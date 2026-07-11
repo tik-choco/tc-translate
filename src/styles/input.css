@@ -1,0 +1,342 @@
+﻿.pane-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, min(760px, 100%));
+  justify-content: center;
+  gap: 16px;
+  align-items: start;
+  /* Without this, "normal" resolves to "stretch" for grid containers, so the
+     auto-sized input/output rows get stretched to fill the flex:1 height 窶・
+     splitting the leftover space into a gap between them instead of leaving
+     it below. The no-output (empty) state overrides this back to `center`. */
+  align-content: start;
+}
+
+.text-pane,
+.settings-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Grid items default to a min-content automatic minimum size, so a single
+   long unbroken run of text (URL, hash, code) pasted into the textarea
+   would otherwise force this whole grid column wider than the viewport. */
+.text-pane {
+  min-width: 0;
+}
+
+.settings-modal label > span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+textarea,
+input,
+select {
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+select,
+input {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+select:hover {
+  border-color: var(--border-strong);
+}
+
+textarea {
+  flex: 1;
+  min-height: 120px;
+  max-height: 520px;
+  /* Bottom padding clears the action buttons row (34px) + character count. */
+  padding: 16px 16px 58px;
+  line-height: 1.55;
+  resize: none;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  field-sizing: content;
+}
+
+.input-shell {
+  position: relative;
+}
+
+.input-shell.has-image textarea {
+  /* Image chip (64px) + action buttons stacked above it. */
+  padding-bottom: 136px;
+}
+
+/* With an image chip pinned to the bottom edge, lift the actions above it. */
+.input-shell.has-image .input-actions {
+  bottom: 88px;
+}
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Actions live in the bottom-right corner so text and placeholder never
+   flow underneath them (up to four buttons can be visible at once, which
+   no fixed right-padding on the textarea could reasonably clear). */
+.input-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 8px;
+}
+
+.file-upload-button,
+.clear-input-button,
+.speak-input-button,
+.mic-input-button {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.file-upload-button {
+  color: var(--text);
+  transition:
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.clear-input-button {
+  color: var(--text-muted);
+}
+
+.clear-input-button:hover,
+.clear-input-button:focus-visible {
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+  outline: none;
+}
+
+.speak-input-button {
+  color: var(--text-muted);
+  transition:
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.speak-input-button:hover,
+.speak-input-button:focus-visible {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  outline: none;
+}
+
+.mic-input-button {
+  color: var(--text-muted);
+  transition:
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mic-input-button:hover:not(:disabled),
+.mic-input-button:focus-visible {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  outline: none;
+}
+
+.mic-input-button.recording {
+  color: #ffffff;
+  border-color: var(--danger);
+  background: var(--danger);
+  animation:
+    soft-rise 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    recording-pulse 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.mic-input-button.recording:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: var(--danger);
+}
+
+/* Realtime browser-STT preview shown while the mic is live. */
+.live-transcript {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.live-transcript svg {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--danger);
+}
+
+.file-upload-button:hover:not(:disabled),
+.file-upload-button:focus-visible {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  outline: none;
+}
+
+.file-upload-button:focus-visible,
+.clear-input-button:focus-visible,
+.speak-input-button:focus-visible,
+.mic-input-button:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.image-chip {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 48px 17px minmax(0, 1fr) auto 34px;
+  align-items: center;
+  gap: 9px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-2);
+}
+
+.image-chip img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-3);
+}
+
+.image-chip > svg {
+  color: var(--primary);
+}
+
+.image-chip span {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-chip small {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.character-count {
+  position: absolute;
+  left: 16px;
+  /* Vertically centered against the 34px action buttons sharing this row. */
+  bottom: 23px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+.submit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.submit-row .primary-button {
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.primary-button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  color: var(--on-primary);
+  background: var(--primary);
+  box-shadow: var(--shadow-1);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--primary-hover);
+  box-shadow: var(--shadow-2);
+}
+
+.primary-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.submit-row .shortcut-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  opacity: 0.72;
+  margin-right: auto;
+}

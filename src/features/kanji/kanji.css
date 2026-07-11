@@ -1,0 +1,124 @@
+.kanji-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.kanji-source {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kanji-source-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.kanji-source-input {
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.kanji-source-input::placeholder {
+  color: var(--text-subtle);
+}
+
+.kanji-source-input:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Results stack vertically so every script gets the full row width and the
+   readings have room to stay legible. */
+.kanji-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kanji-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  animation: soft-rise 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.kanji-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kanji-result-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.kanji-result-reading {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.kanji-ruby {
+  min-height: 2.3em;
+  color: var(--text);
+  font-size: 1.5rem;
+  /* Tall lines keep the over-positioned readings clear of the row above. */
+  line-height: 2.1;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.kanji-ruby ruby {
+  ruby-position: over;
+  margin: 0 2px;
+}
+
+.kanji-ruby rt {
+  font-size: 0.58em;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.kanji-result-text {
+  min-height: 1.6em;
+  color: var(--text);
+  font-size: 1.5rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .kanji-result {
+    padding: 10px 12px 12px;
+  }
+
+  .kanji-ruby,
+  .kanji-result-text {
+    font-size: 1.3rem;
+  }
+}

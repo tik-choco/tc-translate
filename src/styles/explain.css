@@ -1,0 +1,111 @@
+.explain-card,
+.explain-point-card,
+.explain-vocab-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  animation: soft-rise 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.explain-card {
+  overflow: hidden;
+}
+
+.explain-card header {
+  min-height: 42px;
+  padding: 0 8px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-3);
+}
+
+.explain-card header span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.explain-overview {
+  margin: 0;
+  padding: 14px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.explain-ruby {
+  padding: 14px;
+  line-height: 2.2;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  color: var(--text-strong);
+}
+
+.explain-ruby rt {
+  font-size: 0.55em;
+  color: var(--text-muted);
+}
+
+.explain-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.explain-section-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+.explain-point-card,
+.explain-vocab-card {
+  padding: 12px;
+}
+
+.explain-pattern,
+.explain-word {
+  overflow-wrap: anywhere;
+  font-weight: 750;
+  color: var(--text-strong);
+  font-size: 14px;
+}
+
+.explain-vocab-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.explain-reading {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.explain-point-card p,
+.explain-meaning {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+p.explain-example,
+p.explain-note {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}

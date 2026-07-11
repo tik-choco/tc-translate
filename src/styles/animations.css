@@ -1,0 +1,144 @@
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes soft-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@keyframes pdf-progress-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes recording-pulse {
+  from {
+    box-shadow: 0 0 0 0 var(--danger-ring);
+  }
+  to {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+@keyframes window-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+@keyframes dropdown-open {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.96);
+  }
+}
+
+@media (max-width: 760px) {
+  /* The layout stacks into one column below, so restore ordinary whole-page
+     scrolling instead of the desktop's independent per-column scroll boxes —
+     nested scroll regions feel wrong once everything is a single column. */
+  .workspace {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+  }
+
+  .translator {
+    padding: 18px 16px;
+    overflow-y: visible;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 58px;
+    padding: 10px 16px;
+    row-gap: 8px;
+  }
+
+  .topbar-actions {
+    margin-left: auto;
+  }
+
+  .pane-grid,
+  .translation-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .header-language {
+    width: min(190px, 42vw);
+  }
+
+  .history-panel {
+    width: auto;
+    min-height: auto;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    padding: 18px 16px;
+  }
+
+  .history-list {
+    flex: initial;
+  }
+
+  /* Keyboard shortcut hint is meaningless on touch-first screens. */
+  .submit-row .shortcut-hint {
+    display: none;
+  }
+
+  textarea {
+    min-height: 120px;
+  }
+
+  /* On narrow screens the input is too short for text to clear the floating
+     action buttons (mic / speak / clear / image) pinned top-right, so start
+     the text below them. */
+  .input-shell textarea {
+    padding-top: 54px;
+  }
+
+}
+
+@media (max-width: 400px) {
+  .tab-button {
+    padding: 0 10px;
+  }
+
+  .tab-button span {
+    display: none;
+  }
+}
