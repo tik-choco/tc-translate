@@ -1,0 +1,106 @@
+.topbar-left {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  min-width: 0;
+}
+
+.tab-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.tab-bar::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tab-button {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 14px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tab-button:hover {
+  color: var(--text-strong);
+}
+
+.tab-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-radius: 4px 4px 0 0;
+}
+
+.tab-button.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.tab-panel {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 24px 20px;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: minmax(0, min(760px, 100%));
+  justify-content: center;
+}
+
+/* Must come after `.tab-panel` (both are single-class, so source order
+   decides): `.tab-panel` sets `display: grid`, and elements can carry both
+   classes at once (`class="tab-panel tab-hidden"`), so `.tab-hidden` needs
+   to win here to actually hide the panel. */
+.tab-hidden {
+  display: none;
+}
+
+.tab-panel:not(.tab-hidden),
+.translation-shell:not(.tab-hidden) {
+  animation: soft-rise 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tab-panel-loading {
+  /* Opt out of the grid item's default stretch so the loading/error state
+     sits at the top of the panel instead of centering mid-viewport. */
+  align-self: start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  padding: 20px;
+}
+
+.tab-panel-retry {
+  padding: 6px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.tab-panel-retry:hover {
+  border-color: var(--text-subtle);
+  background: var(--surface-2);
+}

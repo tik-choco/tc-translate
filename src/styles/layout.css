@@ -1,0 +1,279 @@
+.workspace {
+  /* Fixed (not min-) height on desktop so the translator and history panel
+     each get their own bounded scroll region below — otherwise there's no
+     height ceiling anywhere, the whole page grows to fit the tallest column,
+     and both panels end up scrolling together as one block. Reverted back to
+     natural page scrolling on mobile, where the layout stacks into one column. */
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--page);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  height: 60px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Deliberately no min-width: 0 — the tab bar (below) is the one that
+     shrinks/scrolls when the topbar is tight, so the brand keeps its natural
+     size instead of being squeezed and overflowing into the tabs. */
+  flex: 0 0 auto;
+}
+
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: var(--on-primary);
+  background: linear-gradient(135deg, var(--primary), var(--primary-active));
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-1);
+  flex: 0 0 auto;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.translation-shell {
+  flex: 1;
+  display: grid;
+  /* Keep the track count constant (2 tracks) across both states so the
+     browser can smoothly interpolate the width instead of snapping —
+     animating between a different number of tracks isn't tweenable. */
+  grid-template-columns: minmax(0, 1fr) 360px;
+  min-height: 0;
+  overflow: hidden;
+  transition: grid-template-columns 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.translation-shell.history-hidden {
+  grid-template-columns: minmax(0, 1fr) 0px;
+}
+
+.translator {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 12px;
+  padding: 16px 24px 20px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  justify-content: center;
+  transition: justify-content 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.translator.has-output {
+  justify-content: flex-start;
+}
+
+.translator.no-output .pane-grid {
+  align-content: center;
+}
+
+.translator.no-output .text-pane textarea {
+  min-height: 220px;
+}
+
+/* Two classes so this reliably beats `.text-pane { display: flex }` (input.css,
+   imported later) — equal single-class specificity would otherwise let source
+   order decide, and the flex rule was silently winning. */
+.text-pane.output-pane-collapsed {
+  display: none;
+}
+
+.language-select {
+  position: relative;
+}
+
+.header-language {
+  width: 250px;
+}
+
+.language-trigger {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 10px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.language-trigger span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.language-trigger svg {
+  flex: 0 0 auto;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.language-trigger:hover,
+.language-trigger.open {
+  border-color: var(--border-strong);
+}
+
+.language-trigger:focus-visible {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  outline: none;
+}
+
+.language-trigger.open svg {
+  transform: rotate(180deg);
+}
+
+.language-menu {
+  position: absolute;
+  z-index: 12;
+  top: calc(100% + 7px);
+  left: 0;
+  width: 100%;
+  max-height: 260px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  box-shadow: var(--shadow-menu);
+  transform-origin: top;
+  animation: dropdown-open 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.language-menu button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.language-menu button:hover,
+.language-menu button:focus-visible {
+  color: var(--text-strong);
+  background: var(--surface-2);
+  outline: none;
+  transform: translateX(2px);
+}
+
+.language-menu button.current {
+  color: var(--primary);
+  background: var(--primary-soft);
+  font-weight: 750;
+}
+
+.language-menu-section {
+  padding: 7px 10px 3px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+/* Sticky filter box pinned to the top of the scrolling menu. */
+.language-search {
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  margin: -6px -6px 3px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.language-search svg {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.language-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 30px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+.language-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.language-menu .language-name {
+  white-space: nowrap;
+}
+
+.language-menu .language-native {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.language-menu button.current .language-native {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.language-menu-empty {
+  margin: 0;
+  padding: 8px 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+

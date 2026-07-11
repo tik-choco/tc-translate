@@ -1,0 +1,11 @@
+@import './styles/layout.css';
+@import './styles/tab-bar.css';
+@import './styles/input.css';
+@import './styles/translation-output.css';
+@import './styles/back-translation.css';
+@import './styles/proofread.css';
+@import './styles/explain.css';
+@import './styles/history.css';
+@import './styles/modal.css';
+@import './styles/network-status.css';
+@import './styles/animations.css';

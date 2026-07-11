@@ -1,0 +1,78 @@
+import type { MessageBundle } from './types'
+
+// Kanji converter and Transcribe tabs. Keys are prefixed with `kanji-` /
+// `transcribe-` to avoid collisions with other bundles.
+export const featureMessages = {
+  en: {
+    'kanji-input-label': 'Input',
+    'kanji-input-placeholder': 'Enter Japanese or Chinese text',
+    'kanji-label-ja': 'Japanese',
+    'kanji-label-cn': 'Simplified Chinese',
+    'kanji-label-tw': 'Traditional Chinese',
+    'kanji-ruby-pinyin-placeholder': 'Pinyin',
+    'kanji-ruby-zhuyin-placeholder': 'Zhuyin (Bopomofo)',
+
+    'transcribe-unsupported': "Your browser doesn't support speech recognition.",
+    'transcribe-select-aria-label': 'Recognition language',
+    'transcribe-keep-log': 'Keep log',
+    'transcribe-stop-aria-label': 'Stop recognition',
+    'transcribe-start-aria-label': 'Start recognition',
+    'transcribe-stop-button': 'Stop',
+    'transcribe-start-button': 'Start',
+    'transcribe-error-generic': 'Speech recognition error.',
+  },
+  ja: {
+    'kanji-input-label': '入力',
+    'kanji-input-placeholder': '日本語または中国語のテキストを入力',
+    'kanji-label-ja': '日本語',
+    'kanji-label-cn': '簡体字中国語',
+    'kanji-label-tw': '繁体字中国語',
+    'kanji-ruby-pinyin-placeholder': 'ピンイン',
+    'kanji-ruby-zhuyin-placeholder': '注音',
+
+    'transcribe-unsupported': 'お使いのブラウザは音声認識に対応していません。',
+    'transcribe-select-aria-label': '認識言語',
+    'transcribe-keep-log': 'ログを残す',
+    'transcribe-stop-aria-label': '認識を停止',
+    'transcribe-start-aria-label': '認識を開始',
+    'transcribe-stop-button': '停止',
+    'transcribe-start-button': '開始',
+    'transcribe-error-generic': '音声認識でエラーが発生しました。',
+  },
+  'zh-CN': {
+    'kanji-input-label': '输入',
+    'kanji-input-placeholder': '输入日语或中文文本',
+    'kanji-label-ja': '日语',
+    'kanji-label-cn': '简体中文',
+    'kanji-label-tw': '繁体中文',
+    'kanji-ruby-pinyin-placeholder': '拼音',
+    'kanji-ruby-zhuyin-placeholder': '注音符号',
+
+    'transcribe-unsupported': '你的浏览器不支持语音识别。',
+    'transcribe-select-aria-label': '识别语言',
+    'transcribe-keep-log': '保留记录',
+    'transcribe-stop-aria-label': '停止识别',
+    'transcribe-start-aria-label': '开始识别',
+    'transcribe-stop-button': '停止',
+    'transcribe-start-button': '开始',
+    'transcribe-error-generic': '语音识别出错。',
+  },
+  'zh-TW': {
+    'kanji-input-label': '輸入',
+    'kanji-input-placeholder': '輸入日語或中文文字',
+    'kanji-label-ja': '日語',
+    'kanji-label-cn': '簡體中文',
+    'kanji-label-tw': '繁體中文',
+    'kanji-ruby-pinyin-placeholder': '拼音',
+    'kanji-ruby-zhuyin-placeholder': '注音符號',
+
+    'transcribe-unsupported': '你的瀏覽器不支援語音辨識。',
+    'transcribe-select-aria-label': '辨識語言',
+    'transcribe-keep-log': '保留紀錄',
+    'transcribe-stop-aria-label': '停止辨識',
+    'transcribe-start-aria-label': '開始辨識',
+    'transcribe-stop-button': '停止',
+    'transcribe-start-button': '開始',
+    'transcribe-error-generic': '語音辨識發生錯誤。',
+  },
+} satisfies MessageBundle

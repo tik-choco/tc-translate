@@ -1,0 +1,214 @@
+/* ============================================================
+   TC Translate — design system foundation
+   ------------------------------------------------------------
+   Owns the design tokens (light default + dark), the global
+   reset, typography, scrollbars and focus styling. Every
+   component stylesheet under src/styles/ and each feature CSS
+   builds ONLY on the tokens defined here — keep this file the
+   single source of truth for the visual language, so the whole
+   app themes (light/dark) from one place.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces & structure */
+  --page: #eef1f6;
+  --page-accent: #e6eaf1;
+  --surface: #ffffff;
+  --surface-2: #f4f6f9;
+  --surface-3: #eaedf2;
+  --border: #e0e4ea;
+  --border-strong: #cdd3dc;
+
+  /* Text */
+  --text: #263244;
+  --text-strong: #0f172a;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --on-primary: #ffffff;
+
+  /* Brand accent (teal) — unifies the app on one accent */
+  --primary: #0d9488;
+  --primary-hover: #0b8177;
+  --primary-active: #0a726a;
+  --primary-soft: rgba(13, 148, 136, 0.1);
+  --primary-soft-strong: rgba(13, 148, 136, 0.16);
+  --primary-border: rgba(13, 148, 136, 0.34);
+
+  /* Focus ring (kept teal to match the accent) */
+  --focus: #0d9488;
+  --focus-ring: rgba(13, 148, 136, 0.2);
+
+  /* Status */
+  --danger: #dc2626;
+  --danger-text: #b91c1c;
+  --danger-soft: rgba(220, 38, 38, 0.08);
+  --danger-border: rgba(220, 38, 38, 0.3);
+  --danger-ring: rgba(220, 38, 38, 0.35);
+  --success: #15803d;
+  --success-text: #15803d;
+  --warning: #b45309;
+
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 16px;
+  --radius-pill: 999px;
+
+  /* Elevation — soft, layered, tuned for light backgrounds */
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --shadow-2: 0 4px 12px rgba(16, 24, 40, 0.08), 0 2px 6px rgba(16, 24, 40, 0.05);
+  --shadow-3: 0 12px 32px rgba(16, 24, 40, 0.12), 0 4px 12px rgba(16, 24, 40, 0.08);
+  --shadow-menu: 0 18px 42px rgba(15, 23, 42, 0.16);
+
+  /* Glass header backdrop */
+  --header-bg: rgba(255, 255, 255, 0.76);
+
+  /* Motion */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur-med: 220ms;
+
+  --sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+
+  font-family: var(--sans);
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--page);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --page: #0b0c10;
+  --page-accent: #0e1015;
+  --surface: #14161b;
+  --surface-2: #1a1d23;
+  --surface-3: #23262e;
+  --border: #282c34;
+  --border-strong: #3a3f4a;
+
+  --text: #dfe3ea;
+  --text-strong: #f4f7fb;
+  --text-muted: #9aa1ad;
+  --text-subtle: #6b7280;
+  --on-primary: #04201d;
+
+  --primary: #2dd4bf;
+  --primary-hover: #3fdccb;
+  --primary-active: #22b8a5;
+  --primary-soft: rgba(45, 212, 191, 0.12);
+  --primary-soft-strong: rgba(45, 212, 191, 0.2);
+  --primary-border: rgba(45, 212, 191, 0.38);
+
+  --focus: #2dd4bf;
+  --focus-ring: rgba(45, 212, 191, 0.28);
+
+  --danger: #f87171;
+  --danger-text: #fca5a5;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --danger-border: rgba(248, 113, 113, 0.35);
+  --danger-ring: rgba(248, 113, 113, 0.4);
+  --success: #4ade80;
+  --success-text: #86efac;
+  --warning: #fbbf24;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 16px 40px rgba(0, 0, 0, 0.55), 0 6px 16px rgba(0, 0, 0, 0.4);
+  --shadow-menu: 0 20px 48px rgba(0, 0, 0, 0.6);
+
+  --header-bg: rgba(17, 19, 24, 0.72);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Defends every <pre> (translation/proofread/back-translation text) against
+   a single long unbroken run (URL, hash, code) forcing its flex/grid
+   ancestor to a min-content width wider than the viewport. */
+pre {
+  overflow-wrap: anywhere;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  transition:
+    background-color var(--dur-med) var(--ease),
+    color var(--dur-med) var(--ease);
+}
+
+button,
+input,
+select,
+textarea {
+  letter-spacing: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  accent-color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Thin, theme-aware scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+  background-clip: content-box;
+}

@@ -1,0 +1,63 @@
+/* The LLM Network status UI itself (dots, step indicator, request log, …)
+ * now comes from @tik-choco/mistai/ui.css (imported in app.tsx); this file
+ * only maps the app theme onto the library's CSS variables and keeps the
+ * app-specific settings-card layout. */
+
+:root {
+  --mistai-border: var(--border);
+  --mistai-surface: var(--surface);
+  --mistai-text: var(--text);
+  --mistai-text-muted: var(--text-muted);
+  --mistai-text-strong: var(--text-strong);
+}
+
+.settings-role-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-role-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.settings-role-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-role-head input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.settings-role-title {
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-role-desc {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.settings-role-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}

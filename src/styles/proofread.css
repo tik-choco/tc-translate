@@ -1,0 +1,88 @@
+.proofread-card,
+.correction-card,
+.proofread-summary,
+.no-corrections {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  animation: soft-rise 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.proofread-card {
+  overflow: hidden;
+}
+
+.proofread-card header {
+  min-height: 42px;
+  padding: 0 8px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-3);
+}
+
+.proofread-card header span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.proofread-card pre {
+  margin: 0;
+  padding: 14px;
+  white-space: pre-wrap;
+  color: var(--text-strong);
+  font: inherit;
+  line-height: 1.55;
+}
+
+.corrections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.correction-card,
+.proofread-summary,
+.no-corrections {
+  margin: 0;
+  padding: 12px;
+}
+
+.correction-change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.correction-change del {
+  color: var(--danger-text);
+  text-decoration-thickness: 2px;
+}
+
+.correction-change ins {
+  color: var(--success-text);
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.correction-card p,
+.proofread-summary,
+.no-corrections {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.correction-card p {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+}
