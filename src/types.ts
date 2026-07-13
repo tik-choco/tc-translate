@@ -155,6 +155,37 @@ export type TranslationHistoryItem = {
   explanation?: ExplanationResult
 }
 
+// The heavy per-item fields (full source text, translations, proofread/
+// explain results), stored via mistlib storage_add and referenced from a
+// `PersistedHistoryItem.bodyCid` instead of living inline in localStorage.
+export type HistoryItemBody = {
+  sourceText: string
+  translations: TranslationVariant[]
+  proofread?: ProofreadResult
+  explanation?: ExplanationResult
+}
+
+// Shape of a history item as persisted at `tc-translate-history-v1`. New
+// saves always carry `bodyCid` (see lib/storage.ts) plus a small
+// `sourcePreview`; entries written before this migration instead carry the
+// full fields inline (`sourceText`/`translations`/`proofread`/`explanation`)
+// with no `bodyCid`. Dual-read: prefer `bodyCid` when present, else fall back
+// to the inline legacy fields.
+export type PersistedHistoryItem = {
+  id: string
+  createdAt: number
+  kind: HistoryKind
+  targetLanguage: string
+  notes: string[]
+  sourcePreview: string
+  bodyCid?: string
+  // Legacy inline fields (pre-migration), read-only fallback.
+  sourceText?: string
+  translations?: TranslationVariant[]
+  proofread?: ProofreadResult
+  explanation?: ExplanationResult
+}
+
 export type Status = 'idle' | 'loading' | 'done' | 'error'
 export type ModelStatus = 'idle' | 'loading' | 'done' | 'error'
 

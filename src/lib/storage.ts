@@ -15,21 +15,35 @@ import {
   targetLanguageStorageKey,
   ttsSettingsStorageKey,
 } from '../constants'
+import { storageAddJson, storageGetJson } from './mistStorage'
 import type {
   AppMode,
   ExplanationResult,
   ExplanationRubyToken,
   GrammarPoint,
+  HistoryItemBody,
   HistoryKind,
   LocalProviderSettings,
   LocalSttSettings,
   LocalTtsSettings,
+  PersistedHistoryItem,
   ProofreadCorrection,
   ProofreadResult,
   TranslationHistoryItem,
   TranslationVariant,
   VocabularyEntry,
 } from '../types'
+
+// Length cap (in characters) for the inline preview kept in localStorage
+// alongside a history item's `bodyCid`. Just enough to show a snippet in the
+// history list without re-inflating localStorage with full user content.
+const sourcePreviewMaxLength = 200
+
+function buildSourcePreview(sourceText: string): string {
+  return sourceText.length > sourcePreviewMaxLength
+    ? `${sourceText.slice(0, sourcePreviewMaxLength)}…`
+    : sourceText
+}
 
 // These three keys hold only tc-translate-local settings; baseUrl/apiKey/
 // model/temperature now live in the shared `tc-shared-llm-config-v1` key
@@ -53,7 +67,11 @@ export function loadSettings(): LocalProviderSettings {
 }
 
 export function saveSettings(settings: LocalProviderSettings): void {
-  localStorage.setItem(settingsStorageKey, JSON.stringify(settings))
+  try {
+    localStorage.setItem(settingsStorageKey, JSON.stringify(settings))
+  } catch (err) {
+    console.warn('tc-translate: failed to save provider settings', err)
+  }
 }
 
 export function loadTtsSettings(): LocalTtsSettings {
@@ -68,7 +86,11 @@ export function loadTtsSettings(): LocalTtsSettings {
 }
 
 export function saveTtsSettings(ttsSettings: LocalTtsSettings): void {
-  localStorage.setItem(ttsSettingsStorageKey, JSON.stringify(ttsSettings))
+  try {
+    localStorage.setItem(ttsSettingsStorageKey, JSON.stringify(ttsSettings))
+  } catch (err) {
+    console.warn('tc-translate: failed to save TTS settings', err)
+  }
 }
 
 export function loadSttSettings(): LocalSttSettings {
@@ -84,7 +106,11 @@ export function loadSttSettings(): LocalSttSettings {
 }
 
 export function saveSttSettings(sttSettings: LocalSttSettings): void {
-  localStorage.setItem(sttSettingsStorageKey, JSON.stringify(sttSettings))
+  try {
+    localStorage.setItem(sttSettingsStorageKey, JSON.stringify(sttSettings))
+  } catch (err) {
+    console.warn('tc-translate: failed to save STT settings', err)
+  }
 }
 
 export function loadTargetLanguage(): string {
@@ -93,7 +119,11 @@ export function loadTargetLanguage(): string {
 }
 
 export function saveTargetLanguage(language: string): void {
-  localStorage.setItem(targetLanguageStorageKey, language)
+  try {
+    localStorage.setItem(targetLanguageStorageKey, language)
+  } catch (err) {
+    console.warn('tc-translate: failed to save target language', err)
+  }
 }
 
 // Primary subtag -> languageOptions entry, derived from languageSpeechCodes
@@ -127,7 +157,11 @@ export function loadNativeLanguage(): string {
 }
 
 export function saveNativeLanguage(language: string): void {
-  localStorage.setItem(nativeLanguageStorageKey, language)
+  try {
+    localStorage.setItem(nativeLanguageStorageKey, language)
+  } catch (err) {
+    console.warn('tc-translate: failed to save native language', err)
+  }
 }
 
 export function loadMode(): AppMode {
@@ -136,7 +170,11 @@ export function loadMode(): AppMode {
 }
 
 export function saveMode(mode: AppMode): void {
-  localStorage.setItem(modeStorageKey, mode)
+  try {
+    localStorage.setItem(modeStorageKey, mode)
+  } catch (err) {
+    console.warn('tc-translate: failed to save mode', err)
+  }
 }
 
 export function loadOnboardingSeen(): boolean {
@@ -144,7 +182,11 @@ export function loadOnboardingSeen(): boolean {
 }
 
 export function saveOnboardingSeen(): void {
-  localStorage.setItem(onboardingStorageKey, '1')
+  try {
+    localStorage.setItem(onboardingStorageKey, '1')
+  } catch (err) {
+    console.warn('tc-translate: failed to save onboarding-seen flag', err)
+  }
 }
 
 function isTranslationVariant(value: unknown): value is TranslationVariant {
@@ -213,71 +255,166 @@ function isExplanationResult(value: unknown): value is ExplanationResult {
   )
 }
 
-export function loadHistory(): TranslationHistoryItem[] {
-  try {
-    const stored = JSON.parse(localStorage.getItem(historyStorageKey) ?? '[]') as unknown
-    if (!Array.isArray(stored)) return []
-
-    const items: TranslationHistoryItem[] = []
-    for (const raw of stored) {
-      const historyItem = raw as Partial<TranslationHistoryItem>
-      if (typeof historyItem.id !== 'string' || typeof historyItem.createdAt !== 'number' || typeof historyItem.sourceText !== 'string') continue
-
-      // Legacy items (saved before `kind` existed) and items with an
-      // unrecognized `kind` are backfilled as 'translate'.
-      const kind: HistoryKind = historyItem.kind === 'proofread' || historyItem.kind === 'explain' ? historyItem.kind : 'translate'
-      const notes = Array.isArray(historyItem.notes) ? historyItem.notes : []
-
-      if (kind === 'translate') {
-        if (
-          typeof historyItem.targetLanguage !== 'string' ||
-          !Array.isArray(historyItem.translations) ||
-          !historyItem.translations.every(isTranslationVariant)
-        ) {
-          continue
+// Resolves one stored entry's heavy fields: prefer the new `bodyCid` pointer
+// (mistlib storage_get), falling back to the pre-migration inline fields
+// when there's no `bodyCid` (dual-read). Returns null if neither is usable.
+async function resolveHistoryItemBody(historyItem: Partial<PersistedHistoryItem>): Promise<HistoryItemBody | null> {
+  if (typeof historyItem.bodyCid === 'string' && historyItem.bodyCid) {
+    try {
+      const body = await storageGetJson<Partial<HistoryItemBody>>(historyItem.bodyCid)
+      if (typeof body.sourceText === 'string') {
+        return {
+          sourceText: body.sourceText,
+          translations: Array.isArray(body.translations) ? body.translations : [],
+          proofread: body.proofread,
+          explanation: body.explanation,
         }
-        items.push({
-          id: historyItem.id,
-          createdAt: historyItem.createdAt,
-          kind: 'translate',
-          sourceText: historyItem.sourceText,
-          targetLanguage: historyItem.targetLanguage,
-          translations: historyItem.translations,
-          notes,
-        })
-      } else if (kind === 'proofread') {
-        if (!isProofreadResult(historyItem.proofread)) continue
-        items.push({
-          id: historyItem.id,
-          createdAt: historyItem.createdAt,
-          kind: 'proofread',
-          sourceText: historyItem.sourceText,
-          targetLanguage: '',
-          translations: [],
-          notes: [],
-          proofread: historyItem.proofread,
-        })
-      } else {
-        if (!isExplanationResult(historyItem.explanation)) continue
-        items.push({
-          id: historyItem.id,
-          createdAt: historyItem.createdAt,
-          kind: 'explain',
-          sourceText: historyItem.sourceText,
-          targetLanguage: '',
-          translations: [],
-          notes: [],
-          explanation: historyItem.explanation,
-        })
       }
+    } catch (err) {
+      console.warn('tc-translate: failed to load history item body', historyItem.id, err)
     }
+  }
 
-    return items.slice(0, maxHistoryItems)
-  } catch {
-    return []
+  if (typeof historyItem.sourceText === 'string') {
+    // Legacy shape (pre-migration): fields are inline on the entry itself.
+    return {
+      sourceText: historyItem.sourceText,
+      translations: Array.isArray(historyItem.translations) ? historyItem.translations : [],
+      proofread: historyItem.proofread,
+      explanation: historyItem.explanation,
+    }
+  }
+
+  return null
+}
+
+async function hydrateHistoryItem(raw: unknown): Promise<TranslationHistoryItem | null> {
+  if (raw === null || typeof raw !== 'object') return null
+  const historyItem = raw as Partial<PersistedHistoryItem>
+  if (typeof historyItem.id !== 'string' || typeof historyItem.createdAt !== 'number') return null
+
+  // Legacy items (saved before `kind` existed) and items with an
+  // unrecognized `kind` are backfilled as 'translate'.
+  const kind: HistoryKind = historyItem.kind === 'proofread' || historyItem.kind === 'explain' ? historyItem.kind : 'translate'
+  const notes = Array.isArray(historyItem.notes) ? historyItem.notes : []
+
+  const body = await resolveHistoryItemBody(historyItem)
+  if (!body) return null
+
+  if (kind === 'translate') {
+    if (typeof historyItem.targetLanguage !== 'string' || !body.translations.every(isTranslationVariant)) return null
+    return {
+      id: historyItem.id,
+      createdAt: historyItem.createdAt,
+      kind: 'translate',
+      sourceText: body.sourceText,
+      targetLanguage: historyItem.targetLanguage,
+      translations: body.translations,
+      notes,
+    }
+  }
+
+  if (kind === 'proofread') {
+    if (!isProofreadResult(body.proofread)) return null
+    return {
+      id: historyItem.id,
+      createdAt: historyItem.createdAt,
+      kind: 'proofread',
+      sourceText: body.sourceText,
+      targetLanguage: '',
+      translations: [],
+      notes: [],
+      proofread: body.proofread,
+    }
+  }
+
+  if (!isExplanationResult(body.explanation)) return null
+  return {
+    id: historyItem.id,
+    createdAt: historyItem.createdAt,
+    kind: 'explain',
+    sourceText: body.sourceText,
+    targetLanguage: '',
+    translations: [],
+    notes: [],
+    explanation: body.explanation,
   }
 }
 
-export function saveHistory(history: TranslationHistoryItem[]): void {
-  localStorage.setItem(historyStorageKey, JSON.stringify(history.slice(0, maxHistoryItems)))
+export async function loadHistory(): Promise<TranslationHistoryItem[]> {
+  let stored: unknown[] = []
+  try {
+    const parsed = JSON.parse(localStorage.getItem(historyStorageKey) ?? '[]') as unknown
+    if (Array.isArray(parsed)) stored = parsed
+  } catch {
+    return []
+  }
+
+  const hydrated = await Promise.all(stored.map(hydrateHistoryItem))
+  const items = hydrated.filter((item): item is TranslationHistoryItem => item !== null).slice(0, maxHistoryItems)
+
+  // One-time migration: if any stored entry still has its heavy fields
+  // inline (no `bodyCid`), re-save now so it's moved to mistlib storage and
+  // localStorage is slimmed down. Best-effort — loadHistory's return value
+  // is unaffected either way, and this is a no-op once every entry has a
+  // `bodyCid`.
+  const needsMigration = stored.some((raw) => {
+    if (raw === null || typeof raw !== 'object') return false
+    const bodyCid = (raw as Partial<PersistedHistoryItem>).bodyCid
+    return typeof bodyCid !== 'string' || !bodyCid
+  })
+  if (needsMigration && items.length > 0) {
+    saveHistory(items).catch((err) => console.warn('tc-translate: history migration save failed', err))
+  }
+
+  return items
+}
+
+async function toPersistedHistoryItem(item: TranslationHistoryItem): Promise<PersistedHistoryItem> {
+  const preview: PersistedHistoryItem = {
+    id: item.id,
+    createdAt: item.createdAt,
+    kind: item.kind,
+    targetLanguage: item.targetLanguage,
+    notes: item.notes,
+    sourcePreview: buildSourcePreview(item.sourceText),
+  }
+
+  const body: HistoryItemBody = {
+    sourceText: item.sourceText,
+    translations: item.translations,
+    proofread: item.proofread,
+    explanation: item.explanation,
+  }
+
+  try {
+    preview.bodyCid = await storageAddJson(`${item.id}.tc-translate-history.json`, body)
+  } catch (err) {
+    // mistlib storage unavailable (e.g. no OPFS in this browser): fall back
+    // to the old inline shape rather than losing the item's content.
+    console.warn('tc-translate: failed to store history item body, keeping it inline', item.id, err)
+    preview.sourceText = body.sourceText
+    preview.translations = body.translations
+    preview.proofread = body.proofread
+    preview.explanation = body.explanation
+  }
+
+  return preview
+}
+
+// Guards against out-of-order writes when saveHistory is called again (e.g.
+// a rapid second edit) before an earlier call's storage_add work finishes:
+// only the most recently *started* call is allowed to reach localStorage.
+let historySaveSeq = 0
+
+export async function saveHistory(history: TranslationHistoryItem[]): Promise<void> {
+  const seq = ++historySaveSeq
+  const persisted = await Promise.all(history.slice(0, maxHistoryItems).map(toPersistedHistoryItem))
+  if (seq !== historySaveSeq) return
+
+  try {
+    localStorage.setItem(historyStorageKey, JSON.stringify(persisted))
+  } catch (err) {
+    console.warn('tc-translate: failed to save history', err)
+  }
 }
