@@ -45,6 +45,17 @@ export function useNetworkProvider(
 
   const upstreamConfigured = Boolean(settings.model.trim() && normalizeBaseUrl(settings.baseUrl))
 
+  // mistai v0.4.0 derives the advertised provider_hello.services list from
+  // which of callLlm/synthesize/transcribe are actually injected (see
+  // deriveHelloServices in @tik-choco/mistai/preact). Only pass synthesize /
+  // transcribe when a TTS/STT upstream is actually configured, so this
+  // provider doesn't advertise "tts"/"stt" support it can't deliver on -
+  // otherwise consumers would route voice requests here and always hit the
+  // "missing" throw below instead of failing over to a provider that can
+  // actually serve them.
+  const ttsConfigured = Boolean(resolveTtsConnection(llmConfig).baseUrl)
+  const sttConfigured = Boolean(resolveSttConnection(llmConfig).baseUrl)
+
   const [debouncedRoomId, setDebouncedRoomId] = useState(settings.roomId)
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedRoomId(settings.roomId), 500)
@@ -58,22 +69,26 @@ export function useNetworkProvider(
     nodeIdStorageKey: NODE_ID_STORAGE_KEY,
     callLlm: (messages, model, onDelta) =>
       requestApiChatCompletionStreaming(settingsRef.current, messages, model, onDelta),
-    synthesize: async (text, model, voice) => {
-      const conn = resolveTtsConnection(llmConfigRef.current)
-      if (!conn.baseUrl) throw new Error(t('network-provider-tts-missing'))
-      const blob = await synthesizeSpeech({
-        connection: conn,
-        model: model || ttsSettingsRef.current.model,
-        voice: voice || ttsSettingsRef.current.voice,
-        text,
-      })
-      return { blob, mime: blob.type || 'audio/mpeg' }
-    },
-    transcribe: async (audio, _mime, model, fileName) => {
-      const conn = resolveSttConnection(llmConfigRef.current)
-      if (!conn.baseUrl) throw new Error(t('network-provider-stt-missing'))
-      return transcribeAudio({ connection: conn, model: model || sttSettingsRef.current.model, audio, fileName })
-    },
+    synthesize: ttsConfigured
+      ? async (text, model, voice) => {
+          const conn = resolveTtsConnection(llmConfigRef.current)
+          if (!conn.baseUrl) throw new Error(t('network-provider-tts-missing'))
+          const blob = await synthesizeSpeech({
+            connection: conn,
+            model: model || ttsSettingsRef.current.model,
+            voice: voice || ttsSettingsRef.current.voice,
+            text,
+          })
+          return { blob, mime: blob.type || 'audio/mpeg' }
+        }
+      : undefined,
+    transcribe: sttConfigured
+      ? async (audio, _mime, model, fileName) => {
+          const conn = resolveSttConnection(llmConfigRef.current)
+          if (!conn.baseUrl) throw new Error(t('network-provider-stt-missing'))
+          return transcribeAudio({ connection: conn, model: model || sttSettingsRef.current.model, audio, fileName })
+        }
+      : undefined,
   })
 
   return {

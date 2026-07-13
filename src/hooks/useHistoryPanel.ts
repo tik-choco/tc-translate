@@ -1,18 +1,35 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import { publishTranslationsInbox } from '../lib/shareToStorage'
 import { loadHistory, saveHistory } from '../lib/storage'
 import type { TranslationHistoryItem, TranslationResult } from '../types'
 
 export function useHistoryPanel() {
   const [showHistory, setShowHistory] = useState(true)
-  const [history, setHistory] = useState<TranslationHistoryItem[]>(() => loadHistory())
+  const [history, setHistory] = useState<TranslationHistoryItem[]>([])
+
+  // loadHistory is async (heavy fields may need a mistlib storage_get), so
+  // the initial history list arrives shortly after mount rather than being
+  // available synchronously.
+  useEffect(() => {
+    let cancelled = false
+    loadHistory()
+      .then((loaded) => {
+        if (!cancelled) setHistory(loaded)
+      })
+      .catch((err) => console.warn('tc-translate: failed to load history', err))
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   function updateHistory(nextHistory: TranslationHistoryItem[]): void {
     setHistory(nextHistory)
-    saveHistory(nextHistory)
+    // Both are async (mistlib storage_add for the heavy fields) and
+    // best-effort; failures are logged inside each function.
+    saveHistory(nextHistory).catch(() => {})
     // Mirror finished translations onto the shared bus so tc-storage (and
     // other family apps on the same origin) can show them as files.
-    publishTranslationsInbox(nextHistory)
+    publishTranslationsInbox(nextHistory).catch(() => {})
   }
 
   function updateHistoryItem(id: string, nextResult: TranslationResult): void {
@@ -41,8 +58,8 @@ export function useHistoryPanel() {
   function patchHistoryItem(id: string, patch: (item: TranslationHistoryItem) => TranslationHistoryItem): void {
     setHistory((current) => {
       const nextHistory = current.map((item) => (item.id === id ? patch(item) : item))
-      saveHistory(nextHistory)
-      publishTranslationsInbox(nextHistory)
+      saveHistory(nextHistory).catch(() => {})
+      publishTranslationsInbox(nextHistory).catch(() => {})
       return nextHistory
     })
   }
