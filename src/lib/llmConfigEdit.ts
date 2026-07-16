@@ -1,81 +1,54 @@
-// Editing helpers for tc-translate's Settings UI: unlike ensureProvider/
-// ensurePreset (append-only, used by the one-time migration), these mutate an
-// *existing* provider/preset in place so typing into the API tab updates the
-// same shared-config entry instead of appending a new one on every keystroke.
-// Callers are responsible for calling saveLlmConfig() afterwards.
+// Editing helpers for tc-translate's Settings UI: a plain CRUD layer over
+// `config.providers`/`config.presets`, mirroring how tc-town's SettingsView
+// manages the same shared config (add/update/delete acting directly on the
+// array, not the append-only-dedup ensureProvider/ensurePreset used by the
+// one-time legacy migration). The user explicitly manages a list of named
+// connections and presets here, same as every other tik-choco app - so
+// there's no need for tc-translate's own per-feature auto-creation magic.
+// Callers are responsible for calling saveLlmConfig() afterwards (typically
+// via `SharedLlmConfigState.save`, see hooks/useSharedLlmConfig.ts).
 
-import { ensureProvider, ensurePreset, type SharedLlmConfigV1 } from './llmConfig'
+import type { LlmProviderV1, ModelPresetV1, SharedLlmConfigV1 } from './llmConfig'
 
-/**
- * Finds tc-translate's default preset/provider pair, creating one (and
- * setting it as `defaultPresetId`) if none exists yet - so the first edit in
- * a fresh Settings modal has somewhere to write to. `seed` fills the newly
- * created entry's fields the caller isn't itself about to overwrite (e.g.
- * typing Base URL first shouldn't leave `model` blank): callers pass the
- * full currently-displayed settings so a from-scratch preset starts with the
- * same pre-filled values the UI was already showing, matching the
- * pre-migration merged-defaults UX. Ignored when reusing an existing entry.
- */
-export function ensureDefaultTarget(
-  config: SharedLlmConfigV1,
-  seed?: { baseUrl: string; apiKey: string; model: string; temperature: number },
-): { providerId: string; presetId: string } {
-  const existing = config.presets.find((preset) => preset.id === config.defaultPresetId)
-  if (existing) return { providerId: existing.providerId, presetId: existing.id }
-
-  const providerId = ensureProvider(config, { baseUrl: seed?.baseUrl ?? '', apiKey: seed?.apiKey ?? '' })
-  const presetId = ensurePreset(config, {
-    providerId,
-    model: seed?.model ?? '',
-    ...(seed?.temperature !== undefined ? { temperature: seed.temperature } : {}),
-  })
-  config.defaultPresetId = presetId
-  return { providerId, presetId }
+function newId(): string {
+  return crypto.randomUUID()
 }
 
-export function setDefaultProviderConnection(config: SharedLlmConfigV1, baseUrl: string, apiKey: string): void {
-  const { providerId } = ensureDefaultTarget(config)
-  const provider = config.providers.find((entry) => entry.id === providerId)
-  if (!provider) return
-  provider.baseUrl = baseUrl
-  provider.apiKey = apiKey
+export function createProvider(config: SharedLlmConfigV1, label: string): string {
+  const provider: LlmProviderV1 = { id: newId(), label, baseUrl: '', apiKey: '' }
+  config.providers.push(provider)
+  return provider.id
 }
 
-export function setDefaultPresetModel(config: SharedLlmConfigV1, model: string): void {
-  const { presetId } = ensureDefaultTarget(config)
-  const preset = config.presets.find((entry) => entry.id === presetId)
-  if (preset) preset.model = model
+export function patchProvider(config: SharedLlmConfigV1, id: string, patch: Partial<Omit<LlmProviderV1, 'id'>>): void {
+  const provider = config.providers.find((entry) => entry.id === id)
+  if (provider) Object.assign(provider, patch)
 }
 
-export function setDefaultPresetTemperature(config: SharedLlmConfigV1, temperature: number): void {
-  const { presetId } = ensureDefaultTarget(config)
-  const preset = config.presets.find((entry) => entry.id === presetId)
-  if (preset) preset.temperature = temperature
+/** Removes a provider. Any preset still referencing it keeps its (now dangling) providerId - resolvePreset degrades that to "no target" rather than throwing. */
+export function deleteProvider(config: SharedLlmConfigV1, id: string): void {
+  config.providers = config.providers.filter((entry) => entry.id !== id)
 }
 
-/**
- * Creates/updates the vision preset referenced by `visionPresetId`, or clears
- * it (returns '') when `visionModel` is blank or matches the default
- * preset's model - both cases just fall back to the default preset via
- * resolvePreset's own empty-id handling, so no separate preset is needed.
- */
-export function setVisionPreset(
-  config: SharedLlmConfigV1,
-  visionPresetId: string,
-  visionModel: string,
-  defaultModel: string,
-): string {
-  const trimmed = visionModel.trim()
-  if (!trimmed || trimmed === defaultModel.trim()) return ''
+export function createPreset(config: SharedLlmConfigV1, providerId: string, label: string): string {
+  const preset: ModelPresetV1 = { id: newId(), label, providerId, model: '', temperature: 0.7 }
+  config.presets.push(preset)
+  // First preset ever created becomes the default automatically - otherwise
+  // every role (default/vision/orchestrator/worker) would keep resolving to
+  // nothing even though a preset now exists.
+  if (!config.defaultPresetId) config.defaultPresetId = preset.id
+  return preset.id
+}
 
-  const existing = visionPresetId ? config.presets.find((preset) => preset.id === visionPresetId) : undefined
-  if (existing) {
-    existing.model = trimmed
-    return existing.id
-  }
+export function patchPreset(config: SharedLlmConfigV1, id: string, patch: Partial<Omit<ModelPresetV1, 'id'>>): void {
+  const preset = config.presets.find((entry) => entry.id === id)
+  if (preset) Object.assign(preset, patch)
+}
 
-  const { providerId } = ensureDefaultTarget(config)
-  return ensurePreset(config, { label: 'Vision', providerId, model: trimmed })
+/** Removes a preset. If it was the default, the next remaining preset (if any) takes over; vision/orchestrator/worker pointers referencing it are left to the caller to clear (see useProviderSettings). */
+export function deletePreset(config: SharedLlmConfigV1, id: string): void {
+  config.presets = config.presets.filter((entry) => entry.id !== id)
+  if (config.defaultPresetId === id) config.defaultPresetId = config.presets[0]?.id ?? ''
 }
 
 /** Updates `config.tts`/`config.stt` in place from Settings UI edits. An empty `providerId` clears it (falls back to the default preset's provider). */

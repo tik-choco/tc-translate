@@ -7,10 +7,13 @@ import {
   languageOptions,
   languageSpeechCodes,
   maxHistoryItems,
+  maxSimulTargetLanguages,
   modeStorageKey,
   nativeLanguageStorageKey,
   onboardingStorageKey,
   settingsStorageKey,
+  simulTranslateEnabledStorageKey,
+  simulTranslateLanguagesStorageKey,
   sttSettingsStorageKey,
   targetLanguageStorageKey,
   ttsSettingsStorageKey,
@@ -60,6 +63,9 @@ export function loadSettings(): LocalProviderSettings {
           ? stored.networkProviderEnabled
           : defaultLocalSettings.networkProviderEnabled,
       visionPresetId: typeof stored.visionPresetId === 'string' ? stored.visionPresetId : defaultLocalSettings.visionPresetId,
+      orchestratorPresetId:
+        typeof stored.orchestratorPresetId === 'string' ? stored.orchestratorPresetId : defaultLocalSettings.orchestratorPresetId,
+      workerPresetId: typeof stored.workerPresetId === 'string' ? stored.workerPresetId : defaultLocalSettings.workerPresetId,
     }
   } catch {
     return defaultLocalSettings
@@ -97,7 +103,7 @@ export function loadSttSettings(): LocalSttSettings {
   try {
     const stored = JSON.parse(localStorage.getItem(sttSettingsStorageKey) ?? '{}') as Partial<LocalSttSettings>
     return {
-      engine: stored.engine === 'network' ? 'network' : 'api',
+      engine: stored.engine === 'network' ? 'network' : stored.engine === 'browser' ? 'browser' : 'api',
       micDeviceId: typeof stored.micDeviceId === 'string' ? stored.micDeviceId : defaultLocalSttSettings.micDeviceId,
     }
   } catch {
@@ -174,6 +180,38 @@ export function saveMode(mode: AppMode): void {
     localStorage.setItem(modeStorageKey, mode)
   } catch (err) {
     console.warn('tc-translate: failed to save mode', err)
+  }
+}
+
+export function loadSimulTranslateEnabled(): boolean {
+  return localStorage.getItem(simulTranslateEnabledStorageKey) === '1'
+}
+
+export function saveSimulTranslateEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(simulTranslateEnabledStorageKey, enabled ? '1' : '0')
+  } catch (err) {
+    console.warn('tc-translate: failed to save simultaneous translation toggle', err)
+  }
+}
+
+export function loadSimulTargetLanguages(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(simulTranslateLanguagesStorageKey) ?? '[]') as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((item): item is string => typeof item === 'string' && languageOptions.includes(item))
+      .slice(0, maxSimulTargetLanguages)
+  } catch {
+    return []
+  }
+}
+
+export function saveSimulTargetLanguages(targetLanguages: string[]): void {
+  try {
+    localStorage.setItem(simulTranslateLanguagesStorageKey, JSON.stringify(targetLanguages))
+  } catch (err) {
+    console.warn('tc-translate: failed to save simultaneous translation languages', err)
   }
 }
 

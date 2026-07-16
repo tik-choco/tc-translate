@@ -4,11 +4,12 @@ import { useEffect, useState } from 'preact/hooks'
 
 type LazyPanelProps = {
   active: boolean
-  load: () => Promise<ComponentType>
+  load: () => Promise<ComponentType<any>>
+  props?: Record<string, unknown>
 }
 
-export const LazyPanel = memo(function LazyPanel({ active, load }: LazyPanelProps) {
-  const [Comp, setComp] = useState<ComponentType | null>(null)
+export const LazyPanel = memo(function LazyPanel({ active, load, props }: LazyPanelProps) {
+  const [Comp, setComp] = useState<ComponentType<any> | null>(null)
   const [error, setError] = useState(false)
   const [attempt, setAttempt] = useState(0)
 
@@ -43,5 +44,5 @@ export const LazyPanel = memo(function LazyPanel({ active, load }: LazyPanelProp
 
   if (!Comp) return <div class="tab-panel-loading">Loading…</div>
 
-  return <Comp />
+  return <Comp {...props} />
 })
