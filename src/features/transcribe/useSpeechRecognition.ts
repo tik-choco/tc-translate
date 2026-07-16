@@ -21,7 +21,11 @@ function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | undef
 
 const FATAL_ERROR_CODES = new Set(['not-allowed', 'audio-capture', 'service-not-allowed'])
 
-export function useSpeechRecognition(initialLang: string): UseSpeechRecognitionResult {
+// Optional, purely additive: fires once per finalized result (per the Web
+// Speech API's own `isFinal` flag, not a length heuristic), letting callers
+// - e.g. simultaneous translation - react to completed segments without
+// changing how `transcript` itself is tracked.
+export function useSpeechRecognition(initialLang: string, onFinalResult?: (text: string) => void): UseSpeechRecognitionResult {
   const SpeechRecognitionCtor = getSpeechRecognitionConstructor()
   const isSupported = Boolean(SpeechRecognitionCtor)
 
@@ -31,6 +35,8 @@ export function useSpeechRecognition(initialLang: string): UseSpeechRecognitionR
   const [error, setError] = useState('')
   const isListeningRef = useRef(false)
   const fatalErrorRef = useRef(false)
+  const onFinalResultRef = useRef(onFinalResult)
+  onFinalResultRef.current = onFinalResult
 
   useEffect(() => {
     if (!isListening || !SpeechRecognitionCtor) return
@@ -44,6 +50,12 @@ export function useSpeechRecognition(initialLang: string): UseSpeechRecognitionR
     setError('')
 
     recognition.onresult = (event) => {
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index]
+        if (!result.isFinal) continue
+        const finalText = result[0].transcript.trim()
+        if (finalText) onFinalResultRef.current?.(finalText)
+      }
       const { transcript: latest } = event.results[event.results.length - 1][0]
       setTranscript(latest)
     }

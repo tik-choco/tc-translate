@@ -22,7 +22,8 @@ function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | undef
 
 export function useTranscription({ sttSettings, llmConfig, roomId, speechLang, onTranscribed }: UseTranscriptionParams) {
   const connection = resolveSttConnection(llmConfig)
-  const apiConfigured = Boolean(connection.baseUrl && sttSettings.model.trim())
+  const useBrowser = sttSettings.engine === 'browser'
+  const apiConfigured = !useBrowser && Boolean(connection.baseUrl && sttSettings.model.trim())
   const useNetwork = sttSettings.engine === 'network'
   const roomConfigured = Boolean(roomId.trim())
   const networkConfigured = useNetwork && roomConfigured
@@ -31,9 +32,11 @@ export function useTranscription({ sttSettings, llmConfig, roomId, speechLang, o
     typeof navigator !== 'undefined' &&
     Boolean(navigator.mediaDevices?.getUserMedia) &&
     typeof MediaRecorder !== 'undefined'
-  // With no STT model configured, fall back to the browser's own speech
-  // recognition so the mic still works — and transcribes live to boot.
-  const browserFallback = !modelConfigured && Boolean(getSpeechRecognitionConstructor())
+  const browserRecognitionSupported = Boolean(getSpeechRecognitionConstructor())
+  // Explicitly choosing the browser engine always uses the Web Speech API.
+  // With no STT model configured otherwise, fall back to it too so the mic
+  // still works — and transcribes live to boot.
+  const browserFallback = useBrowser ? browserRecognitionSupported : !modelConfigured && browserRecognitionSupported
   const supported = modelConfigured ? recorderSupported : browserFallback
 
   const [isRecording, setIsRecording] = useState(false)
@@ -99,6 +102,11 @@ export function useTranscription({ sttSettings, llmConfig, roomId, speechLang, o
     if (isRecording || isTranscribing) return
 
     setTranscriptionError('')
+
+    if (useBrowser) {
+      setTranscriptionError(t('stt-browser-file-unsupported'))
+      return
+    }
 
     if (!modelConfigured) {
       setTranscriptionError(t('stt-not-configured'))

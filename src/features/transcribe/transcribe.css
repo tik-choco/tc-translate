@@ -103,3 +103,155 @@
 .transcribe-current {
   color: var(--text-strong);
 }
+
+.transcribe-simul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 200px;
+}
+
+.transcribe-simul-languages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.transcribe-simul-languages-label {
+  color: var(--text-muted);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.transcribe-simul-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--text-strong);
+  font-size: 0.85em;
+}
+
+.transcribe-simul-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.transcribe-simul-chip-remove:hover {
+  background: var(--primary-soft-strong);
+  color: var(--text-strong);
+}
+
+.transcribe-simul-chip-remove:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.transcribe-simul-add {
+  padding: 4px 8px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.transcribe-simul-add:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.transcribe-simul-panel {
+  flex: 1;
+  min-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.transcribe-simul-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.transcribe-simul-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+}
+
+.transcribe-simul-original {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 0.95em;
+  overflow-wrap: anywhere;
+}
+
+.transcribe-simul-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.transcribe-simul-result {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.9em;
+}
+
+.transcribe-simul-result-lang {
+  flex: 0 0 auto;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-size: 0.8em;
+  font-weight: 700;
+}
+
+.transcribe-simul-result-text {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.transcribe-simul-result-pending {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.transcribe-simul-result-pending svg {
+  animation: spin 0.9s linear infinite;
+}
+
+.transcribe-simul-result-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--danger-text);
+}

@@ -141,44 +141,51 @@ export function VoiceSettingsPanel({
         <span>{t('voice-stt-engine-label')}</span>
         <select
           value={sttSettings.engine}
-          onChange={(event) =>
+          onChange={(event) => {
+            const value = event.currentTarget.value
             onUpdateSttSettings({
               ...sttSettings,
-              engine: event.currentTarget.value === 'network' ? 'network' : 'api',
+              engine: value === 'network' ? 'network' : value === 'browser' ? 'browser' : 'api',
             })
-          }
+          }}
           aria-label={t('voice-stt-engine-label')}
         >
           <option value="api">{t('voice-engine-option-api')}</option>
           <option value="network">{t('voice-engine-option-network')}</option>
+          <option value="browser">{t('voice-engine-option-stt-browser')}</option>
         </select>
       </label>
       {sttSettings.engine === 'network' ? <p class="hint">{t('voice-network-engine-hint')}</p> : null}
+      {sttSettings.engine === 'browser' ? <p class="hint">{t('voice-stt-browser-engine-hint')}</p> : null}
 
-      <label>
-        <span>{t('voice-provider-label')}</span>
-        <select
-          value={sttSettings.providerId ?? ''}
-          onChange={(event) => onUpdateSttSettings({ ...sttSettings, providerId: event.currentTarget.value || undefined })}
-          aria-label={t('voice-provider-label')}
-        >
-          <option value="">{t('voice-provider-same-as-llm')}</option>
-          {llmProviders.map((provider) => (
-            <option key={provider.id} value={provider.id}>
-              {provider.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {sttSettings.engine !== 'browser' ? (
+        <>
+          <label>
+            <span>{t('voice-provider-label')}</span>
+            <select
+              value={sttSettings.providerId ?? ''}
+              onChange={(event) => onUpdateSttSettings({ ...sttSettings, providerId: event.currentTarget.value || undefined })}
+              aria-label={t('voice-provider-label')}
+            >
+              <option value="">{t('voice-provider-same-as-llm')}</option>
+              {llmProviders.map((provider) => (
+                <option key={provider.id} value={provider.id}>
+                  {provider.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-      <label>
-        <span>{t('voice-stt-model-label')}</span>
-        <input
-          value={sttSettings.model}
-          onInput={(event) => onUpdateSttSettings({ ...sttSettings, model: event.currentTarget.value })}
-          placeholder="whisper-1"
-        />
-      </label>
+          <label>
+            <span>{t('voice-stt-model-label')}</span>
+            <input
+              value={sttSettings.model}
+              onInput={(event) => onUpdateSttSettings({ ...sttSettings, model: event.currentTarget.value })}
+              placeholder="whisper-1"
+            />
+          </label>
+        </>
+      ) : null}
 
       {enumerationSupported ? (
         <label>

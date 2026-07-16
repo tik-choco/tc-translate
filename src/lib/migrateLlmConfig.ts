@@ -164,6 +164,10 @@ export function migrateLegacyLocalSettings(): void {
       connection: legacy.connection,
       networkProviderEnabled: legacy.networkProviderEnabled,
       visionPresetId,
+      // No legacy equivalent for these - simultaneous translation is new, so
+      // both start unset and fall back to the default preset's model.
+      orchestratorPresetId: '',
+      workerPresetId: '',
     }
     localStorage.setItem(settingsStorageKey, JSON.stringify(newLocalProvider))
   }

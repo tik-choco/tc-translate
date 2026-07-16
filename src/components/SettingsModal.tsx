@@ -1,14 +1,17 @@
-import { RefreshCw, X } from 'lucide-preact'
+import { Plus, RefreshCw, X } from 'lucide-preact'
 import { memo } from 'preact/compat'
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useRef, useState } from 'preact/hooks'
 import { languageOptions } from '../constants'
+import { useDraftField } from '../hooks/useDraftField'
 import { t } from '../i18n'
 import { normalizeBaseUrl } from '../lib/format'
 import { languageOptionLabel } from '../lib/language'
 import type { ConsumerStatus, ProviderLogEntry } from '@tik-choco/mistai'
-import type { LlmProviderV1 } from '../lib/llmConfig'
+import type { LlmProviderV1, ModelPresetV1 } from '../lib/llmConfig'
 import type { NetworkProviderPeer, NetworkProviderStatus } from '../hooks/useNetworkProvider'
 import type { ModelStatus, ProviderSettings, SttSettings, TtsSettings } from '../types'
+import { LlmPresetCard } from './LlmPresetCard'
+import { LlmProviderCard } from './LlmProviderCard'
 import { NetworkConsumerIndicator, NetworkProviderStatusPanel } from './NetworkStatusPanel'
 import { VoiceSettingsPanel } from './VoiceSettingsPanel'
 
@@ -19,11 +22,20 @@ type SettingsModalProps = {
   onUpdateSettings: (next: ProviderSettings) => void
   onClose: () => void
   selectableModelOptions: string[]
-  selectableVisionModelOptions: string[]
   modelStatus: ModelStatus
   modelOptions: string[]
   modelError: string
   onRefreshModels: () => void
+  onAddProvider: (label: string) => void
+  onUpdateProvider: (id: string, patch: Partial<Omit<LlmProviderV1, 'id'>>) => void
+  onRemoveProvider: (id: string) => void
+  onAddPreset: (providerId: string, label: string) => void
+  onUpdatePreset: (id: string, patch: Partial<Omit<ModelPresetV1, 'id'>>) => void
+  onRemovePreset: (id: string) => void
+  onSetDefaultPresetId: (id: string) => void
+  onSetVisionPresetId: (id: string) => void
+  onSetOrchestratorPresetId: (id: string) => void
+  onSetWorkerPresetId: (id: string) => void
   ttsSettings: TtsSettings
   onUpdateTtsSettings: (next: TtsSettings) => void
   sttSettings: SttSettings
@@ -52,55 +64,7 @@ const TABS: Array<{ id: SettingsTab; labelKey: string }> = [
   { id: 'network-provider', labelKey: 'settings-tab-network-provider' },
 ]
 
-function useDraftField(value: string, commit: (next: string) => void, delay = 400) {
-  const [draft, setDraft] = useState(value)
-  const draftRef = useRef(draft)
-  draftRef.current = draft
-  const dirtyRef = useRef(false)
-  const focusedRef = useRef(false)
-  const commitRef = useRef(commit)
-  commitRef.current = commit
-  const timerRef = useRef<number | undefined>(undefined)
-
-  useEffect(() => {
-    if (!dirtyRef.current && !focusedRef.current) setDraft(value)
-  }, [value])
-
-  useEffect(() => {
-    return () => {
-      window.clearTimeout(timerRef.current)
-      if (dirtyRef.current) {
-        dirtyRef.current = false
-        commitRef.current(draftRef.current)
-      }
-    }
-  }, [])
-
-  function onInput(next: string): void {
-    setDraft(next)
-    dirtyRef.current = true
-    window.clearTimeout(timerRef.current)
-    timerRef.current = window.setTimeout(() => {
-      dirtyRef.current = false
-      commitRef.current(next)
-    }, delay)
-  }
-
-  function onFocus(): void {
-    focusedRef.current = true
-  }
-
-  function onBlur(): void {
-    focusedRef.current = false
-    window.clearTimeout(timerRef.current)
-    if (dirtyRef.current) {
-      dirtyRef.current = false
-      commitRef.current(draftRef.current)
-    }
-  }
-
-  return { draft, onInput, onFocus, onBlur }
-}
+const modelSuggestionsListId = 'tc-model-suggestions'
 
 export const SettingsModal = memo(function SettingsModal({
   nativeLanguage,
@@ -109,11 +73,20 @@ export const SettingsModal = memo(function SettingsModal({
   onUpdateSettings,
   onClose,
   selectableModelOptions,
-  selectableVisionModelOptions,
   modelStatus,
   modelOptions,
   modelError,
   onRefreshModels,
+  onAddProvider,
+  onUpdateProvider,
+  onRemoveProvider,
+  onAddPreset,
+  onUpdatePreset,
+  onRemovePreset,
+  onSetDefaultPresetId,
+  onSetVisionPresetId,
+  onSetOrchestratorPresetId,
+  onSetWorkerPresetId,
   ttsSettings,
   onUpdateTtsSettings,
   sttSettings,
@@ -134,8 +107,6 @@ export const SettingsModal = memo(function SettingsModal({
   const overlayPressStarted = useRef(false)
   const [activeTab, setActiveTab] = useState<SettingsTab>('api')
 
-  const baseUrlField = useDraftField(settings.baseUrl, (next) => onUpdateSettings({ ...settings, baseUrl: next }))
-  const apiKeyField = useDraftField(settings.apiKey, (next) => onUpdateSettings({ ...settings, apiKey: next }))
   const roomIdField = useDraftField(settings.roomId, (next) => onUpdateSettings({ ...settings, roomId: next }))
 
   function handleOverlayMouseDown(event: MouseEvent): void {
@@ -146,6 +117,25 @@ export const SettingsModal = memo(function SettingsModal({
     const shouldClose = overlayPressStarted.current && event.target === event.currentTarget
     overlayPressStarted.current = false
     if (shouldClose) onClose()
+  }
+
+  function handleDeleteProvider(id: string): void {
+    const presetsUsing = settings.presets.filter((preset) => preset.providerId === id).length
+    const voiceUsing = (ttsSettings.providerId === id ? 1 : 0) + (sttSettings.providerId === id ? 1 : 0)
+    if (presetsUsing + voiceUsing > 0) {
+      const ok = window.confirm(t('llm-connection-delete-confirm', { count: presetsUsing + voiceUsing }))
+      if (!ok) return
+    }
+    onRemoveProvider(id)
+  }
+
+  function handleDeletePreset(id: string): void {
+    const ok = window.confirm(t('llm-preset-delete-confirm'))
+    if (!ok) return
+    onRemovePreset(id)
+    if (settings.visionPresetId === id) onSetVisionPresetId('')
+    if (settings.orchestratorPresetId === id) onSetOrchestratorPresetId('')
+    if (settings.workerPresetId === id) onSetWorkerPresetId('')
   }
 
   return (
@@ -207,42 +197,62 @@ export const SettingsModal = memo(function SettingsModal({
 
         {activeTab === 'api' ? (
           <div class="settings-tab-panel" role="tabpanel">
-            <label>
-              <span>Base URL</span>
-              <input
-                value={baseUrlField.draft}
-                onInput={(event) => baseUrlField.onInput(event.currentTarget.value)}
-                onFocus={baseUrlField.onFocus}
-                onBlur={baseUrlField.onBlur}
-                placeholder="https://api.openai.com/v1"
-              />
-            </label>
+            <datalist id={modelSuggestionsListId}>
+              {selectableModelOptions.map((model) => (
+                <option key={model} value={model} />
+              ))}
+            </datalist>
+
+            <div class="settings-heading-row">
+              <h2 class="settings-section-title">{t('llm-connections-heading')}</h2>
+              <button
+                type="button"
+                class="secondary-button"
+                onClick={() => onAddProvider(t('llm-new-connection-label'))}
+              >
+                <Plus size={16} />
+                {t('llm-add')}
+              </button>
+            </div>
+            <p class="hint">{t('llm-connections-hint')}</p>
+            <div class="settings-card-list">
+              {settings.providers.map((provider) => (
+                <LlmProviderCard
+                  key={provider.id}
+                  provider={provider}
+                  onUpdate={onUpdateProvider}
+                  onDelete={handleDeleteProvider}
+                />
+              ))}
+              {settings.providers.length === 0 ? <p class="hint">{t('llm-no-connections-hint')}</p> : null}
+            </div>
+
+            <div class="settings-heading-row">
+              <h2 class="settings-section-title">{t('llm-presets-heading')}</h2>
+              <button
+                type="button"
+                class="secondary-button"
+                disabled={settings.providers.length === 0}
+                onClick={() => onAddPreset(settings.providers[0].id, t('llm-new-preset-label'))}
+              >
+                <Plus size={16} />
+                {t('llm-add')}
+              </button>
+            </div>
+            <p class="hint">{t('llm-presets-hint')}</p>
 
             <label>
-              <span>API key</span>
-              <input
-                type="password"
-                value={apiKeyField.draft}
-                onInput={(event) => apiKeyField.onInput(event.currentTarget.value)}
-                onFocus={apiKeyField.onFocus}
-                onBlur={apiKeyField.onBlur}
-                placeholder={t('api-key-placeholder')}
-                autocomplete="off"
-              />
-            </label>
-            <p class="hint">{t('api-hint')}</p>
-
-            <label>
-              <span>Model</span>
+              <span>{t('llm-default-preset-label')}</span>
               <div class="model-control">
                 <select
-                  value={settings.model}
-                  onChange={(event) => onUpdateSettings({ ...settings, model: event.currentTarget.value })}
-                  aria-label={t('model-list')}
+                  value={settings.defaultPresetId}
+                  onChange={(event) => onSetDefaultPresetId(event.currentTarget.value)}
+                  aria-label={t('llm-default-preset-label')}
                 >
-                  {selectableModelOptions.map((model) => (
-                    <option key={model} value={model}>
-                      {model}
+                  <option value="">{t('llm-preset-unset-option')}</option>
+                  {settings.presets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.label || preset.id}
                     </option>
                   ))}
                 </select>
@@ -265,21 +275,79 @@ export const SettingsModal = memo(function SettingsModal({
                     : modelError || t('fallback-models')}
               </span>
             </label>
+            <p class="hint">{t('llm-default-preset-hint')}</p>
 
+            <div class="settings-card-list">
+              {settings.presets.map((preset) => (
+                <LlmPresetCard
+                  key={preset.id}
+                  preset={preset}
+                  providers={settings.providers}
+                  isDefault={preset.id === settings.defaultPresetId}
+                  modelListId={modelSuggestionsListId}
+                  onUpdate={onUpdatePreset}
+                  onDelete={handleDeletePreset}
+                />
+              ))}
+              {settings.presets.length === 0 ? <p class="hint">{t('llm-no-presets-hint')}</p> : null}
+            </div>
+
+            <div class="settings-heading-row">
+              <h2 class="settings-section-title">{t('llm-roles-heading')}</h2>
+            </div>
             <label>
-              <span>Vision model</span>
+              <span>{t('llm-role-vision-label')}</span>
               <select
-                value={settings.visionModel}
-                onChange={(event) => onUpdateSettings({ ...settings, visionModel: event.currentTarget.value })}
-                aria-label={t('vision-model-list')}
+                value={settings.visionPresetId}
+                onChange={(event) => onSetVisionPresetId(event.currentTarget.value)}
+                aria-label={t('llm-role-vision-label')}
               >
-                {selectableVisionModelOptions.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
+                <option value="">{t('llm-role-same-as-default')}</option>
+                {settings.presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.label || preset.id}
                   </option>
                 ))}
               </select>
+              <span class="model-status">{t('llm-role-current-model', { model: settings.visionModel })}</span>
             </label>
+
+            <label>
+              <span>{t('llm-role-orchestrator-label')}</span>
+              <select
+                value={settings.orchestratorPresetId}
+                onChange={(event) => onSetOrchestratorPresetId(event.currentTarget.value)}
+                aria-label={t('llm-role-orchestrator-label')}
+              >
+                <option value="">{t('llm-role-same-as-default')}</option>
+                {settings.presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.label || preset.id}
+                  </option>
+                ))}
+              </select>
+              <span class="model-status">{t('llm-role-current-model', { model: settings.orchestratorModel })}</span>
+            </label>
+            <p class="hint">{t('orchestrator-model-hint')}</p>
+
+            <label>
+              <span>{t('llm-role-worker-label')}</span>
+              <select
+                value={settings.workerPresetId}
+                onChange={(event) => onSetWorkerPresetId(event.currentTarget.value)}
+                aria-label={t('llm-role-worker-label')}
+              >
+                <option value="">{t('llm-role-same-as-default')}</option>
+                {settings.presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.label || preset.id}
+                  </option>
+                ))}
+              </select>
+              <span class="model-status">{t('llm-role-current-model', { model: settings.workerModel })}</span>
+            </label>
+            <p class="hint">{t('worker-model-hint')}</p>
+            <p class="hint">{t('simul-model-hint')}</p>
           </div>
         ) : null}
 

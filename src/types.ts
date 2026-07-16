@@ -1,3 +1,5 @@
+import type { LlmProviderV1, ModelPresetV1 } from './lib/llmConfig'
+
 export type ProviderConnection = 'api' | 'network'
 
 // App-local settings persisted at `tc-translate-provider-settings-v1`.
@@ -19,6 +21,18 @@ export type LocalProviderSettings = {
    * '' means "use the default preset's model for vision too".
    */
   visionPresetId: string
+  /**
+   * Id of the preset used for the simultaneous-translation orchestrator call
+   * (plans the fan-out; see lib/simultaneousTranslate.ts). '' falls back to
+   * the default preset's model, mirroring visionPresetId.
+   */
+  orchestratorPresetId: string
+  /**
+   * Id of the preset used for the simultaneous-translation worker calls (one
+   * per fanned-out target language). '' falls back to the default preset's
+   * model, mirroring visionPresetId.
+   */
+  workerPresetId: string
 }
 
 // Runtime settings used throughout the app: `LocalProviderSettings` merged
@@ -31,6 +45,10 @@ export type ProviderSettings = {
   apiKey: string
   model: string
   visionModel: string
+  /** Model for the simultaneous-translation orchestrator call. Falls back to `defaultResolvedProvider.orchestratorModel` (a stronger model), independent of `model`, when unset. */
+  orchestratorModel: string
+  /** Model for the simultaneous-translation worker calls. Falls back to `defaultResolvedProvider.workerModel` (a lighter model), independent of `model`, when unset. */
+  workerModel: string
   temperature: number
   /** From the resolved default preset, if it set one; falls back to 'none' at call sites. */
   reasoningEffort?: string
@@ -38,6 +56,12 @@ export type ProviderSettings = {
   roomId: string
   networkProviderEnabled: boolean
   visionPresetId: string
+  orchestratorPresetId: string
+  workerPresetId: string
+  /** Every connection/preset in the shared llm config, for the Settings UI's connection/preset management lists and pickers. */
+  providers: LlmProviderV1[]
+  presets: ModelPresetV1[]
+  defaultPresetId: string
 }
 
 // Shape of the pre-migration `tc-translate-provider-settings-v1`, kept only
@@ -81,7 +105,7 @@ export type LegacyTtsSettings = {
   engine: VoiceEngine
 }
 
-export type SttEngine = 'api' | 'network'
+export type SttEngine = 'api' | 'network' | 'browser'
 
 // App-local STT settings persisted at `tc-translate-stt-settings-v1`. The
 // model/provider now live in the shared config's `stt` field; engine and mic

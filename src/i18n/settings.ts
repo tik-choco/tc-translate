@@ -11,8 +11,11 @@ export const settingsMessages = {
     'voice-engine-option-browser': 'Browser (speechSynthesis)',
     'voice-engine-option-api': 'API (OpenAI-compatible)',
     'voice-engine-option-network': 'Network (LLM Network)',
+    'voice-engine-option-stt-browser': 'Browser (Web Speech API)',
     'voice-network-engine-hint':
       'Choosing Network sends TTS/STT requests to the provider in the Room ID from the "Use network" tab (no API endpoint of your own is needed).',
+    'voice-stt-browser-engine-hint':
+      "Uses the browser's built-in speech recognition, transcribing live as you speak. No API endpoint needed, but it only works from the microphone (not for uploaded audio files) and requires a Chromium-based browser.",
     'voice-provider-label': 'Provider',
     'voice-provider-same-as-llm': 'Same as the LLM',
     'voice-tts-model-label': 'TTS model',
@@ -39,8 +42,11 @@ export const settingsMessages = {
     'voice-engine-option-browser': 'ブラウザ (speechSynthesis)',
     'voice-engine-option-api': 'API (OpenAI-compatible)',
     'voice-engine-option-network': 'ネットワーク (LLM Network)',
+    'voice-engine-option-stt-browser': 'ブラウザ (Web Speech API)',
     'voice-network-engine-hint':
       'Network を選ぶと、TTS/STT のリクエストは「ネットワーク利用」タブの Room ID にいる provider に送られます（自分の API エンドポイントは不要）。',
+    'voice-stt-browser-engine-hint':
+      'ブラウザ内蔵の音声認識を使い、話しながらその場で文字起こしします。API エンドポイントは不要ですが、マイクからのみ動作し（音声ファイルの文字起こしは不可）、Chromium系ブラウザが必要です。',
     'voice-provider-label': '提供元',
     'voice-provider-same-as-llm': 'LLMと同じ',
     'voice-tts-model-label': 'TTS モデル',
@@ -67,8 +73,11 @@ export const settingsMessages = {
     'voice-engine-option-browser': '浏览器 (speechSynthesis)',
     'voice-engine-option-api': 'API (OpenAI-compatible)',
     'voice-engine-option-network': '网络 (LLM Network)',
+    'voice-engine-option-stt-browser': '浏览器 (Web Speech API)',
     'voice-network-engine-hint':
       '选择“网络”后，TTS/STT 请求会发送给“使用网络”标签页中 Room ID 内的 provider（无需自己的 API 端点）。',
+    'voice-stt-browser-engine-hint':
+      '使用浏览器内置的语音识别，边说边实时转写。无需 API 端点，但仅支持通过麦克风使用（无法转写已上传的音频文件），且需要基于 Chromium 的浏览器。',
     'voice-provider-label': '提供方',
     'voice-provider-same-as-llm': '与 LLM 相同',
     'voice-tts-model-label': 'TTS 模型',
@@ -94,8 +103,11 @@ export const settingsMessages = {
     'voice-engine-option-browser': '瀏覽器 (speechSynthesis)',
     'voice-engine-option-api': 'API (OpenAI-compatible)',
     'voice-engine-option-network': '網路 (LLM Network)',
+    'voice-engine-option-stt-browser': '瀏覽器 (Web Speech API)',
     'voice-network-engine-hint':
       '選擇「網路」後，TTS/STT 請求會傳送給「使用網路」分頁中 Room ID 內的 provider（不需要自己的 API 端點）。',
+    'voice-stt-browser-engine-hint':
+      '使用瀏覽器內建的語音辨識，邊說邊即時轉寫。不需要 API 端點，但僅支援透過麥克風使用（無法轉寫已上傳的音訊檔案），且需要 Chromium 系瀏覽器。',
     'voice-provider-label': '提供方',
     'voice-provider-same-as-llm': '與 LLM 相同',
     'voice-tts-model-label': 'TTS 模型',

@@ -17,16 +17,31 @@ export const targetLanguageStorageKey = 'tc-translate-target-language-v1'
 export const nativeLanguageStorageKey = 'tc-translate-native-language-v1'
 export const modeStorageKey = 'tc-translate-mode-v1'
 export const onboardingStorageKey = 'tc-translate-onboarding-seen-v1'
+export const simulTranslateEnabledStorageKey = 'tc-translate-simul-translate-enabled-v1'
+export const simulTranslateLanguagesStorageKey = 'tc-translate-simul-translate-languages-v1'
 export const defaultNativeLanguage = 'Japanese'
 export const maxHistoryItems = 20
 // Safety cap so a forgotten recording can't run (and accumulate audio) forever.
 export const maxRecordingDurationMs = 30 * 60 * 1000
+// Simultaneous translation (Transcribe tab): orchestrator plans which of
+// these candidate languages to dispatch, one worker call each, per finalized
+// speech segment. Capped so a single segment can't fan out unboundedly.
+export const maxSimulTargetLanguages = 4
+// How many finalized segments the Transcribe tab keeps on screen; older ones
+// are dropped rather than persisted (this feature is live/ephemeral, unlike
+// the Translate tab's history).
+export const maxSimulEntries = 30
+// Rolling window of prior finalized segments fed to the orchestrator/workers
+// as translation context, mirroring the Translate tab's tone-context sizing.
+export const simulContextSize = 3
 
 // New app-local defaults (post shared-llm-config migration / fresh installs).
 export const defaultLocalSettings: LocalProviderSettings = {
   connection: 'api',
   networkProviderEnabled: false,
   visionPresetId: '',
+  orchestratorPresetId: '',
+  workerPresetId: '',
 }
 
 export const defaultLocalTtsSettings: LocalTtsSettings = {
@@ -47,6 +62,11 @@ export const defaultResolvedProvider = {
   apiKey: '',
   model: 'gpt-4o-mini',
   visionModel: 'gpt-4o-mini',
+  // Simultaneous translation defaults: a stronger model plans the fan-out
+  // (orchestrator), lighter/cheaper models run the per-language translations
+  // in parallel (worker) - independent of whatever `model` above is set to.
+  orchestratorModel: 'claude-fable-5',
+  workerModel: 'claude-sonnet-5',
   temperature: 0.2,
 }
 

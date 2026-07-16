@@ -29,6 +29,10 @@ export function App() {
   const [activeTab, setActiveTab] = useState('translate')
   const [messagesVersion, setMessagesVersion] = useState(0)
   const uiTranslationInFlight = useRef('')
+  const transcribePanelProps = useMemo(
+    () => ({ onOpenSettings: t.openSettings, settings: t.settings }),
+    [t.openSettings, t.settings],
+  )
 
   useEffect(() => subscribeUiMessages(() => setMessagesVersion((version) => version + 1)), [])
 
@@ -133,7 +137,7 @@ export function App() {
         role="tabpanel"
         aria-labelledby="tab-transcribe"
       >
-        <LazyPanel active={activeTab === 'transcribe'} load={loadTranscribePanel} />
+        <LazyPanel active={activeTab === 'transcribe'} load={loadTranscribePanel} props={transcribePanelProps} />
       </div>
 
       <section
@@ -220,11 +224,20 @@ export function App() {
           onUpdateSettings={t.updateSettings}
           onClose={t.closeSettings}
           selectableModelOptions={t.selectableModelOptions}
-          selectableVisionModelOptions={t.selectableVisionModelOptions}
           modelStatus={t.modelStatus}
           modelOptions={t.modelOptions}
           modelError={t.modelError}
           onRefreshModels={t.refreshModels}
+          onAddProvider={t.addProvider}
+          onUpdateProvider={t.updateProvider}
+          onRemoveProvider={t.removeProvider}
+          onAddPreset={t.addPreset}
+          onUpdatePreset={t.updatePreset}
+          onRemovePreset={t.removePreset}
+          onSetDefaultPresetId={t.setDefaultPresetId}
+          onSetVisionPresetId={t.setVisionPresetId}
+          onSetOrchestratorPresetId={t.setOrchestratorPresetId}
+          onSetWorkerPresetId={t.setWorkerPresetId}
           ttsSettings={t.ttsSettings}
           onUpdateTtsSettings={t.updateTtsSettings}
           sttSettings={t.sttSettings}
