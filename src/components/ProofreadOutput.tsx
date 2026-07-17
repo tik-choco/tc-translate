@@ -1,4 +1,4 @@
-import { Check, Clipboard, LoaderCircle, PenLine, Square, Volume2 } from 'lucide-preact'
+import { Check, Clipboard, Download, LoaderCircle, PenLine, Square, Volume2 } from 'lucide-preact'
 import { memo } from 'preact/compat'
 import { t } from '../i18n'
 import { speechCodeForLanguage } from '../lib/language'
@@ -15,6 +15,9 @@ type ProofreadOutputProps = {
   speakingId: string | null
   speechLoadingId: string | null
   onSpeak: (text: string, lang: string | undefined, id: string) => void
+  speechDownloadSupported: boolean
+  speechDownloadingId: string | null
+  onDownloadSpeech: (text: string, id: string) => void
   providerNeedsSetup: boolean
   onOpenSettings: () => void
 }
@@ -31,6 +34,9 @@ export const ProofreadOutput = memo(function ProofreadOutput({
   speakingId,
   speechLoadingId,
   onSpeak,
+  speechDownloadSupported,
+  speechDownloadingId,
+  onDownloadSpeech,
   providerNeedsSetup,
   onOpenSettings,
 }: ProofreadOutputProps) {
@@ -78,6 +84,22 @@ export const ProofreadOutput = memo(function ProofreadOutput({
                   <Square size={18} />
                 ) : (
                   <Volume2 size={18} />
+                )}
+              </button>
+            ) : null}
+            {speechDownloadSupported ? (
+              <button
+                type="button"
+                class="icon-button small"
+                onClick={() => onDownloadSpeech(result.correctedText, proofreadSpeechId)}
+                title={t('translator-download-audio')}
+                aria-label={t('translator-download-audio')}
+                disabled={speechDownloadingId === proofreadSpeechId}
+              >
+                {speechDownloadingId === proofreadSpeechId ? (
+                  <LoaderCircle size={18} class="spin" />
+                ) : (
+                  <Download size={18} />
                 )}
               </button>
             ) : null}

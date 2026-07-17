@@ -420,6 +420,7 @@ export function useTranslator() {
   const stableDeleteHistoryItem = useStableCallback(historyPanel.deleteHistoryItem)
   const stableClearHistory = useStableCallback(historyPanel.clearHistory)
   const stableSpeak = useStableCallback(speech.speak)
+  const stableDownloadSpeech = useStableCallback(speech.downloadAudio)
   const stableCopyProofread = useStableCallback(proofread.copyProofread)
   const openSettings = useCallback(() => setShowSettings(true), [])
   const closeSettings = useCallback(() => setShowSettings(false), [])
@@ -488,6 +489,9 @@ export function useTranslator() {
     speechError: speech.speechError,
     speak: stableSpeak,
     stopSpeech: speech.stop,
+    speechDownloadSupported: speech.downloadSupported,
+    speechDownloadingId: speech.downloadingId,
+    downloadSpeech: stableDownloadSpeech,
     openSettings,
     closeSettings,
     refreshModels,

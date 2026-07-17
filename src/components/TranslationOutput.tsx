@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Check, Clipboard, LoaderCircle, Play, RefreshCw, ScrollText, Square, Volume2 } from 'lucide-preact'
+import { ArrowLeftRight, Check, Clipboard, Download, LoaderCircle, Play, RefreshCw, ScrollText, Square, Volume2 } from 'lucide-preact'
 import { memo } from 'preact/compat'
 import { t } from '../i18n'
 import { speechCodeForLanguage, toneDisplayName } from '../lib/language'
@@ -30,6 +30,9 @@ type TranslationOutputProps = {
   speakingId: string | null
   speechLoadingId: string | null
   onSpeak: (text: string, lang: string | undefined, id: string) => void
+  speechDownloadSupported: boolean
+  speechDownloadingId: string | null
+  onDownloadSpeech: (text: string, id: string) => void
   providerNeedsSetup: boolean
   onOpenSettings: () => void
 }
@@ -53,6 +56,9 @@ export const TranslationOutput = memo(function TranslationOutput({
   speakingId,
   speechLoadingId,
   onSpeak,
+  speechDownloadSupported,
+  speechDownloadingId,
+  onDownloadSpeech,
   providerNeedsSetup,
   onOpenSettings,
 }: TranslationOutputProps) {
@@ -110,6 +116,22 @@ export const TranslationOutput = memo(function TranslationOutput({
                         <Square size={18} />
                       ) : (
                         <Volume2 size={18} />
+                      )}
+                    </button>
+                  ) : null}
+                  {speechDownloadSupported ? (
+                    <button
+                      type="button"
+                      class="icon-button small"
+                      onClick={() => onDownloadSpeech(translation.text, speechId)}
+                      title={t('translator-download-audio')}
+                      aria-label={t('translator-download-audio')}
+                      disabled={speechDownloadingId === speechId}
+                    >
+                      {speechDownloadingId === speechId ? (
+                        <LoaderCircle size={18} class="spin" />
+                      ) : (
+                        <Download size={18} />
                       )}
                     </button>
                   ) : null}
