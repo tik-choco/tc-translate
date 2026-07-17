@@ -12,6 +12,7 @@
     "fetch-mistlib": "node scripts/fetch-mistlib.mjs"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@tik-choco/mistai": "github:tik-choco-lab/mistai",
     "lucide-preact": "^1.16.0",
     "pdfjs-dist": "^6.1.200",

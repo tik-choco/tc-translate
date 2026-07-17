@@ -193,6 +193,9 @@ export function App() {
           speakingId={t.speakingId}
           speechLoadingId={t.speechLoadingId}
           onSpeak={t.speak}
+          speechDownloadSupported={t.speechDownloadSupported}
+          speechDownloadingId={t.speechDownloadingId}
+          onDownloadSpeech={t.downloadSpeech}
           micSupported={t.micSupported}
           isRecording={t.isRecording}
           isTranscribing={t.isTranscribing}

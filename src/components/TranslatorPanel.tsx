@@ -1,4 +1,4 @@
-import { BookOpen, FileUp, LoaderCircle, Mic, PenLine, Play, ScanText, Square, Volume2, X } from 'lucide-preact'
+import { BookOpen, Download, FileUp, LoaderCircle, Mic, PenLine, Play, ScanText, Square, Volume2, X } from 'lucide-preact'
 import type { Ref } from 'preact'
 import { useEffect, useMemo } from 'preact/hooks'
 import { t } from '../i18n'
@@ -68,6 +68,9 @@ type TranslatorPanelProps = {
   speakingId: string | null
   speechLoadingId: string | null
   onSpeak: (text: string, lang: string | undefined, id: string) => void
+  speechDownloadSupported: boolean
+  speechDownloadingId: string | null
+  onDownloadSpeech: (text: string, id: string) => void
   micSupported: boolean
   isRecording: boolean
   isTranscribing: boolean
@@ -130,6 +133,9 @@ export function TranslatorPanel({
   speakingId,
   speechLoadingId,
   onSpeak,
+  speechDownloadSupported,
+  speechDownloadingId,
+  onDownloadSpeech,
   micSupported,
   isRecording,
   isTranscribing,
@@ -283,6 +289,22 @@ export function TranslatorPanel({
                   )}
                 </button>
               ) : null}
+              {canSpeakSource && speechDownloadSupported ? (
+                <button
+                  type="button"
+                  class="download-input-button"
+                  onClick={() => onDownloadSpeech(sourceText, sourceSpeechId)}
+                  title={t('translator-download-audio')}
+                  aria-label={t('translator-download-audio')}
+                  disabled={speechDownloadingId === sourceSpeechId}
+                >
+                  {speechDownloadingId === sourceSpeechId ? (
+                    <LoaderCircle size={16} class="spin" />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                </button>
+              ) : null}
               {micSupported ? (
                 <button
                   type="button"
@@ -380,6 +402,9 @@ export function TranslatorPanel({
               speakingId={speakingId}
               speechLoadingId={speechLoadingId}
               onSpeak={onSpeak}
+              speechDownloadSupported={speechDownloadSupported}
+              speechDownloadingId={speechDownloadingId}
+              onDownloadSpeech={onDownloadSpeech}
               providerNeedsSetup={providerNeedsSetup}
               onOpenSettings={onOpenSettings}
             />
@@ -412,6 +437,9 @@ export function TranslatorPanel({
               speakingId={speakingId}
               speechLoadingId={speechLoadingId}
               onSpeak={onSpeak}
+              speechDownloadSupported={speechDownloadSupported}
+              speechDownloadingId={speechDownloadingId}
+              onDownloadSpeech={onDownloadSpeech}
               providerNeedsSetup={providerNeedsSetup}
               onOpenSettings={onOpenSettings}
             />
