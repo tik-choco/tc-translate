@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'preact/hooks'
+import { sendHistoryItemToLingo } from '../lib/shareToLingo'
 import { publishTranslationsInbox } from '../lib/shareToStorage'
 import { loadHistory, saveHistory } from '../lib/storage'
 import type { TranslationHistoryItem, TranslationResult } from '../types'
 
+// How long the "sent" confirmation state stays on a history item's Lingo
+// button after a successful send, mirroring copiedTone's 1400ms window in
+// useTranslationActions.ts (copyTranslation).
+const sentToLingoResetDelay = 1400
+
 export function useHistoryPanel() {
   const [showHistory, setShowHistory] = useState(true)
   const [history, setHistory] = useState<TranslationHistoryItem[]>([])
+  // Id of the history item whose "send to Lingo" just succeeded, for a
+  // transient checkmark on its button; cleared after sentToLingoResetDelay.
+  const [sentToLingoId, setSentToLingoId] = useState('')
 
   // loadHistory is async (heavy fields may need a mistlib storage_get), so
   // the initial history list arrives shortly after mount rather than being
@@ -68,6 +77,24 @@ export function useHistoryPanel() {
     updateHistory(history.filter((item) => item.id !== id))
   }
 
+  // Sends one history item to tc-lingo's card inbox (see lib/shareToLingo.ts).
+  // Best-effort and independent of updateHistory: this doesn't change the
+  // history itself, only publishes a pointer to a sibling app. On success,
+  // flips the item's button into a transient "sent" state; on failure
+  // (unsupported kind, storage_add failure) it's left as-is — the failure is
+  // already logged inside sendHistoryItemToLingo.
+  function sendToLingo(id: string): void {
+    const item = history.find((entry) => entry.id === id)
+    if (!item) return
+    sendHistoryItemToLingo(item)
+      .then((sent) => {
+        if (!sent) return
+        setSentToLingoId(id)
+        window.setTimeout(() => setSentToLingoId(''), sentToLingoResetDelay)
+      })
+      .catch(() => {})
+  }
+
   function clearHistory(): void {
     updateHistory([])
   }
@@ -86,5 +113,7 @@ export function useHistoryPanel() {
     deleteHistoryItem,
     clearHistory,
     toggleHistory,
+    sendToLingo,
+    sentToLingoId,
   }
 }

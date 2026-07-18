@@ -9,7 +9,7 @@ render(<App />, document.getElementById('app')!)
 writeAppManifest({
   app: 'tc-translate',
   busVersion: BUS_VERSION,
-  publishes: ['translations-inbox'],
+  publishes: ['translations-inbox', 'lingo-card-inbox'],
   consumes: [],
   reads: [],
 })
