@@ -1,4 +1,4 @@
-import { X } from 'lucide-preact'
+import { Check, GraduationCap, X } from 'lucide-preact'
 import { memo } from 'preact/compat'
 import { useMemo, useState } from 'preact/hooks'
 import { t } from '../i18n'
@@ -17,6 +17,9 @@ type HistoryPanelProps = {
   onSelect: (item: TranslationHistoryItem) => void
   onDelete: (id: string) => void
   onClear: () => void
+  onSend: (id: string) => void
+  /** Id of the item whose send-to-Lingo just succeeded (transient checkmark). */
+  sentId: string
 }
 
 type HistoryFilter = 'all' | HistoryKind
@@ -34,7 +37,7 @@ function kindLabel(kind: HistoryKind) {
   return t('history-kind-translate')
 }
 
-export const HistoryPanel = memo(function HistoryPanel({ history, onSelect, onDelete, onClear }: HistoryPanelProps) {
+export const HistoryPanel = memo(function HistoryPanel({ history, onSelect, onDelete, onClear, onSend, sentId }: HistoryPanelProps) {
   const [filter, setFilter] = useState<HistoryFilter>('all')
 
   const distinctKinds = useMemo(() => new Set(history.map((item) => item.kind)), [history])
@@ -97,6 +100,17 @@ export const HistoryPanel = memo(function HistoryPanel({ history, onSelect, onDe
                   <span class="history-preview">{item.explanation.overview}</span>
                 )}
               </button>
+              {item.kind !== 'proofread' && (
+                <button
+                  type="button"
+                  class={`history-send${sentId === item.id ? ' history-send-success' : ''}`}
+                  onClick={() => onSend(item.id)}
+                  title={t('history-send-to-lingo')}
+                  aria-label={t('history-send-to-lingo')}
+                >
+                  {sentId === item.id ? <Check size={14} /> : <GraduationCap size={14} />}
+                </button>
+              )}
               <button
                 type="button"
                 class="history-delete"

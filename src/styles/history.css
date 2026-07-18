@@ -122,10 +122,10 @@
   line-height: 1.45;
 }
 
-.history-delete {
+.history-delete,
+.history-send {
   position: absolute;
   top: 8px;
-  right: 8px;
   width: 26px;
   height: 26px;
   border: 1px solid var(--border);
@@ -140,14 +140,38 @@
     border-color 140ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.history-delete {
+  right: 8px;
+}
+
+/* Sits left of history-delete, same row. */
+.history-send {
+  right: 38px;
+}
+
 .history-card:hover .history-delete,
-.history-delete:focus-visible {
+.history-delete:focus-visible,
+.history-card:hover .history-send,
+.history-send:focus-visible {
   opacity: 1;
 }
 
 .history-delete:hover {
   color: var(--danger-text);
   border-color: var(--danger-border);
+}
+
+.history-send:hover {
+  color: var(--primary);
+  border-color: var(--primary-border);
+}
+
+/* Stays visible (not just on hover) while showing the post-send checkmark. */
+.history-send-success {
+  opacity: 1;
+  color: var(--primary);
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
 }
 
 .history-clear {

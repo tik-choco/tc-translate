@@ -1,4 +1,4 @@
-import { BookType, History, Languages, Mic, Moon, Settings, Sun } from 'lucide-preact'
+import { BookType, ExternalLink, History, Languages, Mic, Moon, Settings, Sun } from 'lucide-preact'
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import '@tik-choco/mistai/ui.css'
 import './app.css'
@@ -18,6 +18,7 @@ import {
   subscribeUiMessages,
   t as msg,
 } from './i18n'
+import { familyAppUrl } from './lib/familyApps'
 import { translateUiMessages } from './lib/uiTranslation'
 
 const loadKanjiPanel = () => import('./features/kanji/KanjiConverterPanel').then((m) => m.KanjiConverterPanel)
@@ -102,6 +103,16 @@ export function App() {
               </button>
             </>
           ) : null}
+          <a
+            class="icon-button"
+            href={familyAppUrl('tc-lingo')}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={msg('open-lingo')}
+            aria-label={msg('open-lingo')}
+          >
+            <ExternalLink size={20} />
+          </a>
           <button
             type="button"
             class="icon-button"
@@ -216,6 +227,8 @@ export function App() {
           onSelect={t.restoreHistoryItem}
           onDelete={t.deleteHistoryItem}
           onClear={t.clearHistory}
+          onSend={t.sendToLingo}
+          sentId={t.sentToLingoId}
         />
       </section>
 

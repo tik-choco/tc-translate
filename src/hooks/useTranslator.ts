@@ -419,6 +419,7 @@ export function useTranslator() {
   const stableHandleImageFile = useStableCallback(handleImageFile)
   const stableDeleteHistoryItem = useStableCallback(historyPanel.deleteHistoryItem)
   const stableClearHistory = useStableCallback(historyPanel.clearHistory)
+  const stableSendToLingo = useStableCallback(historyPanel.sendToLingo)
   const stableSpeak = useStableCallback(speech.speak)
   const stableDownloadSpeech = useStableCallback(speech.downloadAudio)
   const stableCopyProofread = useStableCallback(proofread.copyProofread)
@@ -432,6 +433,7 @@ export function useTranslator() {
     ...historyPanel,
     deleteHistoryItem: stableDeleteHistoryItem,
     clearHistory: stableClearHistory,
+    sendToLingo: stableSendToLingo,
     llmProviders: llmConfigState.config.providers,
     showSettings,
     setShowSettings,
