@@ -325,7 +325,7 @@
   margin: 16px 0;
 }
 
-/* タスク別モデル割り当て（vision/orchestrator/worker等）の1行。ラベルと
+/* タスク別モデル割り当て（既定/Vision/TTS/STT/マイク）の1行。ラベルと
    select群を2カラムグリッドで並べる。 */
 .task-model-item {
   display: grid;
@@ -350,6 +350,33 @@
   padding-top: 8px;
 }
 
+/* タスク行ラベルのhoverツールチップ。data-tip属性の説明文をラベル直下に
+   表示する。 */
+.task-model-item > span[data-tip] {
+  position: relative;
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.task-model-item > span[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  box-shadow: var(--shadow-2);
+}
+
 .task-model-fields {
   display: flex;
   flex-direction: column;
@@ -365,4 +392,103 @@
 .task-model-field select {
   width: 100%;
   min-width: 0;
+}
+
+/* AI Networkルーム由来のカード（room内の他participantが提供するモデル/
+   接続）を、自分で設定したもの（.settings-flat-section-connection /
+   -models それぞれの背景tint）と一目で区別するための強調。破線のaccent枠線
+   ＋共通のprimary-soft背景に統一する。セレクタの詳細度を
+   .settings-flat-section-connection/-models .model-row（クラス2つ）より
+   高く（.settings-flat-section .model-row.model-row-network、クラス3つ）
+   しているため、ソース順に関わらずこちらが勝つ。 */
+.settings-flat-section .model-row.model-row-network {
+  border: 1px dashed var(--primary);
+  background: var(--primary-soft);
+}
+
+/* 提供するモデルのチェックボックス一覧（ネットワークタブ、providerカード
+   内）。model-row-listのグリッドと違い、チェックボックス付きの単純な縦積み
+   リスト。 */
+.network-share-models {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 「提供するモデル」見出し。素のlabelだと本文サイズで浮くので、
+   .settings-modal label > span（input.css）の小見出しスタイルに揃える。 */
+.network-share-models > label,
+.settings-modal .network-share-models > label {
+  margin-bottom: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.network-share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* 1行 = チェックボックス（2行ぶち抜き）＋ ラベル/モデル名の2行テキスト。
+   .settings-modal label（input.css の column flex）と label > span の
+   大文字見出しスタイルに勝つよう、.settings-modal 込みの詳細度でも
+   同じ宣言を当てておく。 */
+.network-share-item,
+.settings-modal .network-share-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 1px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.network-share-item:hover {
+  background: var(--surface-2);
+}
+
+/* 選択中の行はアクセントの薄いtintで「提供中」であることを示す。 */
+.network-share-item:has(input:checked) {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+
+.network-share-item input[type='checkbox'] {
+  grid-row: 1 / 3;
+  margin: 0;
+}
+
+.network-share-item-label,
+.settings-modal .network-share-item > .network-share-item-label {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.network-share-item-model,
+.settings-modal .network-share-item > .network-share-item-model {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

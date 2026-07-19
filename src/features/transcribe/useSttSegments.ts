@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import { sttSegmentIntervalMs } from '../../constants'
 import { t } from '../../i18n'
 import { localizeNetworkError, requestNetworkStt } from '../../lib/network'
+import { networkVoiceModelParam } from '../../lib/networkModels'
 import { startRealtimeStt, type RealtimeSttHandle } from '../../lib/realtimeStt'
 import { resolveSttConnection, transcribeAudio } from '../../lib/voice'
 import type { SharedLlmConfigV1 } from '../../lib/llmConfig'
@@ -76,7 +77,7 @@ export function useSttSegments(params: {
         // The Network STT wire format has no language field; the hint is
         // direct-API only.
         const text = target.useNetwork
-          ? await requestNetworkStt(target.roomId, { audio: blob, model: target.model, fileName })
+          ? await requestNetworkStt(target.roomId, { audio: blob, model: networkVoiceModelParam(target.model), fileName })
           : await transcribeAudio({
               connection: target.connection,
               model: target.model,

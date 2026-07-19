@@ -6,12 +6,13 @@ import { useDraftField } from '../hooks/useDraftField'
 import { t } from '../i18n'
 import { fetchModelIds } from '../lib/api'
 import { languageOptionLabel } from '../lib/language'
+import { isNetworkProviderBaseUrl } from '../lib/networkModels'
 import type { ConsumerStatus, ProviderLogEntry } from '@tik-choco/mistai'
 import type { LlmProviderV1, ModelPresetV1 } from '../lib/llmConfig'
 import type { NetworkProviderPeer, NetworkProviderStatus } from '../hooks/useNetworkProvider'
 import type { ProviderSettings, ReasoningEffort, ReasoningTask, SttSettings, TtsSettings } from '../types'
 import { NetworkConsumerIndicator, NetworkProviderStatusPanel } from './NetworkStatusPanel'
-import { VoiceSettingsPanel } from './VoiceSettingsPanel'
+import { VoiceTaskRows } from './VoiceSettingsPanel'
 
 type SettingsModalProps = {
   nativeLanguage: string
@@ -27,9 +28,8 @@ type SettingsModalProps = {
   onRemovePreset: (id: string) => void
   onSetDefaultPresetId: (id: string) => void
   onSetVisionPresetId: (id: string) => void
-  onSetOrchestratorPresetId: (id: string) => void
-  onSetWorkerPresetId: (id: string) => void
   onSetReasoningEffort: (task: ReasoningTask, effort: ReasoningEffort) => void
+  onSetNetworkProviderPresetIds: (ids: string[]) => void
   ttsSettings: TtsSettings
   onUpdateTtsSettings: (next: TtsSettings) => void
   sttSettings: SttSettings
@@ -49,12 +49,12 @@ type SettingsModalProps = {
   networkProviderUpstreamConfigured: boolean
 }
 
-type SettingsTab = 'connection' | 'tasks' | 'voice'
+type SettingsTab = 'connection' | 'network' | 'tasks'
 
 const TABS: Array<{ id: SettingsTab; labelKey: string }> = [
   { id: 'connection', labelKey: 'settings-tab-connection' },
+  { id: 'network', labelKey: 'settings-tab-network' },
   { id: 'tasks', labelKey: 'settings-tab-tasks' },
-  { id: 'voice', labelKey: 'settings-tab-voice' },
 ]
 
 function getHostLabel(baseUrl: string): string {
@@ -79,9 +79,8 @@ export const SettingsModal = memo(function SettingsModal({
   onRemovePreset,
   onSetDefaultPresetId,
   onSetVisionPresetId,
-  onSetOrchestratorPresetId,
-  onSetWorkerPresetId,
   onSetReasoningEffort,
+  onSetNetworkProviderPresetIds,
   ttsSettings,
   onUpdateTtsSettings,
   sttSettings,
@@ -239,12 +238,18 @@ export const SettingsModal = memo(function SettingsModal({
   // Called whenever a row's provider selection settles on `providerId`.
   // `force` re-fetches even if a cached result exists (used when switching
   // to a different provider, whose models the cache can't be trusted for).
+  //
+  // The AI接続 tab manages HTTP providers/presets regardless of which
+  // transport (`settings.connection`) the AI Network tab has selected - STT/
+  // TTS and the network-provider upstream resolve against them either way -
+  // so the only thing that skips a fetch here is the provider itself being
+  // the `mist-network://` pseudo-provider, which has no HTTP model list.
   function ensureProviderModelsFetched(providerId: string, options: { force?: boolean } = {}): void {
     if (!providerId) return
-    if (settings.connection === 'network') return
     if (!options.force && modelsByProviderId[providerId] !== undefined) return
     const provider = settings.providers.find((entry) => entry.id === providerId)
-    if (provider) void fetchProviderModels(provider)
+    if (!provider || isNetworkProviderBaseUrl(provider.baseUrl)) return
+    void fetchProviderModels(provider)
   }
 
   // While a fetch is in flight (or hasn't run yet but has 0 cached models),
@@ -262,13 +267,31 @@ export const SettingsModal = memo(function SettingsModal({
     return provider.label || getHostLabel(provider.baseUrl)
   }
 
+  // True when `providerId` resolves to the `mist-network://` pseudo-provider
+  // (a model discovered via the AI Network room), as opposed to a regular
+  // HTTP connection the user configured directly.
+  function isNetworkPresetProvider(providerId: string): boolean {
+    const provider = settings.providers.find((entry) => entry.id === providerId)
+    return provider ? isNetworkProviderBaseUrl(provider.baseUrl) : false
+  }
+
   function getPresetBadges(preset: ModelPresetV1): string[] {
     const badges: string[] = []
     if (settings.defaultPresetId === preset.id) badges.push(t('llm-preset-default-badge'))
     if (settings.visionPresetId === preset.id) badges.push(t('llm-task-badge-vision'))
-    if (settings.orchestratorPresetId === preset.id) badges.push(t('llm-task-badge-orchestrator'))
-    if (settings.workerPresetId === preset.id) badges.push(t('llm-task-badge-worker'))
+    if (isNetworkPresetProvider(preset.providerId)) badges.push(t('llm-preset-network-badge'))
+    if (settings.networkProviderPresetIds.includes(preset.id)) badges.push(t('llm-preset-shared-badge'))
     return badges
+  }
+
+  // --- AI Network (network tab) handlers ------------------------------------
+
+  // Toggles a preset's membership in the set of presets advertised to the AI
+  // Network room (settings.networkProviderPresetIds), preserving order.
+  function handleToggleShareModel(presetId: string, checked: boolean): void {
+    const current = settings.networkProviderPresetIds
+    const next = checked ? [...current, presetId] : current.filter((id) => id !== presetId)
+    onSetNetworkProviderPresetIds(next)
   }
 
   function handleOverlayMouseDown(event: MouseEvent): void {
@@ -303,7 +326,8 @@ export const SettingsModal = memo(function SettingsModal({
         return next
       })
       const provider = settings.providers.find((entry) => entry.id === id)
-      if (provider) void fetchProviderModels({ ...provider, [field]: value })
+      const nextBaseUrl = field === 'baseUrl' ? value : provider?.baseUrl ?? ''
+      if (provider && !isNetworkProviderBaseUrl(nextBaseUrl)) void fetchProviderModels({ ...provider, [field]: value })
     }
   }
 
@@ -456,8 +480,6 @@ export const SettingsModal = memo(function SettingsModal({
     if (!ok) return
     onRemovePreset(id)
     if (settings.visionPresetId === id) onSetVisionPresetId('')
-    if (settings.orchestratorPresetId === id) onSetOrchestratorPresetId('')
-    if (settings.workerPresetId === id) onSetWorkerPresetId('')
     if (editingPresetId === id) setEditingPresetId('')
   }
 
@@ -465,7 +487,11 @@ export const SettingsModal = memo(function SettingsModal({
 
   function renderProviderRow(provider: LlmProviderV1) {
     const isEditing = editingProviderId === provider.id
+    const isNetworkProvider = isNetworkProviderBaseUrl(provider.baseUrl)
     const hostLabel = getHostLabel(provider.baseUrl)
+    // The raw `mist-network://<room>` host is meaningless to a user - show
+    // a translated note instead, same idea as the badge on network presets.
+    const secondLine = isNetworkProvider ? t('llm-connection-network-note') : hostLabel
 
     if (isEditing) {
       return (
@@ -509,10 +535,10 @@ export const SettingsModal = memo(function SettingsModal({
     }
 
     return (
-      <div class="model-row" key={provider.id}>
+      <div class={`model-row${isNetworkProvider ? ' model-row-network' : ''}`} key={provider.id}>
         <button type="button" class="model-row-main" onClick={() => handleOpenEditProvider(provider)}>
           <span class="model-row-label">{provider.label || hostLabel}</span>
-          <span class="model-row-model">{hostLabel}</span>
+          <span class="model-row-model">{secondLine}</span>
         </button>
         <span
           class="preset-chip-remove model-row-remove"
@@ -662,8 +688,9 @@ export const SettingsModal = memo(function SettingsModal({
     }
 
     const badges = getPresetBadges(preset)
+    const isNetworkPreset = isNetworkPresetProvider(preset.providerId)
     return (
-      <div class="model-row" key={preset.id}>
+      <div class={`model-row${isNetworkPreset ? ' model-row-network' : ''}`} key={preset.id}>
         <button type="button" class="model-row-main" onClick={() => handleOpenEditPreset(preset)}>
           <span class="model-row-label">{preset.label}</span>
           <span class="model-row-model">{preset.model}</span>
@@ -835,13 +862,34 @@ export const SettingsModal = memo(function SettingsModal({
   // Mirrors resolveVoice's fallback (lib/llmConfig.ts): the default preset's
   // provider with no further substitute. settings.baseUrl would paper over an
   // unresolved default preset with the built-in OpenAI URL, hiding the exact
-  // state VoiceSettingsPanel needs to warn about.
+  // state VoiceTaskRows needs to warn about.
   const defaultPreset = settings.presets.find((preset) => preset.id === settings.defaultPresetId)
   const defaultPresetProvider = settings.providers.find((provider) => provider.id === defaultPreset?.providerId)
   const defaultVoiceConnection = {
     baseUrl: defaultPresetProvider?.baseUrl ?? '',
     apiKey: defaultPresetProvider?.apiKey ?? '',
   }
+
+  // Presets shareable to the AI Network room: must resolve to a real HTTP
+  // provider - a preset whose provider is itself the `mist-network://`
+  // pseudo-provider (i.e. imported from the room) can't be re-shared.
+  const eligiblePresets = settings.presets.filter((preset) => {
+    const provider = settings.providers.find((entry) => entry.id === preset.providerId)
+    return provider !== undefined && !isNetworkProviderBaseUrl(provider.baseUrl)
+  })
+
+  // VoiceTaskRows only uses this list to resolve a direct HTTP
+  // connection (warnings / TTS voice fetch), so network pseudo-providers are
+  // excluded. Network-imported presets themselves ARE selectable in the
+  // TTS/STT model pickers (settings.presets, passed below as llmPresets, is
+  // unfiltered) and route through the network transport automatically via
+  // the derived 'network' engine.
+  const voiceLlmProviders = llmProviders.filter((provider) => !isNetworkProviderBaseUrl(provider.baseUrl))
+
+  // The room's mist-network:// pseudo-provider id, '' when none imported yet
+  // (no AI Network room joined/consumed). Drives the "AI Networkにおまかせ"
+  // option in the TTS/STT model pickers.
+  const networkVoiceProviderId = settings.providers.find((provider) => isNetworkProviderBaseUrl(provider.baseUrl))?.id ?? ''
 
   return (
     <div
@@ -904,104 +952,116 @@ export const SettingsModal = memo(function SettingsModal({
           <div class="settings-tab-panel" role="tabpanel">
             <p class="hint">{t('llm-connections-hint')}</p>
 
-            <div class="connection-mode-toggle" role="radiogroup">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={settings.connection === 'api'}
-                class={`connection-mode-button ${settings.connection === 'api' ? 'connection-mode-button-active' : ''}`}
-                onClick={() => onUpdateSettings({ ...settings, connection: 'api' })}
-              >
-                <Server size={14} />
-                {t('llm-connection-mode-direct')}
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={settings.connection === 'network'}
-                class={`connection-mode-button ${settings.connection === 'network' ? 'connection-mode-button-active' : ''}`}
-                onClick={() => onUpdateSettings({ ...settings, connection: 'network' })}
-              >
-                <Network size={14} />
-                {t('llm-connection-mode-network')}
-              </button>
-            </div>
-
-            {settings.connection === 'network' ? (
-              <>
-                <p class="hint">{t('network-consumer-hint')}</p>
-                <label>
-                  <span>Room ID</span>
-                  <input
-                    value={roomIdField.draft}
-                    onInput={(event) => roomIdField.onInput(event.currentTarget.value)}
-                    onFocus={roomIdField.onFocus}
-                    onBlur={roomIdField.onBlur}
-                    placeholder={t('room-id-consumer-placeholder')}
-                  />
-                </label>
-                <NetworkConsumerIndicator status={networkConsumerStatus} updatedAt={networkConsumerUpdatedAt} variant="detailed" />
-
-                <hr class="settings-section-divider" />
-              </>
-            ) : null}
-
-            {/* Providers/presets stay editable in Network mode too: STT/TTS and
-                the network-provider upstream resolve against them regardless of
-                which transport the main connection uses. */}
+            {/* Providers/presets stay editable regardless of transport: STT/TTS
+                and the network-provider upstream resolve against them whether
+                the AI Network tab has "Use a network LLM" on or off. */}
             {renderDirectApiSection()}
+          </div>
+        ) : null}
 
-            <hr class="settings-section-divider" />
+        {activeTab === 'network' ? (
+          <div class="settings-tab-panel" role="tabpanel">
+            <p class="hint">{t('network-tab-hint')}</p>
 
-            <p class="hint">{t('network-provider-hint')}</p>
-            <div class="settings-role-card">
-              <label class="settings-role-head">
-                <input
-                  type="checkbox"
-                  checked={settings.networkProviderEnabled}
-                  onChange={(event) =>
-                    onUpdateSettings({ ...settings, networkProviderEnabled: event.currentTarget.checked })
-                  }
-                />
-                <span class="settings-role-title">{t('network-provider-toggle')}</span>
-              </label>
-              {settings.networkProviderEnabled ? (
-                <div class="settings-role-body">
-                  {settings.connection !== 'network' ? (
-                    <label>
-                      <span>Room ID</span>
-                      <input
-                        value={roomIdField.draft}
-                        onInput={(event) => roomIdField.onInput(event.currentTarget.value)}
-                        onFocus={roomIdField.onFocus}
-                        onBlur={roomIdField.onBlur}
-                        placeholder={t('room-id-provider-placeholder')}
-                      />
-                    </label>
-                  ) : null}
-                  <NetworkProviderStatusPanel
-                    providerStatus={networkProviderStatus}
-                    providerStatusUpdatedAt={networkProviderStatusUpdatedAt}
-                    providerError={networkProviderError}
-                    ownNodeId={networkProviderOwnNodeId}
-                    roomId={networkProviderRoomId}
-                    peers={networkProviderPeers}
-                    consumerCount={networkProviderConsumerCount}
-                    logs={networkProviderLogs}
-                    upstreamConfigured={networkProviderUpstreamConfigured}
+            <label>
+              <span>Room ID</span>
+              <input
+                value={roomIdField.draft}
+                onInput={(event) => roomIdField.onInput(event.currentTarget.value)}
+                onFocus={roomIdField.onFocus}
+                onBlur={roomIdField.onBlur}
+                placeholder={t('room-id-consumer-placeholder')}
+              />
+            </label>
+
+            <div class="settings-role-group">
+              <div class="settings-role-card">
+                <label class="settings-role-head">
+                  <input
+                    type="checkbox"
+                    checked={settings.connection === 'network'}
+                    onChange={(event) =>
+                      onUpdateSettings({ ...settings, connection: event.currentTarget.checked ? 'network' : 'api' })
+                    }
                   />
-                </div>
-              ) : null}
+                  <span class="settings-role-title">
+                    <Network size={15} />
+                    {t('network-consumer-toggle')}
+                  </span>
+                </label>
+                <p class="settings-role-desc">{t('network-consumer-hint')}</p>
+                {settings.connection === 'network' ? (
+                  <div class="settings-role-body">
+                    <NetworkConsumerIndicator status={networkConsumerStatus} updatedAt={networkConsumerUpdatedAt} variant="detailed" />
+                    <p class="settings-role-desc">{t('network-auto-import-hint')}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div class="settings-role-card">
+                <label class="settings-role-head">
+                  <input
+                    type="checkbox"
+                    checked={settings.networkProviderEnabled}
+                    onChange={(event) =>
+                      onUpdateSettings({ ...settings, networkProviderEnabled: event.currentTarget.checked })
+                    }
+                  />
+                  <span class="settings-role-title">
+                    <Server size={15} />
+                    {t('network-provider-toggle')}
+                  </span>
+                </label>
+                <p class="settings-role-desc">{t('network-provider-hint')}</p>
+                {settings.networkProviderEnabled ? (
+                  <div class="settings-role-body">
+                    {/* The what/why of sharing lives in the card's settings-role-desc
+                        (network-provider-hint) - repeating it here as another hint
+                        paragraph just pushed the list below the fold. */}
+                    <div class="network-share-models">
+                      <label>{t('network-share-models-heading')}</label>
+                      {eligiblePresets.length === 0 ? (
+                        <p class="hint">{t('network-share-models-empty')}</p>
+                      ) : (
+                        <div class="network-share-list">
+                          {eligiblePresets.map((preset) => (
+                            <label class="network-share-item" key={preset.id}>
+                              <input
+                                type="checkbox"
+                                checked={settings.networkProviderPresetIds.includes(preset.id)}
+                                onChange={(event) => handleToggleShareModel(preset.id, event.currentTarget.checked)}
+                              />
+                              <span class="network-share-item-label">{preset.label || preset.model}</span>
+                              <span class="network-share-item-model">
+                                {preset.model} · {getProviderLabel(preset.providerId)}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <NetworkProviderStatusPanel
+                      providerStatus={networkProviderStatus}
+                      providerStatusUpdatedAt={networkProviderStatusUpdatedAt}
+                      providerError={networkProviderError}
+                      ownNodeId={networkProviderOwnNodeId}
+                      roomId={networkProviderRoomId}
+                      peers={networkProviderPeers}
+                      consumerCount={networkProviderConsumerCount}
+                      logs={networkProviderLogs}
+                      upstreamConfigured={networkProviderUpstreamConfigured}
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         ) : null}
 
         {activeTab === 'tasks' ? (
           <div class="settings-tab-panel" role="tabpanel">
-            <p class="hint">{t('llm-tasks-hint')}</p>
-
             <div class="task-model-item">
-              <span>{t('llm-task-default-label')}</span>
+              <span data-tip={t('llm-task-tip-default')}>{t('llm-task-default-label')}</span>
               <div class="task-model-fields">
                 <div class="task-model-field">
                   <select
@@ -1022,7 +1082,7 @@ export const SettingsModal = memo(function SettingsModal({
             </div>
 
             <div class="task-model-item">
-              <span>{t('llm-role-vision-label')}</span>
+              <span data-tip={t('llm-task-tip-vision')}>{t('llm-role-vision-label')}</span>
               <div class="task-model-fields">
                 <div class="task-model-field">
                   <select
@@ -1039,70 +1099,20 @@ export const SettingsModal = memo(function SettingsModal({
                   </select>
                 </div>
                 {renderReasoningEffortSelect('vision', settings.visionReasoningEffort)}
-                <span class="model-status">{t('llm-role-current-model', { model: settings.visionModel })}</span>
               </div>
             </div>
 
-            <div class="task-model-item">
-              <span>{t('llm-role-orchestrator-label')}</span>
-              <div class="task-model-fields">
-                <div class="task-model-field">
-                  <select
-                    value={settings.orchestratorPresetId}
-                    onChange={(event) => onSetOrchestratorPresetId(event.currentTarget.value)}
-                    aria-label={t('llm-role-orchestrator-label')}
-                  >
-                    <option value="">{t('llm-role-same-as-default')}</option>
-                    {settings.presets.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.label || preset.id}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {renderReasoningEffortSelect('orchestrator', settings.orchestratorReasoningEffort)}
-                <span class="model-status">{t('llm-role-current-model', { model: settings.orchestratorModel })}</span>
-              </div>
-            </div>
-            <p class="hint">{t('orchestrator-model-hint')}</p>
-
-            <div class="task-model-item">
-              <span>{t('llm-role-worker-label')}</span>
-              <div class="task-model-fields">
-                <div class="task-model-field">
-                  <select
-                    value={settings.workerPresetId}
-                    onChange={(event) => onSetWorkerPresetId(event.currentTarget.value)}
-                    aria-label={t('llm-role-worker-label')}
-                  >
-                    <option value="">{t('llm-role-same-as-default')}</option>
-                    {settings.presets.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.label || preset.id}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {renderReasoningEffortSelect('worker', settings.workerReasoningEffort)}
-                <span class="model-status">{t('llm-role-current-model', { model: settings.workerModel })}</span>
-              </div>
-            </div>
-            <p class="hint">{t('worker-model-hint')}</p>
-            <p class="hint">{t('simul-model-hint')}</p>
-            <p class="hint">{t('llm-reasoning-effort-hint')}</p>
+            <VoiceTaskRows
+              ttsSettings={ttsSettings}
+              onUpdateTtsSettings={onUpdateTtsSettings}
+              sttSettings={sttSettings}
+              onUpdateSttSettings={onUpdateSttSettings}
+              llmProviders={voiceLlmProviders}
+              llmPresets={settings.presets}
+              defaultVoiceConnection={defaultVoiceConnection}
+              networkVoiceProviderId={networkVoiceProviderId}
+            />
           </div>
-        ) : null}
-
-        {activeTab === 'voice' ? (
-          <VoiceSettingsPanel
-            ttsSettings={ttsSettings}
-            onUpdateTtsSettings={onUpdateTtsSettings}
-            sttSettings={sttSettings}
-            onUpdateSttSettings={onUpdateSttSettings}
-            llmProviders={llmProviders}
-            llmPresets={settings.presets}
-            defaultVoiceConnection={defaultVoiceConnection}
-          />
         ) : null}
       </aside>
     </div>

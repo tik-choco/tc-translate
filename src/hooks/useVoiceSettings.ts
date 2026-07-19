@@ -1,40 +1,39 @@
 import { useMemo, useState } from 'preact/hooks'
 import { setVoiceConfig } from '../lib/llmConfigEdit'
-import { loadSttSettings, loadTtsSettings, saveSttSettings, saveTtsSettings } from '../lib/storage'
+import { loadSttSettings, saveSttSettings } from '../lib/storage'
+import { deriveVoiceEngine } from '../lib/voice'
 import type { SharedLlmConfigState } from './useSharedLlmConfig'
-import type { LocalSttSettings, LocalTtsSettings, SttSettings, TtsSettings } from '../types'
+import type { LocalSttSettings, SttSettings, TtsSettings } from '../types'
 
+// TTS has no app-local settings left: `engine` is derived from the shared llm
+// config (deriveVoiceEngine, lib/voice.ts) and model/voice/provider live in
+// `config.tts`. STT keeps `micDeviceId` app-local; its engine is derived the
+// same way from `config.stt`.
 export function useVoiceSettings(llmConfigState: SharedLlmConfigState) {
-  const [localTts, setLocalTts] = useState<LocalTtsSettings>(() => loadTtsSettings())
   const [localStt, setLocalStt] = useState<LocalSttSettings>(() => loadSttSettings())
 
   const ttsSettings = useMemo<TtsSettings>(() => {
     const shared = llmConfigState.config.tts
     return {
-      engine: localTts.engine,
+      engine: deriveVoiceEngine(llmConfigState.config, 'tts'),
       providerId: shared?.providerId,
       model: shared?.model ?? '',
       voice: shared?.voice ?? '',
     }
-  }, [localTts, llmConfigState.config.tts])
+  }, [llmConfigState.config])
 
   const sttSettings = useMemo<SttSettings>(() => {
     const shared = llmConfigState.config.stt
     return {
-      engine: localStt.engine,
+      engine: deriveVoiceEngine(llmConfigState.config, 'stt'),
       micDeviceId: localStt.micDeviceId,
       providerId: shared?.providerId,
       model: shared?.model ?? '',
     }
-  }, [localStt, llmConfigState.config.stt])
+  }, [localStt, llmConfigState.config])
 
   function updateTtsSettings(next: TtsSettings): void {
-    if (next.engine !== localTts.engine) {
-      const nextLocal: LocalTtsSettings = { engine: next.engine }
-      setLocalTts(nextLocal)
-      saveTtsSettings(nextLocal)
-    }
-
+    // next.engine is ignored: it's derived, not settable.
     if (next.providerId !== ttsSettings.providerId || next.model !== ttsSettings.model || next.voice !== ttsSettings.voice) {
       llmConfigState.save((config) => {
         setVoiceConfig(config, 'tts', { providerId: next.providerId, model: next.model, voice: next.voice })
@@ -43,8 +42,9 @@ export function useVoiceSettings(llmConfigState: SharedLlmConfigState) {
   }
 
   function updateSttSettings(next: SttSettings): void {
-    if (next.engine !== localStt.engine || next.micDeviceId !== localStt.micDeviceId) {
-      const nextLocal: LocalSttSettings = { engine: next.engine, micDeviceId: next.micDeviceId }
+    // next.engine is ignored: it's derived, not settable.
+    if (next.micDeviceId !== localStt.micDeviceId) {
+      const nextLocal: LocalSttSettings = { micDeviceId: next.micDeviceId }
       setLocalStt(nextLocal)
       saveSttSettings(nextLocal)
     }

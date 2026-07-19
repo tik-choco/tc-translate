@@ -34,8 +34,8 @@ export function createPreset(config: SharedLlmConfigV1, providerId: string, labe
   const preset: ModelPresetV1 = { id: newId(), label, providerId, model: '', temperature: 0.7 }
   config.presets.push(preset)
   // First preset ever created becomes the default automatically - otherwise
-  // every role (default/vision/orchestrator/worker) would keep resolving to
-  // nothing even though a preset now exists.
+  // every role (default/vision) would keep resolving to nothing even though
+  // a preset now exists.
   if (!config.defaultPresetId) config.defaultPresetId = preset.id
   return preset.id
 }
@@ -45,7 +45,7 @@ export function patchPreset(config: SharedLlmConfigV1, id: string, patch: Partia
   if (preset) Object.assign(preset, patch)
 }
 
-/** Removes a preset. If it was the default, the next remaining preset (if any) takes over; vision/orchestrator/worker pointers referencing it are left to the caller to clear (see useProviderSettings). */
+/** Removes a preset. If it was the default, the next remaining preset (if any) takes over; the vision pointer referencing it is left to the caller to clear (see useProviderSettings). */
 export function deletePreset(config: SharedLlmConfigV1, id: string): void {
   config.presets = config.presets.filter((entry) => entry.id !== id)
   if (config.defaultPresetId === id) config.defaultPresetId = config.presets[0]?.id ?? ''

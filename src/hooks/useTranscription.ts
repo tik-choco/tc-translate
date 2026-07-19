@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import { t } from '../i18n'
 import { maxRecordingDurationMs } from '../constants'
 import { localizeNetworkError, requestNetworkStt } from '../lib/network'
+import { networkVoiceModelParam } from '../lib/networkModels'
 import { resolveSttConnection, transcribeAudio } from '../lib/voice'
 import type { SharedLlmConfigV1 } from '../lib/llmConfig'
 import type { SttSettings } from '../types'
@@ -73,7 +74,7 @@ export function useTranscription({ sttSettings, llmConfig, roomId, speechLang, o
     setIsTranscribing(true)
     try {
       const text = networkConfigured
-        ? await requestNetworkStt(roomId, { audio, model: sttSettings.model, fileName })
+        ? await requestNetworkStt(roomId, { audio, model: networkVoiceModelParam(sttSettings.model), fileName })
         : await transcribeAudio({
             connection,
             model: sttSettings.model,

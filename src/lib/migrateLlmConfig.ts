@@ -33,7 +33,6 @@ import type {
   LegacyVoiceSettings,
   LocalProviderSettings,
   LocalSttSettings,
-  LocalTtsSettings,
 } from '../types'
 
 function readRaw(key: string): Record<string, unknown> | null {
@@ -47,8 +46,9 @@ function readRaw(key: string): Record<string, unknown> | null {
   }
 }
 
-// The new local shapes (LocalProviderSettings/LocalTtsSettings/LocalSttSettings)
-// never have a `baseUrl` field, so its presence marks the old (legacy) shape.
+// The new local shapes (LocalProviderSettings/LocalSttSettings; TTS no longer
+// has a local shape at all - see below) never have a `baseUrl` field, so its
+// presence marks the old (legacy) shape.
 function hasBaseUrlField(raw: Record<string, unknown>): boolean {
   return typeof raw.baseUrl === 'string'
 }
@@ -164,14 +164,9 @@ export function migrateLegacyLocalSettings(): void {
       connection: legacy.connection,
       networkProviderEnabled: legacy.networkProviderEnabled,
       visionPresetId,
-      // No legacy equivalent for these - simultaneous translation is new, so
-      // both start unset and fall back to the default preset's model.
-      orchestratorPresetId: '',
-      workerPresetId: '',
+      networkProviderPresetIds: [],
       defaultReasoningEffort: 'none',
       visionReasoningEffort: 'none',
-      orchestratorReasoningEffort: 'none',
-      workerReasoningEffort: 'none',
     }
     localStorage.setItem(settingsStorageKey, JSON.stringify(newLocalProvider))
   }
@@ -194,8 +189,9 @@ export function migrateLegacyLocalSettings(): void {
       if (cfg.tts) cfgChanged = true
     }
 
-    const newLocalTts: LocalTtsSettings = { engine: legacy.engine }
-    localStorage.setItem(ttsSettingsStorageKey, JSON.stringify(newLocalTts))
+    // No local TTS key to rewrite anymore - engine is derived from the
+    // shared config (see deriveVoiceEngine in lib/voice.ts), not stored, so
+    // `legacy.engine` above is simply discarded.
   }
 
   if (sttIsLegacy) {
@@ -212,7 +208,9 @@ export function migrateLegacyLocalSettings(): void {
       if (cfg.stt) cfgChanged = true
     }
 
-    const newLocalStt: LocalSttSettings = { engine: legacy.engine, micDeviceId: legacy.micDeviceId }
+    // engine is derived (see deriveVoiceEngine in lib/voice.ts), not stored -
+    // `legacy.engine` is discarded, only `micDeviceId` carries over.
+    const newLocalStt: LocalSttSettings = { micDeviceId: legacy.micDeviceId }
     localStorage.setItem(sttSettingsStorageKey, JSON.stringify(newLocalStt))
   }
 

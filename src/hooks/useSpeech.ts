@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { localizeNetworkError, requestNetworkTts } from '../lib/network'
+import { networkVoiceModelParam } from '../lib/networkModels'
 import { resolveTtsConnection, synthesizeSpeech } from '../lib/voice'
 import type { SharedLlmConfigV1 } from '../lib/llmConfig'
 import type { TtsSettings } from '../types'
@@ -116,7 +117,7 @@ export function useSpeech({ ttsSettings, llmConfig, roomId }: UseSpeechParams) {
 
     if (useNetworkEngine) {
       void playFromSource(
-        () => requestNetworkTts(roomId, { text, model: ttsSettings.model, voice: ttsSettings.voice }),
+        () => requestNetworkTts(roomId, { text, model: networkVoiceModelParam(ttsSettings.model), voice: ttsSettings.voice }),
         text,
         lang,
         id,
@@ -195,7 +196,7 @@ export function useSpeech({ ttsSettings, llmConfig, roomId }: UseSpeechParams) {
     const generation = ++downloadGenerationRef.current
 
     const getBlob = useNetworkEngine
-      ? () => requestNetworkTts(roomId, { text, model: ttsSettings.model, voice: ttsSettings.voice })
+      ? () => requestNetworkTts(roomId, { text, model: networkVoiceModelParam(ttsSettings.model), voice: ttsSettings.voice })
       : () => synthesizeSpeech({ connection, model: ttsSettings.model, voice: ttsSettings.voice, text })
 
     setSpeechError('')

@@ -7,7 +7,7 @@ export type ProviderConnection = 'api' | 'network'
 // field" — requests always include reasoning_effort, 'none' included.
 export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high'
 
-export type ReasoningTask = 'default' | 'vision' | 'orchestrator' | 'worker'
+export type ReasoningTask = 'default' | 'vision'
 
 // App-local settings persisted at `tc-translate-provider-settings-v1`.
 // Connection details (baseUrl/apiKey/model/temperature) now live in the
@@ -29,22 +29,16 @@ export type LocalProviderSettings = {
    */
   visionPresetId: string
   /**
-   * Id of the preset used for the simultaneous-translation orchestrator call
-   * (plans the fan-out; see lib/simultaneousTranslate.ts). '' falls back to
-   * the default preset's model, mirroring visionPresetId.
+   * Ids of presets (in the shared llm config) shared to the LLM Network when
+   * networkProviderEnabled; their labels (falling back to model ids, see
+   * advertisedModelName in lib/networkModels.ts) are advertised via
+   * provider_hello.models, and incoming requests naming one route to the
+   * matching preset's connection.
    */
-  orchestratorPresetId: string
-  /**
-   * Id of the preset used for the simultaneous-translation worker calls (one
-   * per fanned-out target language). '' falls back to the default preset's
-   * model, mirroring visionPresetId.
-   */
-  workerPresetId: string
+  networkProviderPresetIds: string[]
   /** Per-task reasoning_effort, always sent with the request (default 'none'). */
   defaultReasoningEffort: ReasoningEffort
   visionReasoningEffort: ReasoningEffort
-  orchestratorReasoningEffort: ReasoningEffort
-  workerReasoningEffort: ReasoningEffort
 }
 
 // Runtime settings used throughout the app: `LocalProviderSettings` merged
@@ -57,22 +51,22 @@ export type ProviderSettings = {
   apiKey: string
   model: string
   visionModel: string
-  /** Model for the simultaneous-translation orchestrator call. Falls back to `defaultResolvedProvider.orchestratorModel` (a stronger model), independent of `model`, when unset. */
-  orchestratorModel: string
-  /** Model for the simultaneous-translation worker calls. Falls back to `defaultResolvedProvider.workerModel` (a lighter model), independent of `model`, when unset. */
-  workerModel: string
   temperature: number
   /** reasoning_effort for default-task requests. Always sent to the API, 'none' included. */
   reasoningEffort: ReasoningEffort
   visionReasoningEffort: ReasoningEffort
-  orchestratorReasoningEffort: ReasoningEffort
-  workerReasoningEffort: ReasoningEffort
   connection: ProviderConnection
   roomId: string
   networkProviderEnabled: boolean
   visionPresetId: string
-  orchestratorPresetId: string
-  workerPresetId: string
+  /**
+   * Ids of presets (in the shared llm config) shared to the LLM Network when
+   * networkProviderEnabled; their labels (falling back to model ids, see
+   * advertisedModelName in lib/networkModels.ts) are advertised via
+   * provider_hello.models, and incoming requests naming one route to the
+   * matching preset's connection.
+   */
+  networkProviderPresetIds: string[]
   /** Every connection/preset in the shared llm config, for the Settings UI's connection/preset management lists and pickers. */
   providers: LlmProviderV1[]
   presets: ModelPresetV1[]
@@ -94,16 +88,12 @@ export type LegacyProviderSettings = {
 
 export type VoiceEngine = 'browser' | 'api' | 'network'
 
-// App-local TTS settings persisted at `tc-translate-tts-settings-v1`. The
-// model/voice/provider now live in the shared config's `tts` field; only the
-// engine choice (browser vs. API vs. Network) is app-local.
-export type LocalTtsSettings = {
-  engine: VoiceEngine
-}
-
-// Runtime TTS settings: `LocalTtsSettings.engine` merged with the shared
-// config's `tts` field. `providerId` absent means "same provider as the
-// default LLM preset" (see resolveVoice in lib/llmConfig.ts).
+// Runtime TTS settings: the shared config's `tts` field, with `engine`
+// DERIVED (not app-local/stored) via deriveVoiceEngine in lib/voice.ts - an
+// unset/blank `model` means 'browser'; otherwise it reflects whether the
+// resolved provider is a Network room or a plain API endpoint. `providerId`
+// absent means "same provider as the default LLM preset" (see resolveVoice
+// in lib/llmConfig.ts).
 export type TtsSettings = {
   engine: VoiceEngine
   providerId?: string
@@ -120,20 +110,25 @@ export type LegacyTtsSettings = {
   engine: VoiceEngine
 }
 
-export type SttEngine = 'api' | 'network' | 'browser'
+// Same union as VoiceEngine; kept as a separate name since call sites
+// (useTranscription, useSttSegments, ...) refer to the STT engine by this type.
+export type SttEngine = VoiceEngine
 
-// App-local STT settings persisted at `tc-translate-stt-settings-v1`. The
-// model/provider now live in the shared config's `stt` field; engine and mic
-// selection stay app-local.
+// App-local STT settings persisted at `tc-translate-stt-settings-v1`. Only
+// mic selection stays app-local; model/provider live in the shared config's
+// `stt` field and engine is DERIVED (see lib/voice.ts deriveVoiceEngine), not
+// stored here.
 export type LocalSttSettings = {
-  engine: SttEngine
   /** Preferred audio input deviceId; empty string means the system default. */
   micDeviceId: string
 }
 
 // Runtime STT settings: `LocalSttSettings` merged with the shared config's
-// `stt` field. `providerId` absent means "same provider as the default LLM
-// preset" (see resolveVoice in lib/llmConfig.ts).
+// `stt` field, with `engine` DERIVED (not app-local/stored) via
+// deriveVoiceEngine in lib/voice.ts - an unset/blank `model` means 'browser';
+// otherwise it reflects whether the resolved provider is a Network room or a
+// plain API endpoint. `providerId` absent means "same provider as the
+// default LLM preset" (see resolveVoice in lib/llmConfig.ts).
 export type SttSettings = {
   engine: SttEngine
   micDeviceId: string
