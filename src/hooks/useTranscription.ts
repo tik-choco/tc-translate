@@ -142,7 +142,22 @@ export function useTranscription({ sttSettings, llmConfig, roomId, speechLang, o
       // 'no-speech' just means a silent stretch; the onend restart handles it.
       if (event.error === 'no-speech') return
       listeningRef.current = false
-      setTranscriptionError(event.error || t('stt-recognition-error'))
+      // Web Speech API error codes are raw English identifiers ('network',
+      // 'not-allowed', …) — never show them to the user as-is. 'network' in
+      // particular means the browser's own cloud recognizer is unreachable,
+      // not anything about the app's configured STT provider.
+      const message =
+        event.error === 'network'
+          ? t('stt-browser-network-error')
+          : event.error === 'not-allowed' || event.error === 'service-not-allowed'
+            ? t('stt-mic-denied')
+            : event.error
+              ? `${t('stt-recognition-error')} (${event.error})`
+              : t('stt-recognition-error')
+      // If we got here via the silent no-model fallback (engine is api/network
+      // but unresolved), say so — otherwise the user thinks their configured
+      // STT failed when it was never used.
+      setTranscriptionError(useBrowser ? message : `${message} ${t('stt-fallback-hint')}`)
     }
 
     recognition.onend = () => {

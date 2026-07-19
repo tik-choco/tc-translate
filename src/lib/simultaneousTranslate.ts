@@ -40,7 +40,11 @@ export async function planTranslationFanOut(params: {
   }
 
   const content = await requestChatCompletion({
-    settings: { ...params.settings, model: params.settings.orchestratorModel },
+    settings: {
+      ...params.settings,
+      model: params.settings.orchestratorModel,
+      reasoningEffort: params.settings.orchestratorReasoningEffort,
+    },
     signal: params.signal,
     messages: [
       {
@@ -73,7 +77,11 @@ export async function translateSegmentForLanguage(params: {
   signal?: AbortSignal
 }): Promise<string> {
   const content = await requestChatCompletion({
-    settings: { ...params.settings, model: params.settings.workerModel },
+    settings: {
+      ...params.settings,
+      model: params.settings.workerModel,
+      reasoningEffort: params.settings.workerReasoningEffort,
+    },
     signal: params.signal,
     messages: [
       {

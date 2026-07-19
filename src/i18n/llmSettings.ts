@@ -1,10 +1,10 @@
 import type { MessageBundle } from './types'
 
-// The Settings modal's "Connections"/"Presets"/roles management UI (API
-// tab) - see components/LlmProviderCard.tsx, components/LlmPresetCard.tsx.
-// Split out from app.ts because this became a sizeable chunk of the API tab
-// once it grew from a single implicit connection into a real list, mirroring
-// how every other tik-choco app (tc-town, tc-news, ...) manages the shared
+// The Settings modal's connection/model/tasks management UI ("AI接続"/
+// "タスク" tabs) - see components/SettingsModal.tsx. Split out from app.ts
+// because this became a sizeable chunk of the settings once it grew from a
+// single implicit connection into a real list, mirroring how every other
+// tik-choco app (tc-town, tc-news, tc-pdf-viewer, ...) manages the shared
 // llm config.
 export const llmSettingsMessages = {
   en: {
@@ -41,6 +41,29 @@ export const llmSettingsMessages = {
     'llm-role-worker-label': 'Worker preset',
     'llm-role-same-as-default': 'Same as default',
     'llm-role-current-model': 'Currently: {model}',
+    'llm-connection-mode-direct': 'Direct API',
+    'llm-connection-mode-network': 'AI Network',
+    'llm-add-connection-tile': 'Add connection',
+    'llm-add-model-tile': 'Add model',
+    'llm-add-model-need-connection': 'Add a connection first',
+    'llm-no-models-hint': 'No models yet. Use "+ Add model" to create one.',
+    'llm-select-connection-placeholder': 'Select a connection...',
+    'llm-select-model-placeholder': 'Select a model...',
+    'llm-models-loading': 'Loading…',
+    'llm-model-fetch-error': 'Could not fetch the model list. Enter a model name manually.',
+    'llm-model-select-connection-first': 'Select a connection first',
+    'llm-label-placeholder': 'Label (optional)',
+    'llm-model-name-placeholder': 'Model name',
+    'llm-cancel': 'Cancel',
+    'llm-task-default-label': 'Default (translate / proofread / explain)',
+    'llm-tasks-hint':
+      'Roles left unset fall back to the default model. Orchestrator/worker instead fall back to their built-in defaults (claude-fable-5 / claude-sonnet-5).',
+    'llm-task-badge-vision': 'Vision',
+    'llm-task-badge-orchestrator': 'Orchestrator',
+    'llm-task-badge-worker': 'Worker',
+    'llm-reasoning-effort-label': 'reasoning_effort',
+    'llm-reasoning-effort-hint':
+      "Each task's reasoning_effort is always sent with the request — 'none' is sent explicitly too (disables reasoning on servers that support it).",
   },
   ja: {
     'llm-connections-heading': '接続',
@@ -76,6 +99,29 @@ export const llmSettingsMessages = {
     'llm-role-worker-label': 'ワーカー プリセット',
     'llm-role-same-as-default': '既定と同じ',
     'llm-role-current-model': '現在: {model}',
+    'llm-connection-mode-direct': '直接API接続',
+    'llm-connection-mode-network': 'AI Network',
+    'llm-add-connection-tile': '接続先を追加',
+    'llm-add-model-tile': 'モデルを追加',
+    'llm-add-model-need-connection': '先に接続先を追加してください',
+    'llm-no-models-hint': 'まだモデルがありません。「＋ モデルを追加」から追加してください。',
+    'llm-select-connection-placeholder': '接続先を選択...',
+    'llm-select-model-placeholder': 'モデルを選択...',
+    'llm-models-loading': '取得中…',
+    'llm-model-fetch-error': 'モデル一覧を取得できませんでした。手入力してください。',
+    'llm-model-select-connection-first': '先に接続先を選んでください',
+    'llm-label-placeholder': 'ラベル（省略可）',
+    'llm-model-name-placeholder': 'モデル名',
+    'llm-cancel': 'キャンセル',
+    'llm-task-default-label': '既定（翻訳・校正・説明）',
+    'llm-tasks-hint':
+      '未設定の役割は既定のモデルを使います。オーケストレーター/ワーカーは未設定のとき組み込みの既定（claude-fable-5 / claude-sonnet-5）を使います。',
+    'llm-task-badge-vision': 'Vision',
+    'llm-task-badge-orchestrator': 'オーケストレーター',
+    'llm-task-badge-worker': 'ワーカー',
+    'llm-reasoning-effort-label': 'reasoning_effort',
+    'llm-reasoning-effort-hint':
+      '各タスクの reasoning_effort はリクエストに常に含めて送信されます。none も明示的に送信され、対応サーバーでは思考（reasoning）を無効化します。',
   },
   'zh-CN': {
     'llm-connections-heading': '连接',
@@ -109,6 +155,28 @@ export const llmSettingsMessages = {
     'llm-role-worker-label': '工作预设',
     'llm-role-same-as-default': '与默认相同',
     'llm-role-current-model': '当前：{model}',
+    'llm-connection-mode-direct': '直接 API 连接',
+    'llm-connection-mode-network': 'AI Network',
+    'llm-add-connection-tile': '添加连接',
+    'llm-add-model-tile': '添加模型',
+    'llm-add-model-need-connection': '请先添加连接',
+    'llm-no-models-hint': '还没有模型。请通过“＋添加模型”来添加。',
+    'llm-select-connection-placeholder': '选择连接...',
+    'llm-select-model-placeholder': '选择模型...',
+    'llm-models-loading': '获取中…',
+    'llm-model-fetch-error': '无法获取模型列表。请手动输入。',
+    'llm-model-select-connection-first': '请先选择连接',
+    'llm-label-placeholder': '标签（可选）',
+    'llm-model-name-placeholder': '模型名称',
+    'llm-cancel': '取消',
+    'llm-task-default-label': '默认（翻译/校对/解释）',
+    'llm-tasks-hint': '未设置的角色将使用默认模型。编排器/工作角色未设置时使用内置默认（claude-fable-5 / claude-sonnet-5）。',
+    'llm-task-badge-vision': 'Vision',
+    'llm-task-badge-orchestrator': '编排',
+    'llm-task-badge-worker': '工作',
+    'llm-reasoning-effort-label': 'reasoning_effort',
+    'llm-reasoning-effort-hint':
+      '每个任务的 reasoning_effort 都会随请求一并发送——none 也会显式发送（在支持的服务器上禁用推理）。',
   },
   'zh-TW': {
     'llm-connections-heading': '連線',
@@ -142,5 +210,27 @@ export const llmSettingsMessages = {
     'llm-role-worker-label': '工作預設',
     'llm-role-same-as-default': '與預設相同',
     'llm-role-current-model': '目前：{model}',
+    'llm-connection-mode-direct': '直接 API 連線',
+    'llm-connection-mode-network': 'AI Network',
+    'llm-add-connection-tile': '新增連線',
+    'llm-add-model-tile': '新增模型',
+    'llm-add-model-need-connection': '請先新增連線',
+    'llm-no-models-hint': '尚未有模型。請透過「＋新增模型」來新增。',
+    'llm-select-connection-placeholder': '選擇連線...',
+    'llm-select-model-placeholder': '選擇模型...',
+    'llm-models-loading': '取得中…',
+    'llm-model-fetch-error': '無法取得模型清單。請手動輸入。',
+    'llm-model-select-connection-first': '請先選擇連線',
+    'llm-label-placeholder': '標籤（可省略）',
+    'llm-model-name-placeholder': '模型名稱',
+    'llm-cancel': '取消',
+    'llm-task-default-label': '預設（翻譯/校對/解說）',
+    'llm-tasks-hint': '未設定的角色將使用預設模型。協調器/工作角色未設定時使用內建預設（claude-fable-5 / claude-sonnet-5）。',
+    'llm-task-badge-vision': 'Vision',
+    'llm-task-badge-orchestrator': '協調',
+    'llm-task-badge-worker': '工作',
+    'llm-reasoning-effort-label': 'reasoning_effort',
+    'llm-reasoning-effort-hint':
+      '每個任務的 reasoning_effort 都會隨請求一併傳送——none 也會明確傳送（在支援的伺服器上停用推理）。',
   },
 } satisfies MessageBundle

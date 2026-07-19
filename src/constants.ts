@@ -5,6 +5,7 @@ import type {
   LocalProviderSettings,
   LocalSttSettings,
   LocalTtsSettings,
+  ReasoningEffort,
 } from './types'
 
 export const settingsStorageKey = 'tc-translate-provider-settings-v1'
@@ -23,6 +24,9 @@ export const defaultNativeLanguage = 'Japanese'
 export const maxHistoryItems = 20
 // Safety cap so a forgotten recording can't run (and accumulate audio) forever.
 export const maxRecordingDurationMs = 30 * 60 * 1000
+// Transcribe tab batch-STT: each mic segment is closed off and sent to the
+// configured STT model after this long (see features/transcribe/useSttSegments).
+export const sttSegmentIntervalMs = 8000
 // Simultaneous translation (Transcribe tab): orchestrator plans which of
 // these candidate languages to dispatch, one worker call each, per finalized
 // speech segment. Capped so a single segment can't fan out unboundedly.
@@ -42,7 +46,13 @@ export const defaultLocalSettings: LocalProviderSettings = {
   visionPresetId: '',
   orchestratorPresetId: '',
   workerPresetId: '',
+  defaultReasoningEffort: 'none',
+  visionReasoningEffort: 'none',
+  orchestratorReasoningEffort: 'none',
+  workerReasoningEffort: 'none',
 }
+
+export const reasoningEffortOptions: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high']
 
 export const defaultLocalTtsSettings: LocalTtsSettings = {
   engine: 'browser',

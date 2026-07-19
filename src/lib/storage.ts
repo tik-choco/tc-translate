@@ -32,6 +32,7 @@ import type {
   PersistedHistoryItem,
   ProofreadCorrection,
   ProofreadResult,
+  ReasoningEffort,
   TranslationHistoryItem,
   TranslationVariant,
   VocabularyEntry,
@@ -53,6 +54,10 @@ function buildSourcePreview(sourceText: string): string {
 // (see hooks/useSharedLlmConfig.ts, which runs the one-time migration off of
 // these keys' pre-migration shape before anything here is read).
 
+function parseReasoningEffort(value: unknown): ReasoningEffort {
+  return value === 'minimal' || value === 'low' || value === 'medium' || value === 'high' ? value : 'none'
+}
+
 export function loadSettings(): LocalProviderSettings {
   try {
     const stored = JSON.parse(localStorage.getItem(settingsStorageKey) ?? '{}') as Partial<LocalProviderSettings>
@@ -66,6 +71,10 @@ export function loadSettings(): LocalProviderSettings {
       orchestratorPresetId:
         typeof stored.orchestratorPresetId === 'string' ? stored.orchestratorPresetId : defaultLocalSettings.orchestratorPresetId,
       workerPresetId: typeof stored.workerPresetId === 'string' ? stored.workerPresetId : defaultLocalSettings.workerPresetId,
+      defaultReasoningEffort: parseReasoningEffort(stored.defaultReasoningEffort),
+      visionReasoningEffort: parseReasoningEffort(stored.visionReasoningEffort),
+      orchestratorReasoningEffort: parseReasoningEffort(stored.orchestratorReasoningEffort),
+      workerReasoningEffort: parseReasoningEffort(stored.workerReasoningEffort),
     }
   } catch {
     return defaultLocalSettings

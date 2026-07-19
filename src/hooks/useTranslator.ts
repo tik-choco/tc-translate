@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { defaultResolvedProvider, extraTranslationTones } from '../constants'
-import { createId, normalizeBaseUrl } from '../lib/format'
+import { appendTranscript, createId, normalizeBaseUrl } from '../lib/format'
 import { speechCodeForLanguage } from '../lib/language'
 import {
   loadMode,
@@ -143,7 +143,7 @@ export function useTranslator() {
   const speech = useSpeech({ ttsSettings, llmConfig: llmConfigState.config, roomId: settings.roomId })
 
   function appendSourceText(text: string): void {
-    setSourceText((current) => (current.trim() ? `${current.trim()}\n${text}` : text))
+    setSourceText((current) => appendTranscript(current, text))
   }
 
   const transcription = useTranscription({
@@ -435,6 +435,7 @@ export function useTranslator() {
     clearHistory: stableClearHistory,
     sendToLingo: stableSendToLingo,
     llmProviders: llmConfigState.config.providers,
+    llmConfig: llmConfigState.config,
     showSettings,
     setShowSettings,
     showLanguageMenu,

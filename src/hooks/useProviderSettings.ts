@@ -7,7 +7,7 @@ import { resolvePreset } from '../lib/llmConfig'
 import { loadSettings, saveSettings } from '../lib/storage'
 import type { SharedLlmConfigState } from './useSharedLlmConfig'
 import type { LlmProviderV1, ModelPresetV1 } from '../lib/llmConfig'
-import type { LocalProviderSettings, ModelStatus, ProviderSettings } from '../types'
+import type { LocalProviderSettings, ModelStatus, ProviderSettings, ReasoningEffort, ReasoningTask } from '../types'
 
 function mergeSettings(local: LocalProviderSettings, llmConfigState: SharedLlmConfigState): ProviderSettings {
   const config = llmConfigState.config
@@ -29,7 +29,10 @@ function mergeSettings(local: LocalProviderSettings, llmConfigState: SharedLlmCo
     orchestratorModel: orchestratorResolved?.model ?? defaultResolvedProvider.orchestratorModel,
     workerModel: workerResolved?.model ?? defaultResolvedProvider.workerModel,
     temperature: resolved?.temperature ?? defaultResolvedProvider.temperature,
-    reasoningEffort: resolved?.reasoningEffort,
+    reasoningEffort: local.defaultReasoningEffort,
+    visionReasoningEffort: local.visionReasoningEffort,
+    orchestratorReasoningEffort: local.orchestratorReasoningEffort,
+    workerReasoningEffort: local.workerReasoningEffort,
     connection: local.connection,
     roomId: config.network.roomId,
     networkProviderEnabled: local.networkProviderEnabled,
@@ -69,11 +72,9 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
   function updateSettings(next: ProviderSettings): void {
     if (next.connection !== settings.connection || next.networkProviderEnabled !== settings.networkProviderEnabled) {
       const nextLocal: LocalProviderSettings = {
+        ...local,
         connection: next.connection,
         networkProviderEnabled: next.networkProviderEnabled,
-        visionPresetId: local.visionPresetId,
-        orchestratorPresetId: local.orchestratorPresetId,
-        workerPresetId: local.workerPresetId,
       }
       setLocal(nextLocal)
       saveSettings(nextLocal)
@@ -86,9 +87,10 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
     }
   }
 
-  function addProvider(label: string): void {
+  function addProvider(label: string, patch?: Partial<Omit<LlmProviderV1, 'id'>>): void {
     llmConfigState.save((config) => {
-      createProvider(config, label)
+      const id = createProvider(config, label)
+      if (patch) patchProvider(config, id, patch)
     })
   }
 
@@ -104,9 +106,10 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
     })
   }
 
-  function addPreset(providerId: string, label: string): void {
+  function addPreset(providerId: string, label: string, patch?: Partial<Omit<ModelPresetV1, 'id'>>): void {
     llmConfigState.save((config) => {
-      createPreset(config, providerId, label)
+      const id = createPreset(config, providerId, label)
+      if (patch) patchPreset(config, id, patch)
     })
   }
 
@@ -142,6 +145,20 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
 
   function setWorkerPresetId(id: string): void {
     const nextLocal: LocalProviderSettings = { ...local, workerPresetId: id }
+    setLocal(nextLocal)
+    saveSettings(nextLocal)
+  }
+
+  function setReasoningEffort(task: ReasoningTask, effort: ReasoningEffort): void {
+    const key =
+      task === 'default'
+        ? 'defaultReasoningEffort'
+        : task === 'vision'
+          ? 'visionReasoningEffort'
+          : task === 'orchestrator'
+            ? 'orchestratorReasoningEffort'
+            : 'workerReasoningEffort'
+    const nextLocal: LocalProviderSettings = { ...local, [key]: effort }
     setLocal(nextLocal)
     saveSettings(nextLocal)
   }
@@ -208,6 +225,7 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
     setVisionPresetId,
     setOrchestratorPresetId,
     setWorkerPresetId,
+    setReasoningEffort,
     modelOptions,
     modelStatus,
     modelError,

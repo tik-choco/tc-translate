@@ -5,13 +5,16 @@ import { requestChatCompletion } from './llm'
 import { parseBackTranslation, parseTranslation } from './parse'
 import type { BackTranslationCheck, ImageInput, ProviderSettings, TranslationResult, TranslationVariant } from '../types'
 
-export async function fetchModelIds(settings: ProviderSettings, signal?: AbortSignal): Promise<string[]> {
+export async function fetchModelIds(
+  connection: Pick<ProviderSettings, 'baseUrl' | 'apiKey'>,
+  signal?: AbortSignal,
+): Promise<string[]> {
   // fetchModels doesn't take an AbortSignal, so inject it via a custom fetchFn.
   const fetchWithSignal: typeof fetch = (input, init) => fetch(input, { ...init, signal })
 
   let ids: string[]
   try {
-    ids = await fetchModels({ baseUrl: normalizeBaseUrl(settings.baseUrl), apiKey: settings.apiKey }, fetchWithSignal)
+    ids = await fetchModels({ baseUrl: normalizeBaseUrl(connection.baseUrl), apiKey: connection.apiKey }, fetchWithSignal)
   } catch (modelError) {
     // fetchModels wraps every fetch failure (aborts included) in a
     // MistaiError; resurface aborts so callers can keep their AbortError check.
@@ -92,7 +95,7 @@ export async function readImageText(params: {
       body: JSON.stringify({
         model,
         temperature: params.settings.temperature,
-        reasoning_effort: 'none',
+        reasoning_effort: params.settings.visionReasoningEffort,
         stream: true,
         messages: [
           {

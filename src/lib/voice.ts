@@ -64,6 +64,8 @@ export async function transcribeAudio(params: {
   model: string
   audio: Blob
   fileName?: string
+  /** ISO-639-1 hint for the recognizer (e.g. 'ja'); omit for auto-detect. */
+  language?: string
 }): Promise<string> {
   // fileName can be peer-supplied (LLM Network STT), so strip path separators,
   // quotes, and CR/LF before it lands in the multipart Content-Disposition header.
@@ -72,6 +74,7 @@ export async function transcribeAudio(params: {
   const form = new FormData()
   form.append('file', params.audio, safeFileName)
   form.append('model', params.model.trim())
+  if (params.language?.trim()) form.append('language', params.language.trim())
 
   const response = await fetch(`${params.connection.baseUrl}/audio/transcriptions`, {
     method: 'POST',
