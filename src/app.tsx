@@ -247,9 +247,8 @@ export function App() {
           onRemovePreset={t.removePreset}
           onSetDefaultPresetId={t.setDefaultPresetId}
           onSetVisionPresetId={t.setVisionPresetId}
-          onSetOrchestratorPresetId={t.setOrchestratorPresetId}
-          onSetWorkerPresetId={t.setWorkerPresetId}
           onSetReasoningEffort={t.setReasoningEffort}
+          onSetNetworkProviderPresetIds={t.setNetworkProviderPresetIds}
           ttsSettings={t.ttsSettings}
           onUpdateTtsSettings={t.updateTtsSettings}
           sttSettings={t.sttSettings}

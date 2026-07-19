@@ -1,7 +1,6 @@
 import {
   defaultLocalSettings,
   defaultLocalSttSettings,
-  defaultLocalTtsSettings,
   defaultNativeLanguage,
   historyStorageKey,
   languageOptions,
@@ -16,7 +15,6 @@ import {
   simulTranslateLanguagesStorageKey,
   sttSettingsStorageKey,
   targetLanguageStorageKey,
-  ttsSettingsStorageKey,
 } from '../constants'
 import { storageAddJson, storageGetJson } from './mistStorage'
 import type {
@@ -28,7 +26,6 @@ import type {
   HistoryKind,
   LocalProviderSettings,
   LocalSttSettings,
-  LocalTtsSettings,
   PersistedHistoryItem,
   ProofreadCorrection,
   ProofreadResult,
@@ -49,10 +46,14 @@ function buildSourcePreview(sourceText: string): string {
     : sourceText
 }
 
-// These three keys hold only tc-translate-local settings; baseUrl/apiKey/
-// model/temperature now live in the shared `tc-shared-llm-config-v1` key
-// (see hooks/useSharedLlmConfig.ts, which runs the one-time migration off of
-// these keys' pre-migration shape before anything here is read).
+// These keys hold only tc-translate-local settings; baseUrl/apiKey/model/
+// temperature now live in the shared `tc-shared-llm-config-v1` key (see
+// hooks/useSharedLlmConfig.ts, which runs the one-time migration off of
+// these keys' pre-migration shape before anything here is read). The TTS
+// engine choice is no longer stored at all - it's derived from the shared
+// config (see deriveVoiceEngine in lib/voice.ts) - so there's no local TTS
+// settings key/loader anymore; `sttSettingsStorageKey` now only holds
+// `micDeviceId`.
 
 function parseReasoningEffort(value: unknown): ReasoningEffort {
   return value === 'minimal' || value === 'low' || value === 'medium' || value === 'high' ? value : 'none'
@@ -68,13 +69,11 @@ export function loadSettings(): LocalProviderSettings {
           ? stored.networkProviderEnabled
           : defaultLocalSettings.networkProviderEnabled,
       visionPresetId: typeof stored.visionPresetId === 'string' ? stored.visionPresetId : defaultLocalSettings.visionPresetId,
-      orchestratorPresetId:
-        typeof stored.orchestratorPresetId === 'string' ? stored.orchestratorPresetId : defaultLocalSettings.orchestratorPresetId,
-      workerPresetId: typeof stored.workerPresetId === 'string' ? stored.workerPresetId : defaultLocalSettings.workerPresetId,
+      networkProviderPresetIds: Array.isArray(stored.networkProviderPresetIds)
+        ? stored.networkProviderPresetIds.filter((id): id is string => typeof id === 'string')
+        : defaultLocalSettings.networkProviderPresetIds,
       defaultReasoningEffort: parseReasoningEffort(stored.defaultReasoningEffort),
       visionReasoningEffort: parseReasoningEffort(stored.visionReasoningEffort),
-      orchestratorReasoningEffort: parseReasoningEffort(stored.orchestratorReasoningEffort),
-      workerReasoningEffort: parseReasoningEffort(stored.workerReasoningEffort),
     }
   } catch {
     return defaultLocalSettings
@@ -89,30 +88,10 @@ export function saveSettings(settings: LocalProviderSettings): void {
   }
 }
 
-export function loadTtsSettings(): LocalTtsSettings {
-  try {
-    const stored = JSON.parse(localStorage.getItem(ttsSettingsStorageKey) ?? '{}') as Partial<LocalTtsSettings>
-    return {
-      engine: stored.engine === 'api' ? 'api' : stored.engine === 'network' ? 'network' : 'browser',
-    }
-  } catch {
-    return defaultLocalTtsSettings
-  }
-}
-
-export function saveTtsSettings(ttsSettings: LocalTtsSettings): void {
-  try {
-    localStorage.setItem(ttsSettingsStorageKey, JSON.stringify(ttsSettings))
-  } catch (err) {
-    console.warn('tc-translate: failed to save TTS settings', err)
-  }
-}
-
 export function loadSttSettings(): LocalSttSettings {
   try {
     const stored = JSON.parse(localStorage.getItem(sttSettingsStorageKey) ?? '{}') as Partial<LocalSttSettings>
     return {
-      engine: stored.engine === 'network' ? 'network' : stored.engine === 'browser' ? 'browser' : 'api',
       micDeviceId: typeof stored.micDeviceId === 'string' ? stored.micDeviceId : defaultLocalSttSettings.micDeviceId,
     }
   } catch {

@@ -17,6 +17,7 @@ import { useHistoryPanel } from './useHistoryPanel'
 import { useImageImport } from './useImageImport'
 import { useNetworkConsumerConnection } from './useNetworkConsumerConnection'
 import { useNetworkConsumerStatusWithTimestamp } from './useNetworkConsumerStatus'
+import { useNetworkModelSync } from './useNetworkModelSync'
 import { useNetworkProvider } from './useNetworkProvider'
 import { usePdfImport } from './usePdfImport'
 import { useProofread } from './useProofread'
@@ -48,6 +49,7 @@ export function useTranslator() {
   const networkProvider = useNetworkProvider(settings, ttsSettings, sttSettings, llmConfigState.config)
   useNetworkConsumerConnection(settings)
   const { status: networkConsumerStatus, updatedAt: networkConsumerUpdatedAt } = useNetworkConsumerStatusWithTimestamp()
+  useNetworkModelSync(settings, networkConsumerStatus, llmConfigState)
 
   const [showSettings, setShowSettings] = useState(false)
   const [showLanguageMenu, setShowLanguageMenu] = useState(false)

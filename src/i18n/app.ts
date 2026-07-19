@@ -19,8 +19,8 @@ export const appMessages = {
       'Sets both the app language and your native language for translation notes. Languages without a built-in dictionary are translated automatically by the configured LLM (English is shown until that finishes).',
     'settings-tab-api': 'API',
     'settings-tab-connection': 'AI Connection',
+    'settings-tab-network': 'AI Network',
     'settings-tab-tasks': 'Tasks',
-    'settings-tab-voice': 'TTS/STT',
     'settings-tab-network-consumer': 'Use network',
     'settings-tab-network-provider': 'Provide network',
     'api-hint':
@@ -30,18 +30,12 @@ export const appMessages = {
     'loading-models': 'Loading models...',
     'models-loaded': '{count} models loaded',
     'fallback-models': 'Fallback models',
-    'orchestrator-model-hint':
-      "Plans which of the target languages this segment should be translated into. A stronger preset's model is recommended.",
-    'worker-model-hint':
-      "Translates into one planned language, running in parallel with the other workers. A lighter/cheaper preset's model is usually enough.",
-    'simul-model-hint':
-      'Used by the Transcribe tab\'s simultaneous translation. Leave Orchestrator/Worker set to "Same as default" to use their built-in defaults (a stronger planner model, lighter worker models) instead of the default preset.',
     'network-consumer-hint':
       'When enabled, translation requests are sent to a provider in the Room instead of your own API. The app connects to the Room and starts looking for providers as soon as this is set.',
     'network-consumer-toggle': 'Use a network LLM',
     'room-id-consumer-placeholder': 'Room ID shared with the provider',
     'network-provider-hint':
-      'Serves your model to users in this Room, using the API tab\'s default preset as the upstream.',
+      'Serves the models you check below to users in this Room. With nothing checked, the default preset is used as the upstream.',
     'network-provider-toggle': 'Provide my API to the network',
     'room-id-provider-placeholder': 'Room ID shared with users',
     'stt-not-configured':
@@ -55,8 +49,6 @@ export const appMessages = {
       'No STT connection/model is configured, so the browser recognizer was used instead — check Settings → TTS/STT.',
     'stt-browser-file-unsupported':
       'Browser speech recognition only works live from the microphone; switch the STT engine to API or Network to transcribe an audio file.',
-    'network-vision-unsupported':
-      'The LLM Network does not support image recognition (vision). Switch to an API connection.',
   },
   ja: {
     'tab-translate': '翻訳',
@@ -75,8 +67,8 @@ export const appMessages = {
       'アプリの表示言語と、翻訳の説明に使う母語を兼ねます。辞書がない言語は設定済みの LLM で UI を自動翻訳します（完了までは英語表示）。',
     'settings-tab-api': 'API',
     'settings-tab-connection': 'AI接続',
+    'settings-tab-network': 'AI Network',
     'settings-tab-tasks': 'タスク',
-    'settings-tab-voice': 'TTS/STT',
     'settings-tab-network-consumer': 'ネットワーク利用',
     'settings-tab-network-provider': 'ネットワーク提供',
     'api-hint':
@@ -86,16 +78,12 @@ export const appMessages = {
     'loading-models': 'モデルを読み込み中...',
     'models-loaded': '{count} 個のモデルを読み込みました',
     'fallback-models': 'フォールバックモデル',
-    'orchestrator-model-hint': 'このセグメントをどの言語に翻訳するかを計画する役割です。強めのモデルのプリセットを推奨します。',
-    'worker-model-hint': '計画された1言語への翻訳を、他のワーカーと並列で実行します。軽め・安価なモデルのプリセットで十分です。',
-    'simul-model-hint':
-      'Transcribeタブの同時翻訳で使用します。オーケストレーター/ワーカーを「既定と同じ」のままにすると、既定のプリセットではなく組み込みの既定値（計画役には強めのモデル、ワーカーには軽めのモデル）が使われます。',
     'network-consumer-hint':
       '有効にすると、翻訳リクエストは自分の API ではなく Room 内の provider に送信されます。設定するとすぐに Room へ接続し、provider を探索します。',
     'network-consumer-toggle': 'ネットワークのLLMを利用',
     'room-id-consumer-placeholder': 'provider と共有する Room ID',
     'network-provider-hint':
-      'API タブの既定のプリセットを upstream として、この Room 内の利用者にモデルを提供します。',
+      '下でチェックしたモデルを、この Room 内の利用者に提供します。未選択の場合は既定のプリセットを upstream として使います。',
     'network-provider-toggle': '自分のAPIをネットワークに提供',
     'room-id-provider-placeholder': '利用者と共有する Room ID',
     'stt-not-configured':
@@ -109,7 +97,6 @@ export const appMessages = {
       'STT の接続先/モデルが未設定のためブラウザ音声認識を使用しました。設定の TTS/STT タブを確認してください。',
     'stt-browser-file-unsupported':
       'ブラウザの音声認識はマイクからのライブ入力のみ対応しています。音声ファイルを文字起こしするには、STTエンジンをAPIまたはネットワークに切り替えてください。',
-    'network-vision-unsupported': 'LLM Network は画像認識(vision)に対応していません。API接続に切り替えてください。',
   },
   'zh-CN': {
     'tab-translate': '翻译',
@@ -128,8 +115,8 @@ export const appMessages = {
       '同时设置应用界面语言和用于翻译说明的母语。没有内置词典的语言会由已配置的 LLM 自动翻译界面（翻译完成前显示英文）。',
     'settings-tab-api': 'API',
     'settings-tab-connection': 'AI 连接',
+    'settings-tab-network': 'AI Network',
     'settings-tab-tasks': '任务',
-    'settings-tab-voice': 'TTS/STT',
     'settings-tab-network-consumer': '使用网络',
     'settings-tab-network-provider': '提供网络',
     'api-hint': '下方的默认预设会在“使用网络”关闭时用于翻译，或在“提供网络”开启时作为 upstream 使用。',
@@ -138,15 +125,11 @@ export const appMessages = {
     'loading-models': '正在加载模型...',
     'models-loaded': '已加载 {count} 个模型',
     'fallback-models': '备用模型',
-    'orchestrator-model-hint': '规划应将该片段翻译成哪些语言。建议使用模型更强的预设。',
-    'worker-model-hint': '并行执行其中一种已规划语言的翻译。使用模型较轻量/更便宜的预设通常就足够了。',
-    'simul-model-hint':
-      '用于“转录”标签页的同声翻译。将编排器/工作保持为“与默认相同”时，会使用内置默认值（编排器用更强的模型，工作用更轻量的模型），而不是默认预设。',
     'network-consumer-hint':
       '启用后，翻译请求将发送给 Room 中的 provider，而不是你自己的 API。设置后应用会立即连接该 Room 并开始寻找 provider。',
     'network-consumer-toggle': '使用网络 LLM',
     'room-id-consumer-placeholder': '与 provider 共享的 Room ID',
-    'network-provider-hint': '使用 API 标签页的默认预设作为 upstream，为此 Room 中的用户提供模型。',
+    'network-provider-hint': '将下方勾选的模型提供给此 Room 中的用户。未勾选任何模型时，使用默认预设作为 upstream。',
     'network-provider-toggle': '将我的 API 提供给网络',
     'room-id-provider-placeholder': '与用户共享的 Room ID',
     'stt-not-configured': '请先设置 STT 的 base URL 和模型，或使用 Room ID 启用网络 STT 引擎，然后再转写音频文件。',
@@ -157,7 +140,6 @@ export const appMessages = {
       '浏览器内置语音识别无法连接其云端语音服务。部分浏览器（如 Brave）根本不提供此功能——请改用 Chrome/Edge，或在设置的 TTS/STT 中配置 STT 模型。',
     'stt-fallback-hint': '未设置 STT 的连接/模型，因此改用了浏览器语音识别。请检查设置中的 TTS/STT 标签页。',
     'stt-browser-file-unsupported': '浏览器语音识别仅支持通过麦克风实时输入。要转写音频文件，请将 STT 引擎切换为 API 或网络。',
-    'network-vision-unsupported': 'LLM Network 不支持图像识别（vision）。请切换到 API 连接。',
   },
   'zh-TW': {
     'tab-translate': '翻譯',
@@ -176,8 +158,8 @@ export const appMessages = {
       '同時設定應用程式介面語言，以及用於翻譯說明的母語。沒有內建詞典的語言會由已設定的 LLM 自動翻譯介面（翻譯完成前顯示英文）。',
     'settings-tab-api': 'API',
     'settings-tab-connection': 'AI 連線',
+    'settings-tab-network': 'AI Network',
     'settings-tab-tasks': '任務',
-    'settings-tab-voice': 'TTS/STT',
     'settings-tab-network-consumer': '使用網路',
     'settings-tab-network-provider': '提供網路',
     'api-hint': '下方的預設項目會在「使用網路」關閉時用於翻譯，或在「提供網路」開啟時作為 upstream 使用。',
@@ -186,15 +168,11 @@ export const appMessages = {
     'loading-models': '正在載入模型...',
     'models-loaded': '已載入 {count} 個模型',
     'fallback-models': '備用模型',
-    'orchestrator-model-hint': '規劃這個片段應翻譯成哪些語言。建議使用模型較強的預設。',
-    'worker-model-hint': '並行執行其中一種已規劃語言的翻譯。使用模型較輕量/較便宜的預設通常就足夠了。',
-    'simul-model-hint':
-      '用於「轉錄」分頁的同步翻譯。將協調器/工作保持為「與預設相同」時，會使用內建預設值（協調器用較強的模型，工作用較輕量的模型），而非預設項目。',
     'network-consumer-hint':
       '啟用後，翻譯請求會傳送給 Room 中的 provider，而非你自己的 API。設定後應用程式會立即連線該 Room 並開始尋找 provider。',
     'network-consumer-toggle': '使用網路 LLM',
     'room-id-consumer-placeholder': '與 provider 共用的 Room ID',
-    'network-provider-hint': '使用 API 分頁的預設項目作為 upstream，為此 Room 中的使用者提供模型。',
+    'network-provider-hint': '將下方勾選的模型提供給此 Room 中的使用者。未勾選任何模型時，使用預設項目作為 upstream。',
     'network-provider-toggle': '將我的 API 提供給網路',
     'room-id-provider-placeholder': '與使用者共用的 Room ID',
     'stt-not-configured': '請先設定 STT 的 base URL 與模型，或使用 Room ID 啟用網路 STT 引擎，然後再轉寫音訊檔案。',
@@ -205,6 +183,5 @@ export const appMessages = {
       '瀏覽器內建語音辨識無法連線其雲端語音服務。部分瀏覽器（如 Brave）根本不提供此功能——請改用 Chrome/Edge，或在設定的 TTS/STT 中設定 STT 模型。',
     'stt-fallback-hint': '未設定 STT 的連線/模型，因此改用了瀏覽器語音辨識。請檢查設定中的 TTS/STT 分頁。',
     'stt-browser-file-unsupported': '瀏覽器語音辨識僅支援透過麥克風即時輸入。要轉寫音訊檔案，請將 STT 引擎切換為 API 或網路。',
-    'network-vision-unsupported': 'LLM Network 不支援影像辨識（vision）。請切換為 API 連線。',
   },
 } satisfies MessageBundle

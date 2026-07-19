@@ -27,23 +27,41 @@
   background: var(--surface);
 }
 
-.settings-role-head {
+/* .settings-modal label（input.css）が display:flex + column を、
+   .settings-modal label > span が小さめの大文字見出しスタイルを当てて
+   くるため、チェックボックス＋タイトルの1行ヘッダには .settings-modal
+   を含めた同等以上の詳細度で行レイアウト/タイポグラフィを固定し直す。 */
+.settings-role-head,
+.settings-modal .settings-role-head {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
 }
 
 .settings-role-head input[type='checkbox'] {
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
+  margin: 0;
 }
 
-.settings-role-title {
+.settings-role-title,
+.settings-modal .settings-role-head > .settings-role-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--text-strong);
   font-size: 14px;
   font-weight: 700;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.settings-role-title svg {
+  color: var(--primary);
+  flex: 0 0 auto;
 }
 
 .settings-role-desc {

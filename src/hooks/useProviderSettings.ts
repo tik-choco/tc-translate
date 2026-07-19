@@ -4,6 +4,7 @@ import { fetchModelIds } from '../lib/api'
 import { normalizeBaseUrl } from '../lib/format'
 import { createPreset, createProvider, deletePreset, deleteProvider, patchPreset, patchProvider } from '../lib/llmConfigEdit'
 import { resolvePreset } from '../lib/llmConfig'
+import { isNetworkProviderBaseUrl } from '../lib/networkModels'
 import { loadSettings, saveSettings } from '../lib/storage'
 import type { SharedLlmConfigState } from './useSharedLlmConfig'
 import type { LlmProviderV1, ModelPresetV1 } from '../lib/llmConfig'
@@ -13,32 +14,20 @@ function mergeSettings(local: LocalProviderSettings, llmConfigState: SharedLlmCo
   const config = llmConfigState.config
   const resolved = resolvePreset(config)
   const visionResolved = resolvePreset(config, local.visionPresetId)
-  // Unlike vision (which should fall back to the default preset's model),
-  // orchestrator/worker fall back to their own opinionated defaults
-  // (defaultResolvedProvider.orchestratorModel/workerModel) - so resolvePreset
-  // is only consulted when a dedicated preset id is actually set; passing ''
-  // would make it fall back to the shared default preset instead.
-  const orchestratorResolved = local.orchestratorPresetId ? resolvePreset(config, local.orchestratorPresetId) : null
-  const workerResolved = local.workerPresetId ? resolvePreset(config, local.workerPresetId) : null
 
   return {
     baseUrl: resolved?.baseUrl ?? defaultResolvedProvider.baseUrl,
     apiKey: resolved?.apiKey ?? defaultResolvedProvider.apiKey,
     model: resolved?.model ?? defaultResolvedProvider.model,
     visionModel: visionResolved?.model ?? resolved?.model ?? defaultResolvedProvider.visionModel,
-    orchestratorModel: orchestratorResolved?.model ?? defaultResolvedProvider.orchestratorModel,
-    workerModel: workerResolved?.model ?? defaultResolvedProvider.workerModel,
     temperature: resolved?.temperature ?? defaultResolvedProvider.temperature,
     reasoningEffort: local.defaultReasoningEffort,
     visionReasoningEffort: local.visionReasoningEffort,
-    orchestratorReasoningEffort: local.orchestratorReasoningEffort,
-    workerReasoningEffort: local.workerReasoningEffort,
     connection: local.connection,
     roomId: config.network.roomId,
     networkProviderEnabled: local.networkProviderEnabled,
     visionPresetId: local.visionPresetId,
-    orchestratorPresetId: local.orchestratorPresetId,
-    workerPresetId: local.workerPresetId,
+    networkProviderPresetIds: local.networkProviderPresetIds,
     providers: config.providers,
     presets: config.presets,
     defaultPresetId: config.defaultPresetId,
@@ -67,8 +56,8 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
 
   // connection/networkProviderEnabled/roomId are the only fields still edited
   // through the merged settings object - baseUrl/apiKey/model/temperature and
-  // vision/orchestrator/worker now go through the provider/preset CRUD below,
-  // which edits the shared config's `providers`/`presets` arrays directly.
+  // vision now go through the provider/preset CRUD below, which edits the
+  // shared config's `providers`/`presets` arrays directly.
   function updateSettings(next: ProviderSettings): void {
     if (next.connection !== settings.connection || next.networkProviderEnabled !== settings.networkProviderEnabled) {
       const nextLocal: LocalProviderSettings = {
@@ -137,34 +126,25 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
     saveSettings(nextLocal)
   }
 
-  function setOrchestratorPresetId(id: string): void {
-    const nextLocal: LocalProviderSettings = { ...local, orchestratorPresetId: id }
-    setLocal(nextLocal)
-    saveSettings(nextLocal)
-  }
-
-  function setWorkerPresetId(id: string): void {
-    const nextLocal: LocalProviderSettings = { ...local, workerPresetId: id }
+  function setNetworkProviderPresetIds(ids: string[]): void {
+    const nextLocal: LocalProviderSettings = { ...local, networkProviderPresetIds: ids }
     setLocal(nextLocal)
     saveSettings(nextLocal)
   }
 
   function setReasoningEffort(task: ReasoningTask, effort: ReasoningEffort): void {
-    const key =
-      task === 'default'
-        ? 'defaultReasoningEffort'
-        : task === 'vision'
-          ? 'visionReasoningEffort'
-          : task === 'orchestrator'
-            ? 'orchestratorReasoningEffort'
-            : 'workerReasoningEffort'
+    const key = task === 'default' ? 'defaultReasoningEffort' : 'visionReasoningEffort'
     const nextLocal: LocalProviderSettings = { ...local, [key]: effort }
     setLocal(nextLocal)
     saveSettings(nextLocal)
   }
 
   async function loadModels(signal?: AbortSignal): Promise<void> {
-    if (settings.connection === 'network' || !normalizeBaseUrl(settings.baseUrl)) {
+    // The default preset can now resolve to a network-imported preset (see
+    // useNetworkModelSync) whose baseUrl is the `mist-network://` pseudo-
+    // provider scheme, not an HTTP endpoint - skip the fetch for those the
+    // same way the 'network' connection mode is skipped.
+    if (settings.connection === 'network' || isNetworkProviderBaseUrl(settings.baseUrl) || !normalizeBaseUrl(settings.baseUrl)) {
       setModelOptions([])
       setModelStatus('idle')
       setModelError('')
@@ -194,7 +174,8 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
   }
 
   useEffect(() => {
-    if (settings.connection === 'network' || !normalizeBaseUrl(settings.baseUrl)) {
+    // Same network-pseudo-provider guard as loadModels above.
+    if (settings.connection === 'network' || isNetworkProviderBaseUrl(settings.baseUrl) || !normalizeBaseUrl(settings.baseUrl)) {
       setModelOptions([])
       setModelStatus('idle')
       setModelError('')
@@ -223,8 +204,7 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
     removePreset,
     setDefaultPresetId,
     setVisionPresetId,
-    setOrchestratorPresetId,
-    setWorkerPresetId,
+    setNetworkProviderPresetIds,
     setReasoningEffort,
     modelOptions,
     modelStatus,

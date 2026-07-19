@@ -12,13 +12,18 @@ import {
   type ChatMessage,
   type MistNodeLike,
 } from '@tik-choco/mistai'
-import { MistNode } from '../vendor/mistlib/wrappers/web/index.js'
+import { createSharedMistNode } from './mistNodeShared'
+import { OaiTunnelClient } from './p2p/tunnel'
 
 // Kept identical to the pre-migration key so existing installs keep their node id.
 export const NODE_ID_STORAGE_KEY = 'tc-translate-mistllm-node-id-v1'
 
+// Every network stack in the app (this consumer client, the provider hook,
+// the OAI tunnel) resolves to ONE shared MistNode: mistlib-wasm only allows a
+// single active node per page, but that node is multi-room - see
+// lib/mistNodeShared.ts for the multiplexing.
 export function createMistNode(nodeId: string): MistNodeLike {
-  return new MistNode(nodeId)
+  return createSharedMistNode(nodeId)
 }
 
 export const networkClient = new ConsumerClient({
@@ -68,6 +73,22 @@ export function requestNetworkStt(
   params: { audio: Blob; model?: string; fileName?: string },
 ): Promise<string> {
   return networkClient.requestStt(roomId, params)
+}
+
+// Same node identity as networkClient: all stacks share the page's single
+// MistNode (see createMistNode above), so the tunnel is just another handle
+// on it - same peer id on the wire, own provider table and oai_* correlation.
+export const oaiTunnelClient = new OaiTunnelClient({
+  createNode: createMistNode,
+  nodeIdStorageKey: NODE_ID_STORAGE_KEY,
+})
+
+/** Proxies an OpenAI-compatible request through an 'oai'-capable room provider; body/response are UTF-8 text. */
+export function requestNetworkOpenAi(
+  roomId: string,
+  req: { path: string; method?: 'GET' | 'POST'; contentType?: string; body?: string },
+): Promise<{ status: number; contentType: string; body: string }> {
+  return oaiTunnelClient.request(roomId, req)
 }
 
 // ---------------------------------------------------------------------------

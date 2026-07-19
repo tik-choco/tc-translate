@@ -1,7 +1,8 @@
 import { fetchModels, MistaiError } from '@tik-choco/mistai'
-import { t } from '../i18n'
 import { normalizeBaseUrl } from './format'
 import { requestChatCompletion } from './llm'
+import { requestNetworkOpenAi } from './network'
+import { isNetworkProviderBaseUrl } from './networkModels'
 import { parseBackTranslation, parseTranslation } from './parse'
 import type { BackTranslationCheck, ImageInput, ProviderSettings, TranslationResult, TranslationVariant } from '../types'
 
@@ -66,16 +67,86 @@ export async function translateText(params: {
 // Stays app-local instead of riding mistai's streamChatCompletion: the
 // library's wire ChatMessage.content is string-only, and this request needs
 // the OpenAI vision content-part array (text + image_url). Errors are still
-// typed MistaiErrors so localizeNetworkError can localize them. Streamed
-// (rather than JSON-wrapped) so callers can show OCR text as it's read
-// instead of waiting for the whole response.
+// typed MistaiErrors so localizeNetworkError can localize them. Over a direct
+// API connection this streams (rather than JSON-wraps) so callers can show
+// OCR text as it's read instead of waiting for the whole response; over the
+// LLM Network it goes through the single-shot OaiTunnelClient proxy instead
+// (no streaming — the whole reply arrives at once via onDelta).
 export async function readImageText(params: {
   settings: ProviderSettings
   image: ImageInput
   onDelta?: (delta: string) => void
 }): Promise<string> {
-  if (params.settings.connection === 'network') {
-    throw new Error(t('network-vision-unsupported'))
+  const messages = [
+    {
+      role: 'system',
+      content:
+        'You are tc-translate OCR. Read all visible text from the image in natural reading order. Reply with only the text you read, preserving useful line breaks. Do not translate, summarize, explain, or correct it. Do not add commentary, headings, or quotation marks around it. If no readable text is present, reply with nothing.',
+    },
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: 'Read the text in this image.',
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: params.image.dataUrl,
+            detail: 'high',
+          },
+        },
+      ],
+    },
+  ]
+
+  // 'connection === network' covers an explicit Network toggle; the baseUrl
+  // check covers a default preset imported from a network provider's
+  // advertised models while connection is still 'api'.
+  if (params.settings.connection === 'network' || isNetworkProviderBaseUrl(params.settings.baseUrl)) {
+    const response = await requestNetworkOpenAi(params.settings.roomId, {
+      path: '/chat/completions',
+      method: 'POST',
+      contentType: 'application/json',
+      body: JSON.stringify({
+        // The advertised network name, not a real upstream model id — the
+        // provider maps it back to its own upstream model.
+        model: params.settings.visionModel.trim() || params.settings.model.trim() || undefined,
+        temperature: params.settings.temperature,
+        reasoning_effort: params.settings.visionReasoningEffort,
+        messages,
+      }),
+    })
+
+    if (response.status < 200 || response.status >= 300) {
+      let errorPayload: { error?: { message?: unknown } } | undefined
+      try {
+        errorPayload = JSON.parse(response.body) as { error?: { message?: unknown } }
+      } catch {
+        errorPayload = undefined
+      }
+      const message =
+        typeof errorPayload?.error?.message === 'string'
+          ? errorPayload.error.message
+          : `Request failed with ${response.status}`
+      throw new MistaiError('UPSTREAM_HTTP_ERROR', message, { status: response.status })
+    }
+
+    let payload: { choices?: Array<{ message?: { content?: string } }> }
+    try {
+      payload = JSON.parse(response.body) as { choices?: Array<{ message?: { content?: string } }> }
+    } catch {
+      throw new MistaiError('UPSTREAM_BAD_RESPONSE', 'The provider returned an empty response.')
+    }
+    const sourceText = (payload.choices?.[0]?.message?.content ?? '').trim()
+    if (!sourceText) {
+      throw new Error('No readable text was found in the image.')
+    }
+
+    // No streaming over the tunnel: deliver the whole reply as a single delta.
+    params.onDelta?.(sourceText)
+    return sourceText
   }
 
   const baseUrl = normalizeBaseUrl(params.settings.baseUrl)
@@ -97,29 +168,7 @@ export async function readImageText(params: {
         temperature: params.settings.temperature,
         reasoning_effort: params.settings.visionReasoningEffort,
         stream: true,
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are tc-translate OCR. Read all visible text from the image in natural reading order. Reply with only the text you read, preserving useful line breaks. Do not translate, summarize, explain, or correct it. Do not add commentary, headings, or quotation marks around it. If no readable text is present, reply with nothing.',
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Read the text in this image.',
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: params.image.dataUrl,
-                  detail: 'high',
-                },
-              },
-            ],
-          },
-        ],
+        messages,
       }),
     })
   } catch (requestError) {

@@ -4,7 +4,6 @@ import type {
   LegacyTtsSettings,
   LocalProviderSettings,
   LocalSttSettings,
-  LocalTtsSettings,
   ReasoningEffort,
 } from './types'
 
@@ -44,22 +43,14 @@ export const defaultLocalSettings: LocalProviderSettings = {
   connection: 'api',
   networkProviderEnabled: false,
   visionPresetId: '',
-  orchestratorPresetId: '',
-  workerPresetId: '',
+  networkProviderPresetIds: [],
   defaultReasoningEffort: 'none',
   visionReasoningEffort: 'none',
-  orchestratorReasoningEffort: 'none',
-  workerReasoningEffort: 'none',
 }
 
 export const reasoningEffortOptions: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high']
 
-export const defaultLocalTtsSettings: LocalTtsSettings = {
-  engine: 'browser',
-}
-
 export const defaultLocalSttSettings: LocalSttSettings = {
-  engine: 'api',
   micDeviceId: '',
 }
 
@@ -72,11 +63,6 @@ export const defaultResolvedProvider = {
   apiKey: '',
   model: 'gpt-4o-mini',
   visionModel: 'gpt-4o-mini',
-  // Simultaneous translation defaults: a stronger model plans the fan-out
-  // (orchestrator), lighter/cheaper models run the per-language translations
-  // in parallel (worker) - independent of whatever `model` above is set to.
-  orchestratorModel: 'claude-fable-5',
-  workerModel: 'claude-sonnet-5',
   temperature: 0.2,
 }
 
