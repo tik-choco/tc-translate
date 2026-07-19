@@ -18,6 +18,8 @@ export const appMessages = {
     'ui-language-hint':
       'Sets both the app language and your native language for translation notes. Languages without a built-in dictionary are translated automatically by the configured LLM (English is shown until that finishes).',
     'settings-tab-api': 'API',
+    'settings-tab-connection': 'AI Connection',
+    'settings-tab-tasks': 'Tasks',
     'settings-tab-voice': 'TTS/STT',
     'settings-tab-network-consumer': 'Use network',
     'settings-tab-network-provider': 'Provide network',
@@ -47,6 +49,10 @@ export const appMessages = {
     'stt-transcription-failed': 'Transcription failed.',
     'stt-mic-denied': 'Microphone access was denied.',
     'stt-recognition-error': 'Speech recognition error.',
+    'stt-browser-network-error':
+      "The browser's built-in speech recognition could not reach its cloud speech service. Some browsers (e.g. Brave) do not ship this feature at all — use Chrome/Edge, or set up an STT model in Settings → TTS/STT.",
+    'stt-fallback-hint':
+      'No STT connection/model is configured, so the browser recognizer was used instead — check Settings → TTS/STT.',
     'stt-browser-file-unsupported':
       'Browser speech recognition only works live from the microphone; switch the STT engine to API or Network to transcribe an audio file.',
     'network-vision-unsupported':
@@ -68,6 +74,8 @@ export const appMessages = {
     'ui-language-hint':
       'アプリの表示言語と、翻訳の説明に使う母語を兼ねます。辞書がない言語は設定済みの LLM で UI を自動翻訳します（完了までは英語表示）。',
     'settings-tab-api': 'API',
+    'settings-tab-connection': 'AI接続',
+    'settings-tab-tasks': 'タスク',
     'settings-tab-voice': 'TTS/STT',
     'settings-tab-network-consumer': 'ネットワーク利用',
     'settings-tab-network-provider': 'ネットワーク提供',
@@ -95,6 +103,10 @@ export const appMessages = {
     'stt-transcription-failed': '文字起こしに失敗しました。',
     'stt-mic-denied': 'マイクの使用が許可されませんでした。',
     'stt-recognition-error': '音声認識エラーが発生しました。',
+    'stt-browser-network-error':
+      'ブラウザ内蔵の音声認識がクラウド音声サービスに接続できませんでした。一部のブラウザ（Brave など）はこの機能自体を搭載していません。Chrome/Edge を使うか、設定の TTS/STT で STT モデルを設定してください。',
+    'stt-fallback-hint':
+      'STT の接続先/モデルが未設定のためブラウザ音声認識を使用しました。設定の TTS/STT タブを確認してください。',
     'stt-browser-file-unsupported':
       'ブラウザの音声認識はマイクからのライブ入力のみ対応しています。音声ファイルを文字起こしするには、STTエンジンをAPIまたはネットワークに切り替えてください。',
     'network-vision-unsupported': 'LLM Network は画像認識(vision)に対応していません。API接続に切り替えてください。',
@@ -115,6 +127,8 @@ export const appMessages = {
     'ui-language-hint':
       '同时设置应用界面语言和用于翻译说明的母语。没有内置词典的语言会由已配置的 LLM 自动翻译界面（翻译完成前显示英文）。',
     'settings-tab-api': 'API',
+    'settings-tab-connection': 'AI 连接',
+    'settings-tab-tasks': '任务',
     'settings-tab-voice': 'TTS/STT',
     'settings-tab-network-consumer': '使用网络',
     'settings-tab-network-provider': '提供网络',
@@ -139,6 +153,9 @@ export const appMessages = {
     'stt-transcription-failed': '转写失败。',
     'stt-mic-denied': '麦克风访问被拒绝。',
     'stt-recognition-error': '语音识别出错。',
+    'stt-browser-network-error':
+      '浏览器内置语音识别无法连接其云端语音服务。部分浏览器（如 Brave）根本不提供此功能——请改用 Chrome/Edge，或在设置的 TTS/STT 中配置 STT 模型。',
+    'stt-fallback-hint': '未设置 STT 的连接/模型，因此改用了浏览器语音识别。请检查设置中的 TTS/STT 标签页。',
     'stt-browser-file-unsupported': '浏览器语音识别仅支持通过麦克风实时输入。要转写音频文件，请将 STT 引擎切换为 API 或网络。',
     'network-vision-unsupported': 'LLM Network 不支持图像识别（vision）。请切换到 API 连接。',
   },
@@ -158,6 +175,8 @@ export const appMessages = {
     'ui-language-hint':
       '同時設定應用程式介面語言，以及用於翻譯說明的母語。沒有內建詞典的語言會由已設定的 LLM 自動翻譯介面（翻譯完成前顯示英文）。',
     'settings-tab-api': 'API',
+    'settings-tab-connection': 'AI 連線',
+    'settings-tab-tasks': '任務',
     'settings-tab-voice': 'TTS/STT',
     'settings-tab-network-consumer': '使用網路',
     'settings-tab-network-provider': '提供網路',
@@ -182,6 +201,9 @@ export const appMessages = {
     'stt-transcription-failed': '轉寫失敗。',
     'stt-mic-denied': '麥克風存取遭拒。',
     'stt-recognition-error': '語音辨識發生錯誤。',
+    'stt-browser-network-error':
+      '瀏覽器內建語音辨識無法連線其雲端語音服務。部分瀏覽器（如 Brave）根本不提供此功能——請改用 Chrome/Edge，或在設定的 TTS/STT 中設定 STT 模型。',
+    'stt-fallback-hint': '未設定 STT 的連線/模型，因此改用了瀏覽器語音辨識。請檢查設定中的 TTS/STT 分頁。',
     'stt-browser-file-unsupported': '瀏覽器語音辨識僅支援透過麥克風即時輸入。要轉寫音訊檔案，請將 STT 引擎切換為 API 或網路。',
     'network-vision-unsupported': 'LLM Network 不支援影像辨識（vision）。請切換為 API 連線。',
   },

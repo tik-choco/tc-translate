@@ -3,26 +3,52 @@ import type { JSX } from 'preact'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { languageOptions } from '../../constants'
 import { t } from '../../i18n'
+import { appendTranscript } from '../../lib/format'
 import { languageOptionLabel } from '../../lib/language'
 import { ProviderSetupGuide } from '../../components/ProviderSetupGuide'
-import type { ProviderSettings } from '../../types'
+import type { SharedLlmConfigV1 } from '../../lib/llmConfig'
+import type { ProviderSettings, SttSettings } from '../../types'
 import languages from './languages.json'
 import './transcribe.css'
 import { useSimultaneousTranslation } from './useSimultaneousTranslation'
 import { useSpeechRecognition } from './useSpeechRecognition'
+import { useSttSegments } from './useSttSegments'
 
 type TranscribePanelProps = {
   settings: ProviderSettings
+  sttSettings: SttSettings
+  llmConfig: SharedLlmConfigV1
   onOpenSettings: () => void
 }
 
-export function TranscribePanel({ settings, onOpenSettings }: TranscribePanelProps): JSX.Element {
+export function TranscribePanel({ settings, sttSettings, llmConfig, onOpenSettings }: TranscribePanelProps): JSX.Element {
   const simul = useSimultaneousTranslation(settings)
 
   const handleFinalResult = useCallback((text: string) => void simul.submitSegment(text), [simul.submitSegment])
   const speech = useSpeechRecognition('ja', handleFinalResult)
   const [logText, setLogText] = useState('')
   const [keepLog, setKeepLog] = useState(true)
+
+  // Configured STT (API/Network) takes priority via the batch-segment path;
+  // the browser's live recognition is the fallback when none is configured.
+  const handleSttSegment = useCallback(
+    (text: string) => {
+      void simul.submitSegment(text)
+      setLogText((current) => (keepLog ? appendTranscript(current, text) : text))
+    },
+    [simul.submitSegment, keepLog],
+  )
+  const stt = useSttSegments({
+    sttSettings,
+    llmConfig,
+    roomId: settings.roomId,
+    speechLang: speech.lang,
+    onSegment: handleSttSegment,
+  })
+  const usingApiStt = stt.configured
+  const isListening = usingApiStt ? stt.isListening : speech.isListening
+  const toggleListening = usingApiStt ? stt.toggle : speech.toggle
+  const listenError = usingApiStt ? stt.error : speech.error
   const prevTranscriptRef = useRef('')
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const simulBottomRef = useRef<HTMLDivElement | null>(null)
@@ -34,7 +60,7 @@ export function TranscribePanel({ settings, onOpenSettings }: TranscribePanelPro
 
   useEffect(() => {
     if (keepLog && prevTranscriptRef.current && speech.transcript.length < prevTranscriptRef.current.length) {
-      setLogText((current) => current + prevTranscriptRef.current + '\n')
+      setLogText((current) => appendTranscript(current, prevTranscriptRef.current))
     }
     prevTranscriptRef.current = speech.transcript
   }, [speech.transcript, keepLog])
@@ -51,7 +77,7 @@ export function TranscribePanel({ settings, onOpenSettings }: TranscribePanelPro
     if (simul.enabled) simulBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [simul.entries, simul.enabled])
 
-  if (!speech.isSupported) {
+  if (!speech.isSupported && !stt.configured) {
     return (
       <div class="transcribe-panel">
         <p class="transcribe-unsupported">{t('transcribe-unsupported')}</p>
@@ -95,21 +121,36 @@ export function TranscribePanel({ settings, onOpenSettings }: TranscribePanelPro
 
         <button
           type="button"
-          class={`transcribe-toggle ${speech.isListening ? 'active' : ''}`}
-          onClick={speech.toggle}
-          aria-pressed={speech.isListening}
-          aria-label={speech.isListening ? t('transcribe-stop-aria-label') : t('transcribe-start-aria-label')}
+          class={`transcribe-toggle ${isListening ? 'active' : ''}`}
+          onClick={toggleListening}
+          aria-pressed={isListening}
+          aria-label={isListening ? t('transcribe-stop-aria-label') : t('transcribe-start-aria-label')}
         >
-          {speech.isListening ? <MicOff size={18} /> : <Mic size={18} />}
-          {speech.isListening ? t('transcribe-stop-button') : t('transcribe-start-button')}
+          {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+          {isListening ? t('transcribe-stop-button') : t('transcribe-start-button')}
         </button>
+        {usingApiStt && stt.isTranscribing ? (
+          <span class="transcribe-simul-result-pending" aria-label={t('transcribe-simul-pending-aria-label')}>
+            <LoaderCircle size={16} />
+          </span>
+        ) : null}
       </div>
 
-      {speech.error ? <p class="transcribe-error">{speech.error}</p> : null}
+      <p class="transcribe-stt-mode">
+        {!usingApiStt
+          ? t('transcribe-stt-mode-browser')
+          : stt.mode === 'realtime'
+            ? t('transcribe-stt-mode-realtime')
+            : stt.mode === 'batch'
+              ? t('transcribe-stt-mode-batch')
+              : t('transcribe-stt-mode-api')}
+      </p>
+
+      {listenError ? <p class="transcribe-error">{listenError}</p> : null}
 
       <div class="transcribe-transcript">
         <span class="transcribe-log">{logText}</span>
-        <span class="transcribe-current">{speech.transcript}</span>
+        <span class="transcribe-current">{usingApiStt ? stt.liveText : speech.transcript}</span>
         <div ref={bottomRef} />
       </div>
 

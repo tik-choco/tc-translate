@@ -168,6 +168,10 @@ export function migrateLegacyLocalSettings(): void {
       // both start unset and fall back to the default preset's model.
       orchestratorPresetId: '',
       workerPresetId: '',
+      defaultReasoningEffort: 'none',
+      visionReasoningEffort: 'none',
+      orchestratorReasoningEffort: 'none',
+      workerReasoningEffort: 'none',
     }
     localStorage.setItem(settingsStorageKey, JSON.stringify(newLocalProvider))
   }

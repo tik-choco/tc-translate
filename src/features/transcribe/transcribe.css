@@ -83,6 +83,12 @@
   font-size: 0.9em;
 }
 
+.transcribe-stt-mode {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8em;
+}
+
 .transcribe-transcript {
   flex: 1;
   min-height: 200px;

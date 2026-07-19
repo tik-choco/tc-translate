@@ -62,7 +62,20 @@ export function useSpeechRecognition(initialLang: string, onFinalResult?: (text:
 
     recognition.onerror = (event) => {
       fatalErrorRef.current = FATAL_ERROR_CODES.has(event.error)
-      setError(event.error || t('transcribe-error-generic'))
+      // 'no-speech' just means a silent stretch; the onend restart handles it.
+      if (event.error === 'no-speech') return
+      // Raw Web Speech API codes ('network', 'not-allowed', …) mean nothing to
+      // users — 'network' in particular is the browser's own cloud recognizer
+      // being unreachable (or absent entirely, e.g. Brave), not this app's STT.
+      setError(
+        event.error === 'network'
+          ? t('stt-browser-network-error')
+          : event.error === 'not-allowed' || event.error === 'service-not-allowed'
+            ? t('stt-mic-denied')
+            : event.error
+              ? `${t('transcribe-error-generic')} (${event.error})`
+              : t('transcribe-error-generic'),
+      )
     }
 
     recognition.onend = () => {

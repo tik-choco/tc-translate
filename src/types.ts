@@ -2,6 +2,13 @@ import type { LlmProviderV1, ModelPresetV1 } from './lib/llmConfig'
 
 export type ProviderConnection = 'api' | 'network'
 
+// reasoning_effort values offered per task. 'none' is a real API value
+// (explicitly disables reasoning on servers that support it), not "omit the
+// field" — requests always include reasoning_effort, 'none' included.
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high'
+
+export type ReasoningTask = 'default' | 'vision' | 'orchestrator' | 'worker'
+
 // App-local settings persisted at `tc-translate-provider-settings-v1`.
 // Connection details (baseUrl/apiKey/model/temperature) now live in the
 // shared `tc-shared-llm-config-v1` key (see lib/llmConfig.ts) so they can be
@@ -33,6 +40,11 @@ export type LocalProviderSettings = {
    * model, mirroring visionPresetId.
    */
   workerPresetId: string
+  /** Per-task reasoning_effort, always sent with the request (default 'none'). */
+  defaultReasoningEffort: ReasoningEffort
+  visionReasoningEffort: ReasoningEffort
+  orchestratorReasoningEffort: ReasoningEffort
+  workerReasoningEffort: ReasoningEffort
 }
 
 // Runtime settings used throughout the app: `LocalProviderSettings` merged
@@ -50,8 +62,11 @@ export type ProviderSettings = {
   /** Model for the simultaneous-translation worker calls. Falls back to `defaultResolvedProvider.workerModel` (a lighter model), independent of `model`, when unset. */
   workerModel: string
   temperature: number
-  /** From the resolved default preset, if it set one; falls back to 'none' at call sites. */
-  reasoningEffort?: string
+  /** reasoning_effort for default-task requests. Always sent to the API, 'none' included. */
+  reasoningEffort: ReasoningEffort
+  visionReasoningEffort: ReasoningEffort
+  orchestratorReasoningEffort: ReasoningEffort
+  workerReasoningEffort: ReasoningEffort
   connection: ProviderConnection
   roomId: string
   networkProviderEnabled: boolean

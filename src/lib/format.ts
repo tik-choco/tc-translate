@@ -9,6 +9,17 @@ export function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, '')
 }
 
+/**
+ * Joins consecutive transcription segments as flowing text (no newline).
+ * CJK boundaries concatenate directly; a space keeps Latin words apart.
+ */
+export function appendTranscript(base: string, text: string): string {
+  const trimmed = base.trim()
+  if (!trimmed) return text
+  const cjkBoundary = /[\u3000-\u30ff\u3400-\u9fff\uf900-\ufaff\uff01-\uff9f]$/.test(trimmed) || /^[\u3000-\u30ff\u3400-\u9fff\uf900-\ufaff\uff01-\uff9f]/.test(text)
+  return cjkBoundary ? trimmed + text : `${trimmed} ${text}`
+}
+
 export function readImageFile(file: File): Promise<ImageInput> {
   const maxImageBytes = 10 * 1024 * 1024
   if (!file.type.startsWith('image/')) {

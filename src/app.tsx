@@ -31,8 +31,8 @@ export function App() {
   const [messagesVersion, setMessagesVersion] = useState(0)
   const uiTranslationInFlight = useRef('')
   const transcribePanelProps = useMemo(
-    () => ({ onOpenSettings: t.openSettings, settings: t.settings }),
-    [t.openSettings, t.settings],
+    () => ({ onOpenSettings: t.openSettings, settings: t.settings, sttSettings: t.sttSettings, llmConfig: t.llmConfig }),
+    [t.openSettings, t.settings, t.sttSettings, t.llmConfig],
   )
 
   useEffect(() => subscribeUiMessages(() => setMessagesVersion((version) => version + 1)), [])
@@ -239,11 +239,6 @@ export function App() {
           settings={t.settings}
           onUpdateSettings={t.updateSettings}
           onClose={t.closeSettings}
-          selectableModelOptions={t.selectableModelOptions}
-          modelStatus={t.modelStatus}
-          modelOptions={t.modelOptions}
-          modelError={t.modelError}
-          onRefreshModels={t.refreshModels}
           onAddProvider={t.addProvider}
           onUpdateProvider={t.updateProvider}
           onRemoveProvider={t.removeProvider}
@@ -254,6 +249,7 @@ export function App() {
           onSetVisionPresetId={t.setVisionPresetId}
           onSetOrchestratorPresetId={t.setOrchestratorPresetId}
           onSetWorkerPresetId={t.setWorkerPresetId}
+          onSetReasoningEffort={t.setReasoningEffort}
           ttsSettings={t.ttsSettings}
           onUpdateTtsSettings={t.updateTtsSettings}
           sttSettings={t.sttSettings}

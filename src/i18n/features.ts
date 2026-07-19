@@ -13,6 +13,10 @@ export const featureMessages = {
     'kanji-ruby-zhuyin-placeholder': 'Zhuyin (Bopomofo)',
 
     'transcribe-unsupported': "Your browser doesn't support speech recognition.",
+    'transcribe-stt-mode-api': 'STT: configured model',
+    'transcribe-stt-mode-realtime': 'STT: realtime streaming (Realtime API)',
+    'transcribe-stt-mode-batch': 'STT: batched segments (sent every few seconds)',
+    'transcribe-stt-mode-browser': 'STT: browser speech recognition (no STT model configured)',
     'transcribe-select-aria-label': 'Recognition language',
     'transcribe-keep-log': 'Keep log',
     'transcribe-stop-aria-label': 'Stop recognition',
@@ -42,6 +46,10 @@ export const featureMessages = {
     'kanji-ruby-zhuyin-placeholder': '注音',
 
     'transcribe-unsupported': 'お使いのブラウザは音声認識に対応していません。',
+    'transcribe-stt-mode-api': 'STT: 設定モデル',
+    'transcribe-stt-mode-realtime': 'STT: リアルタイム（Realtime API）',
+    'transcribe-stt-mode-batch': 'STT: まとめて送信（数秒ごと）',
+    'transcribe-stt-mode-browser': 'STT: ブラウザ音声認識（STTモデル未設定）',
     'transcribe-select-aria-label': '認識言語',
     'transcribe-keep-log': 'ログを残す',
     'transcribe-stop-aria-label': '認識を停止',
@@ -71,6 +79,10 @@ export const featureMessages = {
     'kanji-ruby-zhuyin-placeholder': '注音符号',
 
     'transcribe-unsupported': '你的浏览器不支持语音识别。',
+    'transcribe-stt-mode-api': 'STT：已配置的模型',
+    'transcribe-stt-mode-realtime': 'STT：实时流式（Realtime API）',
+    'transcribe-stt-mode-batch': 'STT：批量发送（每隔数秒）',
+    'transcribe-stt-mode-browser': 'STT：浏览器语音识别（未配置 STT 模型）',
     'transcribe-select-aria-label': '识别语言',
     'transcribe-keep-log': '保留记录',
     'transcribe-stop-aria-label': '停止识别',
@@ -100,6 +112,10 @@ export const featureMessages = {
     'kanji-ruby-zhuyin-placeholder': '注音符號',
 
     'transcribe-unsupported': '你的瀏覽器不支援語音辨識。',
+    'transcribe-stt-mode-api': 'STT：已設定的模型',
+    'transcribe-stt-mode-realtime': 'STT：即時串流（Realtime API）',
+    'transcribe-stt-mode-batch': 'STT：批次傳送（每隔數秒）',
+    'transcribe-stt-mode-browser': 'STT：瀏覽器語音辨識（未設定 STT 模型）',
     'transcribe-select-aria-label': '辨識語言',
     'transcribe-keep-log': '保留紀錄',
     'transcribe-stop-aria-label': '停止辨識',
