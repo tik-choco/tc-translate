@@ -2,8 +2,21 @@ import { useMemo, useRef, useState } from 'preact/hooks'
 import type { ReplyTone } from '../../constants'
 import { normalizeBaseUrl, writeClipboard } from '../../lib/format'
 import { localizeNetworkError } from '../../lib/network'
-import { translateIncomingMessage, translateReply, type ReplyTranslateResult } from '../../lib/replyTranslate'
-import { loadReplyAutoCopy, loadReplyTone, saveReplyAutoCopy, saveReplyTone } from '../../lib/storage'
+import {
+  checkReplyBackTranslation,
+  translateIncomingMessage,
+  translateReply,
+  type ReplyBackTranslationResult,
+  type ReplyTranslateResult,
+} from '../../lib/replyTranslate'
+import {
+  loadReplyAutoBackCheck,
+  loadReplyAutoCopy,
+  loadReplyTone,
+  saveReplyAutoBackCheck,
+  saveReplyAutoCopy,
+  saveReplyTone,
+} from '../../lib/storage'
 import type { ProviderSettings, ReplyResult, Status } from '../../types'
 
 type UseReplyTranslateParams = {
@@ -26,6 +39,12 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
   const [tone, setToneState] = useState<ReplyTone>(() => loadReplyTone())
   const [copied, setCopied] = useState(false)
   const copiedTimeoutRef = useRef<number | undefined>(undefined)
+
+  const [autoBackCheck, setAutoBackCheckState] = useState(() => loadReplyAutoBackCheck())
+  const [backCheckStatus, setBackCheckStatus] = useState<Status>('idle')
+  const [backCheckResult, setBackCheckResult] = useState<ReplyBackTranslationResult | null>(null)
+  const [backCheckError, setBackCheckError] = useState('')
+  const backCheckGeneration = useRef(0)
 
   const [incomingStatus, setIncomingStatus] = useState<Status>('idle')
   const [incomingTranslation, setIncomingTranslation] = useState('')
@@ -51,6 +70,38 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
   function setTone(value: ReplyTone): void {
     setToneState(value)
     saveReplyTone(value)
+  }
+
+  function setAutoBackCheck(value: boolean): void {
+    setAutoBackCheckState(value)
+    saveReplyAutoBackCheck(value)
+  }
+
+  async function runBackCheck(ownReplyText: string, translatedReplyText: string): Promise<void> {
+    const currentGeneration = ++backCheckGeneration.current
+    setBackCheckStatus('loading')
+    setBackCheckError('')
+
+    try {
+      const checkResult = await checkReplyBackTranslation({
+        settings,
+        ownReply: ownReplyText,
+        translatedReply: translatedReplyText,
+        nativeLanguage,
+      })
+      if (backCheckGeneration.current !== currentGeneration) return
+      setBackCheckResult(checkResult)
+      setBackCheckStatus('done')
+    } catch (err) {
+      if (backCheckGeneration.current !== currentGeneration) return
+      setBackCheckError(localizeNetworkError(err, 'Back-translation check failed.'))
+      setBackCheckStatus('error')
+    }
+  }
+
+  async function handleCheckBackTranslation(): Promise<void> {
+    if (!result || backCheckStatus === 'loading') return
+    await runBackCheck(ownReply, result.translatedReply)
   }
 
   // Best-effort: a failed clipboard write (permission denied, insecure
@@ -90,6 +141,11 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
       setResult(nextResult)
       setStatus('done')
       if (autoCopy) void copyResult(nextResult.translatedReply)
+      // A fresh translation invalidates any back-check of the previous one.
+      setBackCheckStatus('idle')
+      setBackCheckResult(null)
+      setBackCheckError('')
+      if (autoBackCheck) void runBackCheck(ownReply, nextResult.translatedReply)
       onDone?.(partnerMessage, {
         ownReply,
         detectedLanguage: nextResult.detectedLanguage,
@@ -145,6 +201,7 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
   function reset(): void {
     generation.current += 1
     incomingGeneration.current += 1
+    backCheckGeneration.current += 1
     window.clearTimeout(copiedTimeoutRef.current)
     setPartnerMessageState('')
     setOwnReply('')
@@ -155,6 +212,9 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
     setIncomingStatus('idle')
     setIncomingTranslation('')
     setIncomingError('')
+    setBackCheckStatus('idle')
+    setBackCheckResult(null)
+    setBackCheckError('')
   }
 
   return {
@@ -174,6 +234,12 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
     setTone,
     copied,
     copyResult,
+    autoBackCheck,
+    setAutoBackCheck,
+    backCheckStatus,
+    backCheckResult,
+    backCheckError,
+    handleCheckBackTranslation,
     incomingStatus,
     incomingTranslation,
     incomingError,

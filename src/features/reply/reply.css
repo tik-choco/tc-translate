@@ -129,10 +129,15 @@
   min-height: 80px;
 }
 
-.reply-autocopy-toggle {
+.reply-options {
+  display: flex;
+  align-self: flex-end;
+  gap: 16px;
+}
+
+.reply-option-toggle {
   display: flex;
   align-items: center;
-  align-self: flex-end;
   gap: 6px;
   white-space: nowrap;
   color: var(--text-muted);
@@ -140,11 +145,22 @@
   cursor: pointer;
 }
 
-.reply-autocopy-toggle input[type='checkbox'] {
+.reply-option-toggle input[type='checkbox'] {
   width: 16px;
   height: 16px;
   min-height: 0;
   flex: 0 0 auto;
+}
+
+.reply-backcheck {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reply-backcheck-actions {
+  display: flex;
+  justify-content: center;
 }
 
 .reply-result-wrap {

@@ -1,4 +1,4 @@
-import { Check, Clipboard, ClipboardPaste, Languages, LoaderCircle, Send } from 'lucide-preact'
+import { Check, Clipboard, ClipboardPaste, Languages, LoaderCircle, RefreshCw, Send } from 'lucide-preact'
 import type { JSX } from 'preact'
 import { replyToneOptions, type ReplyTone } from '../../constants'
 import { t } from '../../i18n'
@@ -182,6 +182,42 @@ export function ReplyPanel({
             <article class="reply-result-card">
               <pre>{reply.result.translatedReply}</pre>
             </article>
+            <div class="reply-backcheck">
+              <div class="reply-backcheck-actions">
+                <button
+                  type="button"
+                  class={`secondary-button ${reply.backCheckStatus === 'loading' ? 'loading' : ''}`}
+                  onClick={() => void reply.handleCheckBackTranslation()}
+                  disabled={reply.backCheckStatus === 'loading'}
+                >
+                  {reply.backCheckStatus === 'loading' ? <LoaderCircle size={16} /> : <RefreshCw size={16} />}
+                  {reply.backCheckStatus === 'loading' ? t('translator-checking') : t('translator-back-translate')}
+                </button>
+              </div>
+              {reply.backCheckStatus === 'loading' ? (
+                <span class="loading-line">
+                  <LoaderCircle size={18} />
+                  {t('translator-checking-back-translation')}
+                </span>
+              ) : reply.backCheckError ? (
+                <span class="error-text">{reply.backCheckError}</span>
+              ) : reply.backCheckResult ? (
+                <article class="back-translation-card">
+                  <header>
+                    <span>{t('reply-backcheck-label')}</span>
+                    {reply.backCheckResult.verdict ? <strong>{reply.backCheckResult.verdict}</strong> : null}
+                  </header>
+                  <pre>{reply.backCheckResult.backTranslatedText}</pre>
+                  {reply.backCheckResult.issues.length ? (
+                    <div class="back-translation-issues">
+                      {reply.backCheckResult.issues.map((issue) => (
+                        <p key={issue}>{issue}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ) : null}
+            </div>
           </div>
         ) : (
           <div class="empty-state">
@@ -191,14 +227,24 @@ export function ReplyPanel({
         )}
       </div>
 
-      <label class="reply-autocopy-toggle">
-        <input
-          type="checkbox"
-          checked={reply.autoCopy}
-          onChange={(event) => reply.setAutoCopy(event.currentTarget.checked)}
-        />
-        {t('reply-autocopy-toggle')}
-      </label>
+      <div class="reply-options">
+        <label class="reply-option-toggle">
+          <input
+            type="checkbox"
+            checked={reply.autoBackCheck}
+            onChange={(event) => reply.setAutoBackCheck(event.currentTarget.checked)}
+          />
+          {t('reply-autobackcheck-toggle')}
+        </label>
+        <label class="reply-option-toggle">
+          <input
+            type="checkbox"
+            checked={reply.autoCopy}
+            onChange={(event) => reply.setAutoCopy(event.currentTarget.checked)}
+          />
+          {t('reply-autocopy-toggle')}
+        </label>
+      </div>
     </div>
   )
 }
