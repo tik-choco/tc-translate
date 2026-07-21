@@ -1,0 +1,139 @@
+.reply-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 720px;
+}
+
+.reply-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reply-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.reply-field-buttons {
+  display: flex;
+  justify-content: center;
+}
+
+.reply-paste-translate-button {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.reply-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.reply-incoming-status {
+  font-size: 0.9rem;
+}
+
+.reply-incoming-translation {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.reply-textarea {
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.reply-textarea::placeholder {
+  color: var(--text-subtle);
+}
+
+.reply-textarea:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.reply-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reply-shortcut-hint {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.reply-output {
+  min-height: 80px;
+}
+
+.reply-autocopy-toggle {
+  display: flex;
+  align-items: center;
+  align-self: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.reply-autocopy-toggle input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+.reply-result-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: soft-rise 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reply-result-copy {
+  align-self: flex-end;
+}
+
+.reply-result-card {
+  padding: 12px 16px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+}
+
+.reply-result-card pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--text);
+}

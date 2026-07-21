@@ -29,11 +29,15 @@ const FILTERS: { value: HistoryFilter; labelKey: string }[] = [
   { value: 'translate', labelKey: 'history-kind-translate' },
   { value: 'proofread', labelKey: 'history-kind-proofread' },
   { value: 'explain', labelKey: 'history-kind-explain' },
+  { value: 'example', labelKey: 'history-kind-example' },
+  { value: 'reply', labelKey: 'history-kind-reply' },
 ]
 
 function kindLabel(kind: HistoryKind) {
   if (kind === 'proofread') return t('history-kind-proofread')
   if (kind === 'explain') return t('history-kind-explain')
+  if (kind === 'example') return t('history-kind-example')
+  if (kind === 'reply') return t('history-kind-reply')
   return t('history-kind-translate')
 }
 
@@ -99,8 +103,14 @@ export const HistoryPanel = memo(function HistoryPanel({ history, onSelect, onDe
                 {item.kind === 'explain' && item.explanation && (
                   <span class="history-preview">{item.explanation.overview}</span>
                 )}
+                {item.kind === 'example' && item.example && (
+                  <span class="history-preview">{item.example.sentences[0]?.text ?? ''}</span>
+                )}
+                {item.kind === 'reply' && item.reply && (
+                  <span class="history-preview">{item.reply.translatedReply}</span>
+                )}
               </button>
-              {item.kind !== 'proofread' && (
+              {item.kind !== 'proofread' && item.kind !== 'example' && item.kind !== 'reply' && (
                 <button
                   type="button"
                   class={`history-send${sentId === item.id ? ' history-send-success' : ''}`}

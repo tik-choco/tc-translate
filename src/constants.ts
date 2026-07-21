@@ -19,6 +19,7 @@ export const modeStorageKey = 'tc-translate-mode-v1'
 export const onboardingStorageKey = 'tc-translate-onboarding-seen-v1'
 export const simulTranslateEnabledStorageKey = 'tc-translate-simul-translate-enabled-v1'
 export const simulTranslateLanguagesStorageKey = 'tc-translate-simul-translate-languages-v1'
+export const replyAutoCopyStorageKey = 'tc-translate-reply-auto-copy-v1'
 export const defaultNativeLanguage = 'Japanese'
 export const maxHistoryItems = 20
 // Safety cap so a forgotten recording can't run (and accumulate audio) forever.
@@ -37,6 +38,8 @@ export const maxSimulEntries = 30
 // Rolling window of prior finalized segments fed to the orchestrator/workers
 // as translation context, mirroring the Translate tab's tone-context sizing.
 export const simulContextSize = 3
+// Number of example sentences requested per "example" mode generation.
+export const exampleSentenceCount = 5
 
 // New app-local defaults (post shared-llm-config migration / fresh installs).
 export const defaultLocalSettings: LocalProviderSettings = {

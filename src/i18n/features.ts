@@ -1,7 +1,7 @@
 import type { MessageBundle } from './types'
 
-// Kanji converter and Transcribe tabs. Keys are prefixed with `kanji-` /
-// `transcribe-` to avoid collisions with other bundles.
+// Kanji converter, Transcribe, and Reply tabs. Keys are prefixed with
+// `kanji-` / `transcribe-` / `reply-` to avoid collisions with other bundles.
 export const featureMessages = {
   en: {
     'kanji-input-label': 'Input',
@@ -35,6 +35,18 @@ export const featureMessages = {
     'transcribe-simul-pending-aria-label': 'Translating…',
     'transcribe-simul-error': 'Translation failed',
     'transcribe-simul-setup-hint': 'Configure a translation provider in Settings to use simultaneous translation.',
+
+    'reply-partner-label': 'The message you received',
+    'reply-partner-placeholder': 'Paste the message you received...',
+    'reply-paste-button': 'Paste from clipboard',
+    'reply-paste-and-understand-button': 'Paste & translate',
+    'reply-translating-incoming': 'Translating',
+    'reply-own-label': 'Your reply (in your own language)',
+    'reply-own-placeholder': 'Write your reply...',
+    'reply-translate-button': 'Translate reply',
+    'reply-translating': 'Translating your reply',
+    'reply-empty': 'Your translated reply will appear here',
+    'reply-autocopy-toggle': 'Auto-copy',
   },
   ja: {
     'kanji-input-label': '入力',
@@ -68,6 +80,18 @@ export const featureMessages = {
     'transcribe-simul-pending-aria-label': '翻訳中…',
     'transcribe-simul-error': '翻訳に失敗しました',
     'transcribe-simul-setup-hint': '同時翻訳を使うには設定で翻訳エンジンを構成してください。',
+
+    'reply-partner-label': '受け取ったメッセージ',
+    'reply-partner-placeholder': '受け取ったメッセージを貼り付けてください...',
+    'reply-paste-button': 'クリップボードから貼り付け',
+    'reply-paste-and-understand-button': '貼り付けて翻訳',
+    'reply-translating-incoming': '翻訳中',
+    'reply-own-label': '自分の返信（自分の言語で）',
+    'reply-own-placeholder': '返信を入力してください...',
+    'reply-translate-button': '返信を翻訳',
+    'reply-translating': '返信を翻訳中',
+    'reply-empty': '翻訳された返信はここに表示されます',
+    'reply-autocopy-toggle': '自動コピー',
   },
   'zh-CN': {
     'kanji-input-label': '输入',
@@ -101,6 +125,18 @@ export const featureMessages = {
     'transcribe-simul-pending-aria-label': '翻译中…',
     'transcribe-simul-error': '翻译失败',
     'transcribe-simul-setup-hint': '要使用同步翻译，请先在设置中配置翻译引擎。',
+
+    'reply-partner-label': '收到的消息',
+    'reply-partner-placeholder': '粘贴收到的消息...',
+    'reply-paste-button': '从剪贴板粘贴',
+    'reply-paste-and-understand-button': '粘贴并翻译',
+    'reply-translating-incoming': '正在翻译',
+    'reply-own-label': '你的回复（用你自己的语言）',
+    'reply-own-placeholder': '输入你的回复...',
+    'reply-translate-button': '翻译回复',
+    'reply-translating': '正在翻译回复',
+    'reply-empty': '翻译后的回复将显示在此处',
+    'reply-autocopy-toggle': '自动复制',
   },
   'zh-TW': {
     'kanji-input-label': '輸入',
@@ -134,5 +170,17 @@ export const featureMessages = {
     'transcribe-simul-pending-aria-label': '翻譯中…',
     'transcribe-simul-error': '翻譯失敗',
     'transcribe-simul-setup-hint': '要使用同步翻譯，請先在設定中配置翻譯引擎。',
+
+    'reply-partner-label': '收到的訊息',
+    'reply-partner-placeholder': '貼上收到的訊息...',
+    'reply-paste-button': '從剪貼簿貼上',
+    'reply-paste-and-understand-button': '貼上並翻譯',
+    'reply-translating-incoming': '正在翻譯',
+    'reply-own-label': '你的回覆（用你自己的語言）',
+    'reply-own-placeholder': '輸入你的回覆...',
+    'reply-translate-button': '翻譯回覆',
+    'reply-translating': '正在翻譯回覆',
+    'reply-empty': '翻譯後的回覆將顯示於此',
+    'reply-autocopy-toggle': '自動複製',
   },
 } satisfies MessageBundle

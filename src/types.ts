@@ -170,13 +170,21 @@ export type TranslationVariant = {
   reading?: string
 }
 
-export type HistoryKind = 'translate' | 'proofread' | 'explain'
+export type HistoryKind = 'translate' | 'proofread' | 'explain' | 'example' | 'reply'
 
-// One history entry, covering all three modes. `kind` is backfilled to
+// Reply tab: sourceText holds the received message (partnerMessage); this
+// carries the rest of what was translated in response to it.
+export type ReplyResult = {
+  ownReply: string
+  detectedLanguage: string
+  translatedReply: string
+}
+
+// One history entry, covering every kind. `kind` is backfilled to
 // 'translate' when loading pre-`kind` localStorage data (see lib/storage.ts).
-// For 'proofread'/'explain' items `targetLanguage` is '' and `translations`/
-// `notes` are empty; the mode-specific payload lives in `proofread` /
-// `explanation` respectively.
+// For 'proofread'/'explain'/'example'/'reply' items `targetLanguage` is '' and
+// `translations`/`notes` are empty; the mode-specific payload lives in
+// `proofread` / `explanation` / `example` / `reply` respectively.
 export type TranslationHistoryItem = {
   id: string
   createdAt: number
@@ -187,24 +195,29 @@ export type TranslationHistoryItem = {
   notes: string[]
   proofread?: ProofreadResult
   explanation?: ExplanationResult
+  example?: ExampleResult
+  reply?: ReplyResult
 }
 
 // The heavy per-item fields (full source text, translations, proofread/
-// explain results), stored via mistlib storage_add and referenced from a
-// `PersistedHistoryItem.bodyCid` instead of living inline in localStorage.
+// explain/example/reply results), stored via mistlib storage_add and
+// referenced from a `PersistedHistoryItem.bodyCid` instead of living inline
+// in localStorage.
 export type HistoryItemBody = {
   sourceText: string
   translations: TranslationVariant[]
   proofread?: ProofreadResult
   explanation?: ExplanationResult
+  example?: ExampleResult
+  reply?: ReplyResult
 }
 
 // Shape of a history item as persisted at `tc-translate-history-v1`. New
 // saves always carry `bodyCid` (see lib/storage.ts) plus a small
 // `sourcePreview`; entries written before this migration instead carry the
-// full fields inline (`sourceText`/`translations`/`proofread`/`explanation`)
-// with no `bodyCid`. Dual-read: prefer `bodyCid` when present, else fall back
-// to the inline legacy fields.
+// full fields inline (`sourceText`/`translations`/`proofread`/`explanation`/
+// `example`/`reply`) with no `bodyCid`. Dual-read: prefer `bodyCid` when
+// present, else fall back to the inline legacy fields.
 export type PersistedHistoryItem = {
   id: string
   createdAt: number
@@ -218,6 +231,8 @@ export type PersistedHistoryItem = {
   translations?: TranslationVariant[]
   proofread?: ProofreadResult
   explanation?: ExplanationResult
+  example?: ExampleResult
+  reply?: ReplyResult
 }
 
 export type Status = 'idle' | 'loading' | 'done' | 'error'
@@ -279,4 +294,14 @@ export type ExplanationResult = {
   vocabulary: VocabularyEntry[]
 }
 
-export type AppMode = 'translate' | 'proofread' | 'explain'
+export type ExampleSentence = {
+  text: string
+  reading?: string
+  translation?: string
+}
+
+export type ExampleResult = {
+  sentences: ExampleSentence[]
+}
+
+export type AppMode = 'translate' | 'proofread' | 'explain' | 'example'

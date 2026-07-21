@@ -2,6 +2,8 @@ import { extraTranslationTones, initialTranslationTones } from '../constants'
 import type {
   BackTranslationCheck,
   BackTranslationItem,
+  ExampleResult,
+  ExampleSentence,
   ExplanationResult,
   ExplanationRubyToken,
   GrammarPoint,
@@ -251,6 +253,36 @@ export function parseExplanation(content: string): ExplanationResult {
     grammarPoints: [],
     vocabulary: [],
   }
+}
+
+export function parseExampleResult(content: string): ExampleResult {
+  try {
+    const parsed = JSON.parse(extractJsonContent(content)) as Partial<{ sentences: unknown; examples: unknown }>
+    const rawSentences = Array.isArray(parsed.sentences)
+      ? parsed.sentences
+      : Array.isArray(parsed.examples)
+        ? parsed.examples
+        : []
+    const sentences = rawSentences
+      .map((item) => {
+        const entry = item as Partial<ExampleSentence>
+        if (typeof entry.text !== 'string' || !entry.text.trim()) return null
+        return {
+          text: entry.text.trim(),
+          ...(typeof entry.reading === 'string' && entry.reading.trim() ? { reading: entry.reading.trim() } : {}),
+          ...(typeof entry.translation === 'string' && entry.translation.trim()
+            ? { translation: entry.translation.trim() }
+            : {}),
+        }
+      })
+      .filter((item): item is ExampleSentence => item !== null)
+
+    if (sentences.length) return { sentences }
+  } catch {
+    // Some OpenAI-compatible providers ignore JSON-only instructions.
+  }
+
+  return { sentences: [{ text: content.trim() }] }
 }
 
 export function parseTranslation(content: string): TranslationResult {
