@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'preact/hooks'
+import type { ReplyTone } from '../../constants'
 import { normalizeBaseUrl, writeClipboard } from '../../lib/format'
 import { localizeNetworkError } from '../../lib/network'
 import { translateIncomingMessage, translateReply, type ReplyTranslateResult } from '../../lib/replyTranslate'
-import { loadReplyAutoCopy, saveReplyAutoCopy } from '../../lib/storage'
+import { loadReplyAutoCopy, loadReplyTone, saveReplyAutoCopy, saveReplyTone } from '../../lib/storage'
 import type { ProviderSettings, ReplyResult, Status } from '../../types'
 
 type UseReplyTranslateParams = {
@@ -22,6 +23,7 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
   const [result, setResult] = useState<ReplyTranslateResult | null>(null)
   const [error, setError] = useState('')
   const [autoCopy, setAutoCopyState] = useState(() => loadReplyAutoCopy())
+  const [tone, setToneState] = useState<ReplyTone>(() => loadReplyTone())
   const [copied, setCopied] = useState(false)
   const copiedTimeoutRef = useRef<number | undefined>(undefined)
 
@@ -44,6 +46,11 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
   function setAutoCopy(value: boolean): void {
     setAutoCopyState(value)
     saveReplyAutoCopy(value)
+  }
+
+  function setTone(value: ReplyTone): void {
+    setToneState(value)
+    saveReplyTone(value)
   }
 
   // Best-effort: a failed clipboard write (permission denied, insecure
@@ -78,7 +85,7 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
     setError('')
 
     try {
-      const nextResult = await translateReply({ settings, partnerMessage, ownReply, nativeLanguage })
+      const nextResult = await translateReply({ settings, partnerMessage, ownReply, nativeLanguage, tone })
       if (generation.current !== currentGeneration) return
       setResult(nextResult)
       setStatus('done')
@@ -163,6 +170,8 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
     handleTranslate,
     autoCopy,
     setAutoCopy,
+    tone,
+    setTone,
     copied,
     copyResult,
     incomingStatus,
