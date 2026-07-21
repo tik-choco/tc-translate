@@ -10,6 +10,7 @@ import {
   modeStorageKey,
   nativeLanguageStorageKey,
   onboardingStorageKey,
+  replyAutoCopyStorageKey,
   settingsStorageKey,
   simulTranslateEnabledStorageKey,
   simulTranslateLanguagesStorageKey,
@@ -19,6 +20,8 @@ import {
 import { storageAddJson, storageGetJson } from './mistStorage'
 import type {
   AppMode,
+  ExampleResult,
+  ExampleSentence,
   ExplanationResult,
   ExplanationRubyToken,
   GrammarPoint,
@@ -30,6 +33,7 @@ import type {
   ProofreadCorrection,
   ProofreadResult,
   ReasoningEffort,
+  ReplyResult,
   TranslationHistoryItem,
   TranslationVariant,
   VocabularyEntry,
@@ -160,7 +164,7 @@ export function saveNativeLanguage(language: string): void {
 
 export function loadMode(): AppMode {
   const stored = localStorage.getItem(modeStorageKey)
-  return stored === 'proofread' || stored === 'explain' ? stored : 'translate'
+  return stored === 'proofread' || stored === 'explain' || stored === 'example' ? stored : 'translate'
 }
 
 export function saveMode(mode: AppMode): void {
@@ -200,6 +204,22 @@ export function saveSimulTargetLanguages(targetLanguages: string[]): void {
     localStorage.setItem(simulTranslateLanguagesStorageKey, JSON.stringify(targetLanguages))
   } catch (err) {
     console.warn('tc-translate: failed to save simultaneous translation languages', err)
+  }
+}
+
+// Defaults to on: auto-copying the translated reply to the clipboard is the
+// common case (most users immediately paste it into the chat they're
+// replying in); the Reply tab exposes a toggle to turn it off.
+export function loadReplyAutoCopy(): boolean {
+  const stored = localStorage.getItem(replyAutoCopyStorageKey)
+  return stored === null ? true : stored === '1'
+}
+
+export function saveReplyAutoCopy(enabled: boolean): void {
+  try {
+    localStorage.setItem(replyAutoCopyStorageKey, enabled ? '1' : '0')
+  } catch (err) {
+    console.warn('tc-translate: failed to save reply auto-copy setting', err)
   }
 }
 
@@ -281,6 +301,29 @@ function isExplanationResult(value: unknown): value is ExplanationResult {
   )
 }
 
+function isExampleSentence(value: unknown): value is ExampleSentence {
+  const sentence = value as Partial<ExampleSentence>
+  return (
+    typeof sentence?.text === 'string' &&
+    (sentence.reading === undefined || typeof sentence.reading === 'string') &&
+    (sentence.translation === undefined || typeof sentence.translation === 'string')
+  )
+}
+
+function isExampleResult(value: unknown): value is ExampleResult {
+  const result = value as Partial<ExampleResult>
+  return Array.isArray(result?.sentences) && result.sentences.every(isExampleSentence)
+}
+
+function isReplyResult(value: unknown): value is ReplyResult {
+  const result = value as Partial<ReplyResult>
+  return (
+    typeof result?.ownReply === 'string' &&
+    typeof result?.detectedLanguage === 'string' &&
+    typeof result?.translatedReply === 'string'
+  )
+}
+
 // Resolves one stored entry's heavy fields: prefer the new `bodyCid` pointer
 // (mistlib storage_get), falling back to the pre-migration inline fields
 // when there's no `bodyCid` (dual-read). Returns null if neither is usable.
@@ -294,6 +337,8 @@ async function resolveHistoryItemBody(historyItem: Partial<PersistedHistoryItem>
           translations: Array.isArray(body.translations) ? body.translations : [],
           proofread: body.proofread,
           explanation: body.explanation,
+          example: body.example,
+          reply: body.reply,
         }
       }
     } catch (err) {
@@ -308,6 +353,8 @@ async function resolveHistoryItemBody(historyItem: Partial<PersistedHistoryItem>
       translations: Array.isArray(historyItem.translations) ? historyItem.translations : [],
       proofread: historyItem.proofread,
       explanation: historyItem.explanation,
+      example: historyItem.example,
+      reply: historyItem.reply,
     }
   }
 
@@ -321,7 +368,13 @@ async function hydrateHistoryItem(raw: unknown): Promise<TranslationHistoryItem 
 
   // Legacy items (saved before `kind` existed) and items with an
   // unrecognized `kind` are backfilled as 'translate'.
-  const kind: HistoryKind = historyItem.kind === 'proofread' || historyItem.kind === 'explain' ? historyItem.kind : 'translate'
+  const kind: HistoryKind =
+    historyItem.kind === 'proofread' ||
+    historyItem.kind === 'explain' ||
+    historyItem.kind === 'example' ||
+    historyItem.kind === 'reply'
+      ? historyItem.kind
+      : 'translate'
   const notes = Array.isArray(historyItem.notes) ? historyItem.notes : []
 
   const body = await resolveHistoryItemBody(historyItem)
@@ -354,16 +407,44 @@ async function hydrateHistoryItem(raw: unknown): Promise<TranslationHistoryItem 
     }
   }
 
-  if (!isExplanationResult(body.explanation)) return null
+  if (kind === 'explain') {
+    if (!isExplanationResult(body.explanation)) return null
+    return {
+      id: historyItem.id,
+      createdAt: historyItem.createdAt,
+      kind: 'explain',
+      sourceText: body.sourceText,
+      targetLanguage: '',
+      translations: [],
+      notes: [],
+      explanation: body.explanation,
+    }
+  }
+
+  if (kind === 'example') {
+    if (!isExampleResult(body.example)) return null
+    return {
+      id: historyItem.id,
+      createdAt: historyItem.createdAt,
+      kind: 'example',
+      sourceText: body.sourceText,
+      targetLanguage: '',
+      translations: [],
+      notes: [],
+      example: body.example,
+    }
+  }
+
+  if (!isReplyResult(body.reply)) return null
   return {
     id: historyItem.id,
     createdAt: historyItem.createdAt,
-    kind: 'explain',
+    kind: 'reply',
     sourceText: body.sourceText,
     targetLanguage: '',
     translations: [],
     notes: [],
-    explanation: body.explanation,
+    reply: body.reply,
   }
 }
 
@@ -411,6 +492,8 @@ async function toPersistedHistoryItem(item: TranslationHistoryItem): Promise<Per
     translations: item.translations,
     proofread: item.proofread,
     explanation: item.explanation,
+    example: item.example,
+    reply: item.reply,
   }
 
   try {
@@ -423,6 +506,8 @@ async function toPersistedHistoryItem(item: TranslationHistoryItem): Promise<Per
     preview.translations = body.translations
     preview.proofread = body.proofread
     preview.explanation = body.explanation
+    preview.example = body.example
+    preview.reply = body.reply
   }
 
   return preview

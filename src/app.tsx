@@ -1,4 +1,4 @@
-import { BookType, ExternalLink, History, Languages, Mic, Moon, Settings, Sun } from 'lucide-preact'
+import { BookType, ExternalLink, History, Languages, Mic, Moon, Send, Settings, Sun } from 'lucide-preact'
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import '@tik-choco/mistai/ui.css'
 import './app.css'
@@ -23,6 +23,7 @@ import { translateUiMessages } from './lib/uiTranslation'
 
 const loadKanjiPanel = () => import('./features/kanji/KanjiConverterPanel').then((m) => m.KanjiConverterPanel)
 const loadTranscribePanel = () => import('./features/transcribe/TranscribePanel').then((m) => m.TranscribePanel)
+const loadReplyPanel = () => import('./features/reply/ReplyPanel').then((m) => m.ReplyPanel)
 
 export function App() {
   const t = useTranslator()
@@ -33,6 +34,16 @@ export function App() {
   const transcribePanelProps = useMemo(
     () => ({ onOpenSettings: t.openSettings, settings: t.settings, sttSettings: t.sttSettings, llmConfig: t.llmConfig }),
     [t.openSettings, t.settings, t.sttSettings, t.llmConfig],
+  )
+  const replyPanelProps = useMemo(
+    () => ({
+      onOpenSettings: t.openSettings,
+      settings: t.settings,
+      nativeLanguage: t.nativeLanguage,
+      providerNeedsSetup: t.providerNeedsSetup,
+      onAddHistoryItem: t.addHistoryItem,
+    }),
+    [t.openSettings, t.settings, t.nativeLanguage, t.providerNeedsSetup, t.addHistoryItem],
   )
 
   useEffect(() => subscribeUiMessages(() => setMessagesVersion((version) => version + 1)), [])
@@ -59,6 +70,7 @@ export function App() {
   const tabs: TabDefinition[] = useMemo(
     () => [
       { id: 'translate', label: msg('tab-translate'), icon: Languages },
+      { id: 'reply', label: msg('tab-reply'), icon: Send },
       { id: 'kanji', label: msg('tab-kanji'), icon: BookType },
       { id: 'transcribe', label: msg('tab-transcribe'), icon: Mic },
     ],
@@ -135,6 +147,14 @@ export function App() {
       </header>
 
       <div
+        id="tab-panel-reply"
+        class={`tab-panel ${activeTab === 'reply' ? '' : 'tab-hidden'}`}
+        role="tabpanel"
+        aria-labelledby="tab-reply"
+      >
+        <LazyPanel active={activeTab === 'reply'} load={loadReplyPanel} props={replyPanelProps} />
+      </div>
+      <div
         id="tab-panel-kanji"
         class={`tab-panel ${activeTab === 'kanji' ? '' : 'tab-hidden'}`}
         role="tabpanel"
@@ -173,10 +193,12 @@ export function App() {
           canTranslate={t.canTranslate}
           canProofread={t.canProofread}
           canExplain={t.canExplain}
+          canExample={t.canExample}
           onTranslate={t.runTranslate}
           onCancelTranslate={t.cancelTranslate}
           onProofread={t.runProofread}
           onExplain={t.runExplain}
+          onExample={t.runExample}
           selectedHistory={t.selectedHistory}
           result={t.result}
           proofreadStatus={t.proofreadStatus}
@@ -185,6 +207,8 @@ export function App() {
           explainResult={t.explainResult}
           explainRubyStatus={t.explainRubyStatus}
           explainRubyTokens={t.explainRubyTokens}
+          exampleStatus={t.exampleStatus}
+          exampleResult={t.exampleResult}
           targetLanguage={t.targetLanguage}
           copiedTone={t.copiedTone}
           copiedProofread={t.copiedProofread}

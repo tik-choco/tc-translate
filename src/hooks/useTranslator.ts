@@ -12,6 +12,7 @@ import {
   saveOnboardingSeen,
   saveTargetLanguage,
 } from '../lib/storage'
+import { useExample } from './useExample'
 import { useExplain } from './useExplain'
 import { useHistoryPanel } from './useHistoryPanel'
 import { useImageImport } from './useImageImport'
@@ -30,6 +31,7 @@ import { useVoiceSettings } from './useVoiceSettings'
 import type {
   AppMode,
   BackTranslationCheck,
+  ExampleResult,
   ExplanationResult,
   ExplanationRubyToken,
   ProofreadResult,
@@ -127,6 +129,19 @@ export function useTranslator() {
     pendingExplainRubyRef.current = { sourceText: doneSourceText, tokens }
   }
 
+  function handleExampleDone(doneSourceText: string, result: ExampleResult): void {
+    addHistoryItem({
+      id: createId(),
+      createdAt: Date.now(),
+      kind: 'example',
+      sourceText: doneSourceText,
+      targetLanguage: '',
+      translations: [],
+      notes: [],
+      example: result,
+    })
+  }
+
   const proofread = useProofread({
     settings,
     sourceText,
@@ -140,6 +155,13 @@ export function useTranslator() {
     nativeLanguage,
     onDone: handleExplainDone,
     onRubyTokens: handleExplainRubyTokens,
+  })
+
+  const example = useExample({
+    settings,
+    sourceText,
+    nativeLanguage,
+    onDone: handleExampleDone,
   })
 
   const speech = useSpeech({ ttsSettings, llmConfig: llmConfigState.config, roomId: settings.roomId })
@@ -233,10 +255,15 @@ export function useTranslator() {
   }
 
   function restoreHistoryItem(item: TranslationHistoryItem): void {
+    // 'reply' items don't fit the Translate tab's single-input mode shape
+    // (they need the Reply tab's two-textarea UI) - nothing to restore here.
+    if (item.kind === 'reply') return
+
     if (item.kind === 'proofread') {
       if (!item.proofread) return
       selectMode('proofread')
       explain.resetExplain()
+      example.resetExample()
       setSourceText(item.sourceText)
       proofread.restoreProofread(item.proofread)
       setSelectedHistory(item)
@@ -255,8 +282,28 @@ export function useTranslator() {
       if (!item.explanation) return
       selectMode('explain')
       proofread.resetProofread()
+      example.resetExample()
       setSourceText(item.sourceText)
       explain.restoreExplain(item.explanation)
+      setSelectedHistory(item)
+      setActiveHistoryId(item.id)
+      setResult(null)
+      setBackTranslation(null)
+      setBackTranslationStatus('idle')
+      setStatus('idle')
+      setToneStatus('idle')
+      setError('')
+      setCopiedTone('')
+      return
+    }
+
+    if (item.kind === 'example') {
+      if (!item.example) return
+      selectMode('example')
+      proofread.resetProofread()
+      explain.resetExplain()
+      setSourceText(item.sourceText)
+      example.restoreExample(item.example)
       setSelectedHistory(item)
       setActiveHistoryId(item.id)
       setResult(null)
@@ -272,6 +319,7 @@ export function useTranslator() {
     selectMode('translate')
     proofread.resetProofread()
     explain.resetExplain()
+    example.resetExample()
     updateTargetLanguage(item.targetLanguage)
     setSelectedHistory(item)
     setActiveHistoryId(item.id)
@@ -314,6 +362,7 @@ export function useTranslator() {
     setError('')
     proofread.resetProofread()
     explain.resetExplain()
+    example.resetExample()
   }
 
   useEffect(() => {
@@ -398,6 +447,11 @@ export function useTranslator() {
     void explain.handleExplain()
   }
 
+  function runExample(): void {
+    selectMode('example')
+    void example.handleExample()
+  }
+
   useEffect(() => {
     if (mode !== 'translate') return
     if (!result?.translations.length) return
@@ -459,12 +513,20 @@ export function useTranslator() {
     backTranslation,
     backTranslationStatus,
     selectedHistory,
-    error: mode === 'proofread' ? proofread.proofreadError : mode === 'explain' ? explain.explainError : error,
+    error:
+      mode === 'proofread'
+        ? proofread.proofreadError
+        : mode === 'explain'
+          ? explain.explainError
+          : mode === 'example'
+            ? example.exampleError
+            : error,
     copiedTone,
     copiedProofread: proofread.copiedProofread,
     canTranslate,
     canProofread: proofread.canProofread,
     canExplain: explain.canExplain,
+    canExample: example.canExample,
     missingToneOptions,
     canGenerateTones,
     canCheckBackTranslation,
@@ -474,6 +536,8 @@ export function useTranslator() {
     explainResult: explain.explainResult,
     explainRubyStatus: explain.explainRubyStatus,
     explainRubyTokens: explain.explainRubyTokens,
+    exampleStatus: example.exampleStatus,
+    exampleResult: example.exampleResult,
     updateTargetLanguage: stableUpdateTargetLanguage,
     updateNativeLanguage,
     restoreHistoryItem: stableRestoreHistoryItem,
@@ -484,6 +548,7 @@ export function useTranslator() {
     cancelTranslate,
     runProofread,
     runExplain,
+    runExample,
     handleGenerateTones,
     handleCheckBackTranslation,
     copyProofread: stableCopyProofread,

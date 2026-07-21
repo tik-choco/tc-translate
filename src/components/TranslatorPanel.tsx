@@ -1,16 +1,18 @@
-import { BookOpen, Download, FileUp, LoaderCircle, Mic, PenLine, Play, ScanText, Square, Volume2, X } from 'lucide-preact'
+import { BookOpen, Download, FileUp, LoaderCircle, Mic, NotebookText, PenLine, Play, ScanText, Square, Volume2, X } from 'lucide-preact'
 import type { Ref } from 'preact'
 import { useEffect, useMemo } from 'preact/hooks'
 import { t } from '../i18n'
 import type { PdfPageProgress } from '../hooks/usePdfImport'
 import { formatBytes, getFirstAudioFile, getFirstImageFile, getFirstPdfFile } from '../lib/format'
 import { detectScript, speechCodeForScript } from '../lib/language'
+import { ExampleOutput } from './ExampleOutput'
 import { ExplainOutput } from './ExplainOutput'
 import { ProofreadOutput } from './ProofreadOutput'
 import { TranslationOutput } from './TranslationOutput'
 import type {
   AppMode,
   BackTranslationCheck,
+  ExampleResult,
   ExplanationResult,
   ExplanationRubyToken,
   ImageInput,
@@ -37,10 +39,12 @@ type TranslatorPanelProps = {
   canTranslate: boolean
   canProofread: boolean
   canExplain: boolean
+  canExample: boolean
   onTranslate: () => void
   onCancelTranslate: () => void
   onProofread: () => void
   onExplain: () => void
+  onExample: () => void
   selectedHistory: TranslationHistoryItem | null
   result: TranslationResult | null
   proofreadStatus: Status
@@ -49,6 +53,8 @@ type TranslatorPanelProps = {
   explainResult: ExplanationResult | null
   explainRubyStatus: Status
   explainRubyTokens: ExplanationRubyToken[]
+  exampleStatus: Status
+  exampleResult: ExampleResult | null
   targetLanguage: string
   copiedTone: string
   copiedProofread: boolean
@@ -102,10 +108,12 @@ export function TranslatorPanel({
   canTranslate,
   canProofread,
   canExplain,
+  canExample,
   onTranslate,
   onCancelTranslate,
   onProofread,
   onExplain,
+  onExample,
   selectedHistory,
   result,
   proofreadStatus,
@@ -114,6 +122,8 @@ export function TranslatorPanel({
   explainResult,
   explainRubyStatus,
   explainRubyTokens,
+  exampleStatus,
+  exampleResult,
   targetLanguage,
   copiedTone,
   copiedProofread,
@@ -163,7 +173,9 @@ export function TranslatorPanel({
       ? Boolean(proofreadResult) || proofreadStatus === 'loading'
       : mode === 'explain'
         ? Boolean(explainResult) || explainStatus === 'loading'
-        : Boolean(result) || Boolean(selectedHistory) || status === 'loading')
+        : mode === 'example'
+          ? Boolean(exampleResult) || exampleStatus === 'loading'
+          : Boolean(result) || Boolean(selectedHistory) || status === 'loading')
 
   // Fallback auto-grow for browsers without `field-sizing: content` support.
   useEffect(() => {
@@ -373,6 +385,16 @@ export function TranslatorPanel({
             </button>
             <button
               type="button"
+              class={`secondary-button ${exampleStatus === 'loading' ? 'loading' : ''}`}
+              onClick={onExample}
+              disabled={!canExample || exampleStatus === 'loading'}
+              title={providerNeedsSetup ? t('translator-setup-required-hint') : t('translator-example')}
+            >
+              {exampleStatus === 'loading' ? <LoaderCircle size={16} /> : <NotebookText size={16} />}
+              {t('translator-example')}
+            </button>
+            <button
+              type="button"
               class={`primary-button ${status === 'loading' ? 'loading' : ''}`}
               onClick={status === 'loading' ? onCancelTranslate : onTranslate}
               disabled={status !== 'loading' && !canTranslate}
@@ -414,6 +436,13 @@ export function TranslatorPanel({
               result={explainResult}
               rubyStatus={explainRubyStatus}
               rubyTokens={explainRubyTokens}
+              providerNeedsSetup={providerNeedsSetup}
+              onOpenSettings={onOpenSettings}
+            />
+          ) : mode === 'example' ? (
+            <ExampleOutput
+              status={exampleStatus}
+              result={exampleResult}
               providerNeedsSetup={providerNeedsSetup}
               onOpenSettings={onOpenSettings}
             />
