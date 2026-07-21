@@ -25,10 +25,22 @@ const loadKanjiPanel = () => import('./features/kanji/KanjiConverterPanel').then
 const loadTranscribePanel = () => import('./features/transcribe/TranscribePanel').then((m) => m.TranscribePanel)
 const loadReplyPanel = () => import('./features/reply/ReplyPanel').then((m) => m.ReplyPanel)
 
+// Kept in sync with the `tabs` array's ids below (labels there are
+// i18n-translated and language-dependent; ids are not).
+const tabIds = ['translate', 'reply', 'kanji', 'transcribe']
+
+// Deep-linkable tabs via URL hash (e.g. `#reply`) rather than a path segment
+// - this is a static GitHub Pages deploy with no server-side rewrite, so a
+// path-based route would 404 on a hard refresh or direct link.
+function tabIdFromHash(): string {
+  const hash = window.location.hash.slice(1)
+  return tabIds.includes(hash) ? hash : 'translate'
+}
+
 export function App() {
   const t = useTranslator()
   const { theme, toggleTheme } = useTheme()
-  const [activeTab, setActiveTab] = useState('translate')
+  const [activeTab, setActiveTabState] = useState(() => tabIdFromHash())
   const [messagesVersion, setMessagesVersion] = useState(0)
   const uiTranslationInFlight = useRef('')
   const transcribePanelProps = useMemo(
@@ -45,6 +57,21 @@ export function App() {
     }),
     [t.openSettings, t.settings, t.nativeLanguage, t.providerNeedsSetup, t.addHistoryItem],
   )
+
+  function setActiveTab(tab: string): void {
+    setActiveTabState(tab)
+    if (window.location.hash.slice(1) !== tab) window.history.replaceState(null, '', `#${tab}`)
+  }
+
+  // Keeps the active tab in sync with the URL hash for back/forward
+  // navigation and manual hash edits, not just the initial load.
+  useEffect(() => {
+    function handleHashChange(): void {
+      setActiveTabState(tabIdFromHash())
+    }
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
 
   useEffect(() => subscribeUiMessages(() => setMessagesVersion((version) => version + 1)), [])
 
