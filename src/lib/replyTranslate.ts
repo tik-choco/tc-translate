@@ -1,6 +1,15 @@
 import { extractJsonContent } from './parse'
 import { requestChatCompletion } from './llm'
+import type { ReplyTone } from '../constants'
 import type { ProviderSettings } from '../types'
+
+// Plain-English instruction appended to the reply-translation prompt so the
+// LLM adjusts formality/register for who the reply is going to.
+const replyToneInstructions: Record<ReplyTone, string> = {
+  neutral: 'Use a natural, appropriately neutral tone.',
+  friend: 'The recipient is a close friend or casual acquaintance - write in a warm, casual, friendly tone.',
+  work: 'The recipient is a work or business contact - write in a polite, professional, appropriately formal tone.',
+}
 
 export type ReplyTranslateResult = {
   detectedLanguage: string
@@ -64,14 +73,14 @@ export async function translateReply(params: {
   partnerMessage: string
   ownReply: string
   nativeLanguage: string
+  tone: ReplyTone
 }): Promise<ReplyTranslateResult> {
   const content = await requestChatCompletion({
     settings: params.settings,
     messages: [
       {
         role: 'system',
-        content:
-          'You are tc-translate reply mode. The user received partnerMessage from someone and wrote ownReply (in their own language, nativeLanguage, as context) as what they want to say back. Detect the language partnerMessage is written in, then translate ownReply into that language naturally and accurately, preserving tone and intent. Return only JSON of the shape {"detectedLanguage": "...", "translatedReply": "..."}. "detectedLanguage" is the language name in English (e.g. "Japanese", "Spanish").',
+        content: `You are tc-translate reply mode. The user received partnerMessage from someone and wrote ownReply (in their own language, nativeLanguage, as context) as what they want to say back. Detect the language partnerMessage is written in, then translate ownReply into that language naturally and accurately, preserving intent. ${replyToneInstructions[params.tone]} Return only JSON of the shape {"detectedLanguage": "...", "translatedReply": "..."}. "detectedLanguage" is the language name in English (e.g. "Japanese", "Spanish").`,
       },
       {
         role: 'user',

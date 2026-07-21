@@ -1,11 +1,18 @@
 import { Check, Clipboard, ClipboardPaste, Languages, LoaderCircle, Send } from 'lucide-preact'
 import type { JSX } from 'preact'
+import { replyToneOptions, type ReplyTone } from '../../constants'
 import { t } from '../../i18n'
 import { createId } from '../../lib/format'
 import { ProviderSetupGuide } from '../../components/ProviderSetupGuide'
 import type { ProviderSettings, ReplyResult, TranslationHistoryItem } from '../../types'
 import './reply.css'
 import { useReplyTranslate } from './useReplyTranslate'
+
+function replyToneLabel(tone: ReplyTone): string {
+  if (tone === 'friend') return t('reply-tone-friend')
+  if (tone === 'work') return t('reply-tone-work')
+  return t('reply-tone-neutral')
+}
 
 type ReplyPanelProps = {
   settings: ProviderSettings
@@ -103,9 +110,25 @@ export function ReplyPanel({
       </div>
 
       <div class="reply-field">
-        <label class="reply-label" for="reply-own-message">
-          {t('reply-own-label')}
-        </label>
+        <div class="reply-field-header">
+          <label class="reply-label" for="reply-own-message">
+            {t('reply-own-label')}
+          </label>
+          <div class="reply-tone-group" role="radiogroup" aria-label={t('reply-tone-aria-label')}>
+            {replyToneOptions.map((tone) => (
+              <button
+                key={tone}
+                type="button"
+                class={`reply-tone-chip ${reply.tone === tone ? 'active' : ''}`}
+                role="radio"
+                aria-checked={reply.tone === tone}
+                onClick={() => reply.setTone(tone)}
+              >
+                {replyToneLabel(tone)}
+              </button>
+            ))}
+          </div>
+        </div>
         <textarea
           id="reply-own-message"
           class="reply-textarea"

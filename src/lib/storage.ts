@@ -2,6 +2,7 @@ import {
   defaultLocalSettings,
   defaultLocalSttSettings,
   defaultNativeLanguage,
+  defaultReplyTone,
   historyStorageKey,
   languageOptions,
   languageSpeechCodes,
@@ -11,6 +12,8 @@ import {
   nativeLanguageStorageKey,
   onboardingStorageKey,
   replyAutoCopyStorageKey,
+  replyToneOptions,
+  replyToneStorageKey,
   settingsStorageKey,
   simulTranslateEnabledStorageKey,
   simulTranslateLanguagesStorageKey,
@@ -18,6 +21,7 @@ import {
   targetLanguageStorageKey,
 } from '../constants'
 import { storageAddJson, storageGetJson } from './mistStorage'
+import type { ReplyTone } from '../constants'
 import type {
   AppMode,
   ExampleResult,
@@ -220,6 +224,19 @@ export function saveReplyAutoCopy(enabled: boolean): void {
     localStorage.setItem(replyAutoCopyStorageKey, enabled ? '1' : '0')
   } catch (err) {
     console.warn('tc-translate: failed to save reply auto-copy setting', err)
+  }
+}
+
+export function loadReplyTone(): ReplyTone {
+  const stored = localStorage.getItem(replyToneStorageKey)
+  return replyToneOptions.includes(stored as ReplyTone) ? (stored as ReplyTone) : defaultReplyTone
+}
+
+export function saveReplyTone(tone: ReplyTone): void {
+  try {
+    localStorage.setItem(replyToneStorageKey, tone)
+  } catch (err) {
+    console.warn('tc-translate: failed to save reply tone', err)
   }
 }
 

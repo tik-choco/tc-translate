@@ -20,6 +20,7 @@ export const onboardingStorageKey = 'tc-translate-onboarding-seen-v1'
 export const simulTranslateEnabledStorageKey = 'tc-translate-simul-translate-enabled-v1'
 export const simulTranslateLanguagesStorageKey = 'tc-translate-simul-translate-languages-v1'
 export const replyAutoCopyStorageKey = 'tc-translate-reply-auto-copy-v1'
+export const replyToneStorageKey = 'tc-translate-reply-tone-v1'
 export const defaultNativeLanguage = 'Japanese'
 export const maxHistoryItems = 20
 // Safety cap so a forgotten recording can't run (and accumulate audio) forever.
@@ -40,6 +41,13 @@ export const maxSimulEntries = 30
 export const simulContextSize = 3
 // Number of example sentences requested per "example" mode generation.
 export const exampleSentenceCount = 5
+
+// Reply tab: relationship-based tone for the outgoing reply, remembered
+// across sessions so the user doesn't have to re-pick it every time (see
+// loadReplyTone/saveReplyTone in lib/storage.ts).
+export type ReplyTone = 'neutral' | 'friend' | 'work'
+export const replyToneOptions: ReplyTone[] = ['neutral', 'friend', 'work']
+export const defaultReplyTone: ReplyTone = 'neutral'
 
 // New app-local defaults (post shared-llm-config migration / fresh installs).
 export const defaultLocalSettings: LocalProviderSettings = {

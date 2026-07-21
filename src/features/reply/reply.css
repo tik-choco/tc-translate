@@ -35,6 +35,44 @@
   color: var(--text-strong);
 }
 
+.reply-tone-group {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.reply-tone-chip {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.reply-tone-chip:hover {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+}
+
+.reply-tone-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.reply-tone-chip.active {
+  color: var(--primary);
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+}
+
 .reply-incoming-status {
   font-size: 0.9rem;
 }
