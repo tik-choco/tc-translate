@@ -21,6 +21,7 @@ export const simulTranslateEnabledStorageKey = 'tc-translate-simul-translate-ena
 export const simulTranslateLanguagesStorageKey = 'tc-translate-simul-translate-languages-v1'
 export const replyAutoCopyStorageKey = 'tc-translate-reply-auto-copy-v1'
 export const replyToneStorageKey = 'tc-translate-reply-tone-v1'
+export const replyAutoBackCheckStorageKey = 'tc-translate-reply-auto-back-check-v1'
 export const defaultNativeLanguage = 'Japanese'
 export const maxHistoryItems = 20
 // Safety cap so a forgotten recording can't run (and accumulate audio) forever.

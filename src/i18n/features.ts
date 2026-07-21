@@ -50,7 +50,9 @@ export const featureMessages = {
     'reply-translate-button': 'Translate reply',
     'reply-translating': 'Translating your reply',
     'reply-empty': 'Your translated reply will appear here',
+    'reply-backcheck-label': 'Back-translation',
     'reply-autocopy-toggle': 'Auto-copy',
+    'reply-autobackcheck-toggle': 'Auto-check',
   },
   ja: {
     'kanji-input-label': '入力',
@@ -99,7 +101,9 @@ export const featureMessages = {
     'reply-translate-button': '返信を翻訳',
     'reply-translating': '返信を翻訳中',
     'reply-empty': '翻訳された返信はここに表示されます',
+    'reply-backcheck-label': '逆翻訳',
     'reply-autocopy-toggle': '自動コピー',
+    'reply-autobackcheck-toggle': '自動チェック',
   },
   'zh-CN': {
     'kanji-input-label': '输入',
@@ -148,7 +152,9 @@ export const featureMessages = {
     'reply-translate-button': '翻译回复',
     'reply-translating': '正在翻译回复',
     'reply-empty': '翻译后的回复将显示在此处',
+    'reply-backcheck-label': '回译',
     'reply-autocopy-toggle': '自动复制',
+    'reply-autobackcheck-toggle': '自动检查',
   },
   'zh-TW': {
     'kanji-input-label': '輸入',
@@ -197,6 +203,8 @@ export const featureMessages = {
     'reply-translate-button': '翻譯回覆',
     'reply-translating': '正在翻譯回覆',
     'reply-empty': '翻譯後的回覆將顯示於此',
+    'reply-backcheck-label': '回譯',
     'reply-autocopy-toggle': '自動複製',
+    'reply-autobackcheck-toggle': '自動檢查',
   },
 } satisfies MessageBundle

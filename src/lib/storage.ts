@@ -11,6 +11,7 @@ import {
   modeStorageKey,
   nativeLanguageStorageKey,
   onboardingStorageKey,
+  replyAutoBackCheckStorageKey,
   replyAutoCopyStorageKey,
   replyToneOptions,
   replyToneStorageKey,
@@ -237,6 +238,20 @@ export function saveReplyTone(tone: ReplyTone): void {
     localStorage.setItem(replyToneStorageKey, tone)
   } catch (err) {
     console.warn('tc-translate: failed to save reply tone', err)
+  }
+}
+
+// Defaults to off: back-translation checking is an extra LLM call the user
+// opts into per-reply (or turns on to run automatically every time).
+export function loadReplyAutoBackCheck(): boolean {
+  return localStorage.getItem(replyAutoBackCheckStorageKey) === '1'
+}
+
+export function saveReplyAutoBackCheck(enabled: boolean): void {
+  try {
+    localStorage.setItem(replyAutoBackCheckStorageKey, enabled ? '1' : '0')
+  } catch (err) {
+    console.warn('tc-translate: failed to save reply auto-back-check setting', err)
   }
 }
 
