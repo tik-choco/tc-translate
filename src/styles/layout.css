@@ -67,6 +67,16 @@
   display: none;
 }
 
+/* `overflow-x: auto` above forces `overflow-y` to `auto` too (an ancestor
+   can't scroll one axis while leaving the other visible), which clips the
+   absolutely-positioned language dropdown to the topbar's height instead of
+   letting it extend below — making options unreachable. Go back to
+   `visible` for the moment the menu is open; nothing needs the horizontal
+   scroll while it's open anyway. */
+.topbar-actions.menu-open {
+  overflow: visible;
+}
+
 @media (max-width: 640px) {
   .topbar {
     gap: 10px;

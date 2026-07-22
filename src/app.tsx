@@ -117,7 +117,7 @@ export function App() {
           <TabBar tabs={tabs} activeId={activeTab} onChange={setActiveTab} />
         </div>
 
-        <div class="topbar-actions">
+        <div class={`topbar-actions ${t.showLanguageMenu ? 'menu-open' : ''}`}>
           {activeTab === 'translate' ? (
             <>
               <LanguageSelect
