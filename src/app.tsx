@@ -127,9 +127,6 @@ export function App() {
                 targetLanguage={t.targetLanguage}
                 onTargetLanguageChange={t.updateTargetLanguage}
               />
-              {t.settings.connection === 'network' ? (
-                <NetworkConsumerIndicator status={t.networkConsumerStatus} />
-              ) : null}
               <button
                 type="button"
                 class={`icon-button ${t.showHistory ? 'active' : ''}`}
@@ -172,6 +169,12 @@ export function App() {
           </button>
         </div>
       </header>
+
+      {activeTab === 'translate' && t.settings.connection === 'network' ? (
+        <div class="network-status-bar">
+          <NetworkConsumerIndicator status={t.networkConsumerStatus} />
+        </div>
+      ) : null}
 
       <div
         id="tab-panel-reply"

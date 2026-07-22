@@ -53,6 +53,58 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Without this, a full row of icon buttons (language select, history,
+     lingo link, theme, settings) refuses to shrink below its own content
+     width once the topbar runs out of room, and spills past the header's
+     right edge instead of the tab bar (which already scrolls) taking the
+     hit. Scrolling here is the same pattern already used for `.tab-bar`. */
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.topbar-actions::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    gap: 10px;
+    padding: 0 12px;
+  }
+
+  .topbar-actions {
+    gap: 4px;
+  }
+
+  .header-language {
+    width: 130px;
+  }
+
+  .topbar .icon-button {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* The LLM Network status pill (`.mistai-consumer-indicator`) is a text
+   label plus timestamp that refuses to shrink or wrap internally, so it
+   doesn't share a row well with the fixed-height icon-button strip in
+   `.topbar-actions` — it gets its own full-width row instead, free to wrap
+   if the label runs long. */
+.network-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+@media (max-width: 640px) {
+  .network-status-bar {
+    padding: 8px 12px;
+  }
 }
 
 .translation-shell {
