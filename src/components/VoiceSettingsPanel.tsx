@@ -70,6 +70,10 @@ type VoiceTaskRowsProps = {
   defaultVoiceConnection: { baseUrl: string; apiKey: string }
   /** The room's mist-network:// pseudo-provider id, '' when none imported yet. Drives the "AI Networkにおまかせ" option below. */
   networkVoiceProviderId: string
+  /** True when `providerId` resolves to a `mist-network://` pseudo-provider. Checked against the unfiltered provider list (unlike `llmProviders` above), so it stays correct for network-imported presets even though those pseudo-providers are excluded from `llmProviders`. */
+  isNetworkPresetProvider: (providerId: string) => boolean
+  /** Live AI Network room connection (as opposed to a `mist-network://` provider/preset merely existing in the shared config, which outlives any single connection). Network-origin choices are hidden from the pickers below while disconnected, and reappear selected on their own once `ttsSettings`/`sttSettings` still point at them and the room reconnects. */
+  networkConnected: boolean
 }
 
 // TTS/STT ("voice") task rows, rendered inside SettingsModal's Tasks tab
@@ -92,6 +96,8 @@ export function VoiceTaskRows({
   llmPresets,
   defaultVoiceConnection,
   networkVoiceProviderId,
+  isNetworkPresetProvider,
+  networkConnected,
 }: VoiceTaskRowsProps) {
   const { microphones, labelsHidden, enumerationSupported, unlockLabels } = useMicrophones()
   const knownMic = microphones.some((mic) => mic.deviceId === sttSettings.micDeviceId)
@@ -113,6 +119,16 @@ export function VoiceTaskRows({
   const matchedSttPreset = llmPresets.find(
     (preset) => preset.providerId === sttSettings.providerId && preset.model === sttSettings.model,
   )
+
+  // True when `preset`'s connection is the `mist-network://` pseudo-provider
+  // (a model advertised by the AI Network room), used to color it apart from
+  // presets backed by a regular HTTP connection in the pickers below. Can't
+  // use `llmProviders` for this (it excludes network pseudo-providers, see
+  // the comment above its prop) - `isNetworkPresetProvider` checks the
+  // unfiltered provider list instead.
+  function isNetworkPreset(preset: ModelPresetV1): boolean {
+    return isNetworkPresetProvider(preset.providerId)
+  }
 
   // "AI Networkにおまかせ": providerId points at the room's pseudo-provider and
   // model is the auto sentinel (see lib/networkModels.ts) rather than any
@@ -202,16 +218,25 @@ export function VoiceTaskRows({
               aria-label={t('voice-tts-model-label')}
             >
               <option value="">{t('voice-model-browser-option')}</option>
-              {networkVoiceProviderId ? <option value="__network__">{t('voice-model-network-auto-option')}</option> : null}
+              {networkVoiceProviderId && networkConnected ? (
+                <option value="__network__" class="option-network">
+                  {t('voice-model-network-auto-option')}
+                </option>
+              ) : null}
               {ttsSettings.model.trim() && !matchedTtsPreset && !isTtsNetworkAuto ? (
                 <option value="__current__">{ttsSettings.model}</option>
               ) : null}
-              {llmPresets.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label || preset.model || preset.id}
-                </option>
-              ))}
+              {llmPresets
+                .filter((preset) => networkConnected || !isNetworkPreset(preset))
+                .map((preset) => (
+                  <option key={preset.id} value={preset.id} class={isNetworkPreset(preset) ? 'option-network' : undefined}>
+                    {preset.label || preset.model || preset.id}
+                  </option>
+                ))}
             </select>
+            {networkConnected && (isTtsNetworkAuto || (matchedTtsPreset && isNetworkPreset(matchedTtsPreset))) ? (
+              <span class="task-badge task-badge-network">{t('llm-preset-network-badge')}</span>
+            ) : null}
           </div>
 
           {/* Hidden for the auto sentinel too, alongside the browser engine:
@@ -274,16 +299,25 @@ export function VoiceTaskRows({
               aria-label={t('voice-stt-model-label')}
             >
               <option value="">{t('voice-model-browser-option')}</option>
-              {networkVoiceProviderId ? <option value="__network__">{t('voice-model-network-auto-option')}</option> : null}
+              {networkVoiceProviderId && networkConnected ? (
+                <option value="__network__" class="option-network">
+                  {t('voice-model-network-auto-option')}
+                </option>
+              ) : null}
               {sttSettings.model.trim() && !matchedSttPreset && !isSttNetworkAuto ? (
                 <option value="__current__">{sttSettings.model}</option>
               ) : null}
-              {llmPresets.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label || preset.model || preset.id}
-                </option>
-              ))}
+              {llmPresets
+                .filter((preset) => networkConnected || !isNetworkPreset(preset))
+                .map((preset) => (
+                  <option key={preset.id} value={preset.id} class={isNetworkPreset(preset) ? 'option-network' : undefined}>
+                    {preset.label || preset.model || preset.id}
+                  </option>
+                ))}
             </select>
+            {networkConnected && (isSttNetworkAuto || (matchedSttPreset && isNetworkPreset(matchedSttPreset))) ? (
+              <span class="task-badge task-badge-network">{t('llm-preset-network-badge')}</span>
+            ) : null}
           </div>
         </div>
       </div>
