@@ -97,6 +97,35 @@ export function saveSettings(settings: LocalProviderSettings): void {
   }
 }
 
+/**
+ * Repoints `visionPresetId`/any `networkProviderPresetIds` entry naming a
+ * preset id in `remap`'s keys at its mapped surviving id instead. Used by
+ * `useNetworkModelSync`'s mirror self-heal
+ * (`lib/networkMirrorSync.ts#consolidateNetworkMirror`) after it merges
+ * duplicate mist-network:// presets for the same advertised model into one
+ * survivor: without this, `visionPresetId` (or a network-provider share
+ * entry) that had been pointing at one of the now-removed duplicates would
+ * silently degrade to "unset"/drop out of the shared list instead of
+ * continuing to point at the same model under its surviving id. A no-op
+ * (never calls `saveSettings`) when nothing in the current settings actually
+ * names a remapped id.
+ */
+export function remapPresetIdReferences(remap: ReadonlyMap<string, string>): void {
+  if (remap.size === 0) return
+  const current = loadSettings()
+  let changed = false
+
+  const remappedVisionPresetId = current.visionPresetId ? remap.get(current.visionPresetId) : undefined
+  const visionPresetId = remappedVisionPresetId ?? current.visionPresetId
+  if (remappedVisionPresetId) changed = true
+
+  const networkProviderPresetIds = current.networkProviderPresetIds.map((id) => remap.get(id) ?? id)
+  if (networkProviderPresetIds.some((id, i) => id !== current.networkProviderPresetIds[i])) changed = true
+
+  if (!changed) return
+  saveSettings({ ...current, visionPresetId, networkProviderPresetIds })
+}
+
 export function loadSttSettings(): LocalSttSettings {
   try {
     const stored = JSON.parse(localStorage.getItem(sttSettingsStorageKey) ?? '{}') as Partial<LocalSttSettings>
