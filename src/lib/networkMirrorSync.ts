@@ -27,8 +27,15 @@ export type NetworkMirrorConsolidation = {
  * collapses any duplicate pseudo-provider rows (same normalized baseUrl,
  * apiKey `""`) into the first one (oldest, since `providers` is an
  * append-only array), and any duplicate presets found under them - same
- * advertised model name (trimmed) + temperature + reasoningEffort - into the
- * first one seen. Mutates `config` in place.
+ * advertised model name (trimmed) + temperature + reasoningEffort - into a
+ * single survivor. Within such a duplicate group, a preset still wearing the
+ * generic label `ensurePreset`/useNetworkModelSync.ts stamps on every
+ * freshly (re)created preset (its trimmed model id, verbatim) loses to one
+ * carrying a user-typed label, so a race that merely duplicated the row
+ * never gets to silently discard a rename the user made to just one of the
+ * copies; only when every candidate in the group is equally generic (or
+ * equally customized) does it fall back to array order (oldest first), as
+ * before. Mutates `config` in place.
  *
  * Duplicates of this shape are never supposed to happen -
  * `ensureProvider`/`ensurePreset` (lib/llmConfig.ts) already dedup exactly
@@ -68,22 +75,38 @@ export function consolidateNetworkMirror(config: SharedLlmConfigV1, roomId: stri
   const extraProviderIds = new Set(matchingProviders.slice(1).map((p) => p.id))
 
   const keyOf = (p: ModelPresetV1) => `${p.model.trim()} ${p.temperature ?? ''} ${p.reasoningEffort ?? ''}`
-  const survivorByKey = new Map<string, ModelPresetV1>()
+  /**
+   * True when `label` looks like something the user actually typed, rather
+   * than the generic label every freshly (re)created preset gets stamped
+   * with by default (its own trimmed model id, verbatim - see
+   * `ensurePreset` in lib/llmConfig.ts and useNetworkModelSync.ts).
+   */
+  const isCustomLabel = (p: ModelPresetV1) => {
+    const label = p.label.trim()
+    return label !== '' && label !== p.model.trim()
+  }
+  const groupsByKey = new Map<string, ModelPresetV1[]>()
 
   for (const preset of config.presets) {
     if (!matchingProviderIds.has(preset.providerId)) continue
     const key = keyOf(preset)
-    const existing = survivorByKey.get(key)
-    if (!existing) {
-      survivorByKey.set(key, preset)
-      // Adopt presets already sitting under an extra (soon-to-be-removed)
-      // provider row into the survivor - keeps this preset's own id, so any
-      // external reference to it (defaultPresetId, visionPresetId, a
-      // networkProviderPresetIds entry) stays valid without needing a remap
-      // entry.
-      if (preset.providerId !== survivor.id) preset.providerId = survivor.id
-    } else {
-      presetIdRemap.set(preset.id, existing.id)
+    const group = groupsByKey.get(key)
+    if (group) group.push(preset)
+    else groupsByKey.set(key, [preset])
+  }
+
+  for (const group of groupsByKey.values()) {
+    // Prefer a custom-labeled preset as the survivor (see isCustomLabel);
+    // ties (including "every candidate is generic" and "every candidate is
+    // customized") fall back to array order (oldest first).
+    const chosen = group.find(isCustomLabel) ?? group[0]
+    // Adopt the chosen preset into the survivor provider row - keeps its own
+    // id, so any external reference to it (defaultPresetId, visionPresetId,
+    // a networkProviderPresetIds entry) stays valid without needing a remap
+    // entry.
+    if (chosen.providerId !== survivor.id) chosen.providerId = survivor.id
+    for (const preset of group) {
+      if (preset !== chosen) presetIdRemap.set(preset.id, chosen.id)
     }
   }
 
