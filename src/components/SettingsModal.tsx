@@ -1145,6 +1145,7 @@ export const SettingsModal = memo(function SettingsModal({
               networkVoiceProviderId={networkVoiceProviderId}
               isNetworkPresetProvider={isNetworkPresetProvider}
               networkConnected={networkConnected}
+              consumerStatus={networkConsumerStatus}
             />
           </div>
         ) : null}

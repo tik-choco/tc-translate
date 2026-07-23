@@ -12,6 +12,7 @@ export const settingsMessages = {
     'voice-model-network-auto-option': "AI Network (room's default)",
     'voice-tts-model-label': 'TTS model',
     'voice-tts-voice-label': 'TTS voice',
+    'voice-provider-default-option': 'Provider default (not specified)',
     'voice-stt-model-label': 'STT model',
     'voice-connection-unresolved':
       'No connection can be resolved: pick a model above, or add a connection in the AI Connection tab and set a default model in the Tasks tab.',
@@ -37,6 +38,7 @@ export const settingsMessages = {
     'voice-model-network-auto-option': 'AI Network（ルームにおまかせ）',
     'voice-tts-model-label': 'TTS モデル',
     'voice-tts-voice-label': 'TTS ボイス',
+    'voice-provider-default-option': 'provider 既定（未指定）',
     'voice-stt-model-label': 'STT モデル',
     'voice-connection-unresolved':
       '接続先を解決できません。上のモデルを選び直すか、「AI接続」タブで接続先を追加し、「タスク」タブで既定のモデルを設定してください。',
@@ -62,6 +64,7 @@ export const settingsMessages = {
     'voice-model-network-auto-option': 'AI 网络（由房间决定）',
     'voice-tts-model-label': 'TTS 模型',
     'voice-tts-voice-label': 'TTS 语音',
+    'voice-provider-default-option': 'provider 默认（未指定）',
     'voice-stt-model-label': 'STT 模型',
     'voice-connection-unresolved': '无法解析连接：请在上方重新选择模型，或在“AI 连接”标签页添加连接，并在“任务”标签页设置默认模型。',
     'voice-stt-unresolved-fallback': '在此之前，STT 将回退到浏览器语音识别。',
@@ -85,6 +88,7 @@ export const settingsMessages = {
     'voice-model-network-auto-option': 'AI 網路（由房間決定）',
     'voice-tts-model-label': 'TTS 模型',
     'voice-tts-voice-label': 'TTS 語音',
+    'voice-provider-default-option': 'provider 預設（未指定）',
     'voice-stt-model-label': 'STT 模型',
     'voice-connection-unresolved': '無法解析連線：請在上方重新選擇模型，或在「AI 連線」分頁新增連線，並在「任務」分頁設定預設模型。',
     'voice-stt-unresolved-fallback': '在此之前，STT 將回退為瀏覽器語音辨識。',
