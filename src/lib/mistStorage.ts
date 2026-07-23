@@ -1,17 +1,18 @@
 // Thin storage-only path into the vendored mistlib wasm module, used to move
 // heavy per-item content (translation history bodies, shared translations-
 // inbox Markdown) out of localStorage and into mistlib's OPFS-backed,
-// content-addressed store. Deliberately independent of `network.ts`'s
-// `MistNode` (LLM Network) usage — storage_add/storage_get only need the wasm
-// node initialized, not a joined room — but reuses the same persisted node id
-// so both features share one node identity.
-//
-// mistlib's storage_add/storage_get require `init_with_config` to have run
-// first (see src/vendor/mistlib/wrappers/web/index.js's MistNode.init() for
-// the equivalent LLM-Network-side init). This lazily performs that init once,
-// shared by every caller in this module.
+// content-addressed store. storage_add/storage_get only need the wasm node
+// initialized, not a joined room, but the underlying wasm module supports
+// exactly one active node per page (see mistNodeShared.ts), so init is routed
+// through that shared guard rather than calling `init_with_config` directly -
+// doing so bypassed the guard entirely and silently re-initialized (and thus
+// reset the identity/config of) whichever node the LLM Network consumer/
+// provider stacks had already brought up, an intermittent-freeze bug
+// (verified via a direct repro: two independent `init_with_config` calls on
+// the same wasm singleton each fully reset the engine with no error/warning).
 
-import init, * as mistWasm from '../vendor/mistlib/pkg/mistlib_wasm.js'
+import { storage_add, storage_get } from '../vendor/mistlib/wrappers/web/index.js'
+import { ensureSharedMistNodeReady } from './mistNodeShared'
 import { NODE_ID_STORAGE_KEY } from './network'
 
 const textEncoder = new TextEncoder()
@@ -37,13 +38,7 @@ function loadOrCreateNodeId(): string {
 
 async function ensureStorageNodeInit(): Promise<void> {
   if (!initPromise) {
-    initPromise = (async () => {
-      await init()
-      mistWasm.init_with_config(
-        loadOrCreateNodeId(),
-        JSON.stringify({ signaling: { mode: 'nostr', nostr: { relays: [] } } }),
-      )
-    })().catch((err) => {
+    initPromise = ensureSharedMistNodeReady(loadOrCreateNodeId()).catch((err) => {
       initPromise = null
       throw err
     })
@@ -54,13 +49,13 @@ async function ensureStorageNodeInit(): Promise<void> {
 /** Stores raw bytes under `name` and returns the resulting content-address (CID). */
 export async function storageAdd(name: string, data: Uint8Array): Promise<string> {
   await ensureStorageNodeInit()
-  return mistWasm.storage_add(name, data)
+  return storage_add(name, data)
 }
 
 /** Fetches previously-stored bytes for `cid`. Throws if the data isn't available. */
 export async function storageGet(cid: string): Promise<Uint8Array> {
   await ensureStorageNodeInit()
-  return mistWasm.storage_get(cid)
+  return storage_get(cid)
 }
 
 /** Stores `value` as JSON and returns the resulting CID. */

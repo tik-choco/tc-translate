@@ -120,3 +120,15 @@ class SharedMistNodeHandle implements MistNodeLike {
 export function createSharedMistNode(nodeId: string): MistNodeLike {
   return new SharedMistNodeHandle(nodeId)
 }
+
+/**
+ * For callers that only need the shared node's storage_add/storage_get
+ * (mistStorage.ts) - no rooms, no events - and so don't need a full
+ * SharedMistNodeHandle. Routes through the same `ensureRealNode`/`init()`
+ * guards as every other caller so `init_with_config` still only ever runs
+ * once per page, no matter which caller (storage vs. LLM Network consumer vs.
+ * provider) happens to be first.
+ */
+export async function ensureSharedMistNodeReady(nodeId: string): Promise<void> {
+  await ensureRealNode(nodeId).init()
+}
