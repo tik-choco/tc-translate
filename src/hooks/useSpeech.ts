@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { localizeNetworkError, requestNetworkTts } from '../lib/network'
+import { localizeNetworkError, networkClient, requestNetworkTts } from '../lib/network'
 import { networkVoiceModelParam } from '../lib/networkModels'
 import { resolveTtsConnection, synthesizeSpeech } from '../lib/voice'
 import type { SharedLlmConfigV1 } from '../lib/llmConfig'
@@ -9,6 +9,21 @@ type UseSpeechParams = {
   ttsSettings: TtsSettings
   llmConfig: SharedLlmConfigV1
   roomId: string
+}
+
+/** DevTools-only diagnostics for a failed API/network TTS attempt: the raw
+ * error alongside the consumer's current provider table (which peers are
+ * connected and what `services`/`voices` each one advertised in its last
+ * `provider_hello`) — the single most useful thing to check when "no tts
+ * provider was found" (was a provider even discovered? did it advertise
+ * "tts"?) vs. an actual upstream failure needs telling apart on a real
+ * device where there's no other way to see the wire state. Console-only by
+ * design: this can be a lot of detail, and the AI Network status display
+ * already covers the UI-facing summary. */
+function logTtsFailureDiagnostics(err: unknown): void {
+  console.warn('[useSpeech] TTS request failed; falling back to the browser voice.', err, {
+    consumerStatus: networkClient.status,
+  })
 }
 
 export function useSpeech({ ttsSettings, llmConfig, roomId }: UseSpeechParams) {
@@ -96,7 +111,21 @@ export function useSpeech({ ttsSettings, llmConfig, roomId }: UseSpeechParams) {
       if (generation !== playGenerationRef.current) return // superseded; don't resurrect error/fallback
       setLoadingId(null)
       if (browserSupported) {
-        setSpeechError('API/Network TTS failed. Falling back to the browser voice.')
+        // The generic notice is all that's guaranteed to make sense in every
+        // situation, but the underlying cause (e.g. "no tts provider found"
+        // vs. the room's provider itself rejecting the request) is still
+        // worth surfacing for anyone debugging a real-device setup -
+        // console for whoever's watching DevTools, and appended to the
+        // visible notice itself so it doesn't require opening DevTools at
+        // all. See localizeNetworkError's REMOTE_ERROR handling for how a
+        // provider-authored voice_error message flows through here verbatim.
+        logTtsFailureDiagnostics(apiError)
+        const detail = localizeNetworkError(apiError, '')
+        setSpeechError(
+          detail
+            ? `API/Network TTS failed. Falling back to the browser voice. (${detail})`
+            : 'API/Network TTS failed. Falling back to the browser voice.',
+        )
         speakWithBrowser(text, lang, id)
         return
       }
