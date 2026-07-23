@@ -385,13 +385,30 @@
 }
 
 .task-model-field {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
 .task-model-field select {
   width: 100%;
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* AI Networkルーム提供のプリセットが選ばれているタスクselectに添える印。
+   .task-badgeと同じprimaryトーンで統一し、AI接続タブのNetworkバッジと
+   見た目を揃える。 */
+.task-model-field .task-badge-network {
+  flex-shrink: 0;
+}
+
+/* select内、AI Networkルーム由来のoptionをテキスト色で区別する。ネイティブ
+   optionはbackground/borderなど装飾がほぼ効かないブラウザが多いため、
+   colorのみ .model-row-network / task-badge と同じprimaryトーンで当てる。 */
+option.option-network {
+  color: var(--primary);
 }
 
 /* AI Networkルーム由来のカード（room内の他participantが提供するモデル/

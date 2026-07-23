@@ -275,6 +275,12 @@ export const SettingsModal = memo(function SettingsModal({
     return provider ? isNetworkProviderBaseUrl(provider.baseUrl) : false
   }
 
+  // Same check, but from a preset id (as stored in defaultPresetId/visionPresetId) rather than a providerId directly.
+  function isNetworkPreset(presetId: string): boolean {
+    const preset = settings.presets.find((entry) => entry.id === presetId)
+    return preset ? isNetworkPresetProvider(preset.providerId) : false
+  }
+
   function getPresetBadges(preset: ModelPresetV1): string[] {
     const badges: string[] = []
     if (settings.defaultPresetId === preset.id) badges.push(t('llm-preset-default-badge'))
@@ -891,6 +897,14 @@ export const SettingsModal = memo(function SettingsModal({
   // option in the TTS/STT model pickers.
   const networkVoiceProviderId = settings.providers.find((provider) => isNetworkProviderBaseUrl(provider.baseUrl))?.id ?? ''
 
+  // Live room connection, as opposed to "a mist-network:// provider/preset
+  // exists in the shared config" (those entries are append-only and outlive
+  // any single connection). Network-origin presets are only offered as task
+  // choices while actually connected; while disconnected they're hidden from
+  // the pickers rather than cleared, so a task's stored preset id reappears
+  // selected on its own once the room reconnects.
+  const networkConnected = networkConsumerStatus.phase === 'connected'
+
   return (
     <div
       class="modal-layer"
@@ -1070,12 +1084,21 @@ export const SettingsModal = memo(function SettingsModal({
                     aria-label={t('llm-task-default-label')}
                   >
                     <option value="">{t('llm-preset-unset-option')}</option>
-                    {settings.presets.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.label || preset.id}
-                      </option>
-                    ))}
+                    {settings.presets
+                      .filter((preset) => networkConnected || !isNetworkPresetProvider(preset.providerId))
+                      .map((preset) => (
+                        <option
+                          key={preset.id}
+                          value={preset.id}
+                          class={isNetworkPresetProvider(preset.providerId) ? 'option-network' : undefined}
+                        >
+                          {preset.label || preset.id}
+                        </option>
+                      ))}
                   </select>
+                  {networkConnected && isNetworkPreset(settings.defaultPresetId) ? (
+                    <span class="task-badge task-badge-network">{t('llm-preset-network-badge')}</span>
+                  ) : null}
                 </div>
                 {renderReasoningEffortSelect('default', settings.reasoningEffort)}
               </div>
@@ -1091,12 +1114,21 @@ export const SettingsModal = memo(function SettingsModal({
                     aria-label={t('llm-role-vision-label')}
                   >
                     <option value="">{t('llm-role-same-as-default')}</option>
-                    {settings.presets.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.label || preset.id}
-                      </option>
-                    ))}
+                    {settings.presets
+                      .filter((preset) => networkConnected || !isNetworkPresetProvider(preset.providerId))
+                      .map((preset) => (
+                        <option
+                          key={preset.id}
+                          value={preset.id}
+                          class={isNetworkPresetProvider(preset.providerId) ? 'option-network' : undefined}
+                        >
+                          {preset.label || preset.id}
+                        </option>
+                      ))}
                   </select>
+                  {networkConnected && isNetworkPreset(settings.visionPresetId) ? (
+                    <span class="task-badge task-badge-network">{t('llm-preset-network-badge')}</span>
+                  ) : null}
                 </div>
                 {renderReasoningEffortSelect('vision', settings.visionReasoningEffort)}
               </div>
@@ -1111,6 +1143,8 @@ export const SettingsModal = memo(function SettingsModal({
               llmPresets={settings.presets}
               defaultVoiceConnection={defaultVoiceConnection}
               networkVoiceProviderId={networkVoiceProviderId}
+              isNetworkPresetProvider={isNetworkPresetProvider}
+              networkConnected={networkConnected}
             />
           </div>
         ) : null}
