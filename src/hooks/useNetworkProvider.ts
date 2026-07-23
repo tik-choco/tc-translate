@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { MistaiError } from '@tik-choco/mistai'
+import { MistaiError, fetchVoices } from '@tik-choco/mistai'
 import type { NetworkProviderPeer, NetworkProviderStatus } from '@tik-choco/mistai/preact'
 import { t } from '../i18n'
 import { requestApiChatCompletionStreaming, requestResolvedChatCompletionStreaming } from '../lib/llm'
@@ -108,12 +108,49 @@ export function useNetworkProvider(
   // itself a `mist-network://` pseudo-provider: this provider's own TTS/STT
   // model is "unset -> use the network", so advertising the capability would
   // just loop the request straight back into the room it came from.
-  const ttsConfigured = Boolean(
-    resolveTtsConnection(llmConfig).baseUrl && !isNetworkProviderBaseUrl(resolveTtsConnection(llmConfig).baseUrl),
-  )
+  const ttsConnection = resolveTtsConnection(llmConfig)
+  const ttsConfigured = Boolean(ttsConnection.baseUrl && !isNetworkProviderBaseUrl(ttsConnection.baseUrl))
   const sttConfigured = Boolean(
     resolveSttConnection(llmConfig).baseUrl && !isNetworkProviderBaseUrl(resolveSttConnection(llmConfig).baseUrl),
   )
+
+  // TTS voice names to advertise via provider_hello.voices (tts-voice-selection-v1
+  // §2.1/§2.5): fetched from the resolved TTS upstream (fetchVoices, promoted
+  // to mistai in v0.6.0) whenever it resolves to a real HTTP connection -
+  // mirrors ttsConfigured's guard exactly, so this never probes/advertises
+  // through the mist-network:// loopback. Debounced like the other
+  // connection-driven fetches in Settings, so rapid provider edits don't fire
+  // a request per keystroke. A fetch failure (fetchVoices itself never
+  // throws, but the catch is defensive) or an unconfigured connection
+  // advertises no voices at all - never falling back to a static list, since
+  // this provider might not actually support any of those names.
+  const [fetchedTtsVoices, setFetchedTtsVoices] = useState<string[]>([])
+  useEffect(() => {
+    if (!ttsConfigured) {
+      setFetchedTtsVoices([])
+      return
+    }
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      fetchVoices(ttsConnection.baseUrl, ttsConnection.apiKey)
+        .then((voices) => {
+          if (!cancelled) setFetchedTtsVoices(voices)
+        })
+        .catch(() => {
+          if (!cancelled) setFetchedTtsVoices([])
+        })
+    }, 300)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ttsConfigured, ttsConnection.baseUrl, ttsConnection.apiKey])
+
+  // provider_hello.voices is capped at 64 entries (§2.1) so the hello payload
+  // stays comfortably under mist's ~16KB message-size guard; truncation isn't
+  // surfaced in the UI (a documented v1 limitation).
+  const advertisedVoices = useMemo(() => fetchedTtsVoices.slice(0, 64), [fetchedTtsVoices])
 
   const [debouncedRoomId, setDebouncedRoomId] = useState(settings.roomId)
   useEffect(() => {
@@ -227,6 +264,7 @@ export function useNetworkProvider(
       return requestApiChatCompletionStreaming(settingsRef.current, messages, model, onDelta)
     },
     advertisedModels: advertisedModels.length ? advertisedModels : undefined,
+    advertisedVoices: advertisedVoices.length ? advertisedVoices : undefined,
     synthesize: ttsConfigured
       ? async (text, model, voice) => {
           const conn = resolveTtsConnection(llmConfigRef.current)

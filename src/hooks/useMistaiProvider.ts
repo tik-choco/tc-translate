@@ -1,8 +1,8 @@
 // App-local fork of @tik-choco/mistai/preact's useNetworkProvider (v0.4.x),
 // with two additions the upstream hook lacks:
 //
-// 1. When the advertised capability set (provider_hello's services/models)
-//    changes while the room session is live, the fresh provider_hello is
+// 1. When the advertised capability set (provider_hello's services/models/
+//    voices) changes while the room session is live, the fresh provider_hello is
 //    re-broadcast in place. The upstream hook only sends hello on join /
 //    peer-connect / consumer_hello, and its room-join effect only re-runs on
 //    enabled/roomId (everything else rides in a ref) - so share-list edits
@@ -88,11 +88,13 @@ export function useMistaiNetworkProvider(options: UseNetworkProviderOptionsExten
     const opts = optionsRef.current
     const services = [...deriveHelloServices(opts), ...(opts.extraServices ?? [])]
     const models = opts.advertisedModels
+    const voices = opts.advertisedVoices
     return {
       v: 1 as const,
       type: 'provider_hello' as const,
       services,
       ...(models && models.length > 0 ? { models } : {}),
+      ...(voices && voices.length > 0 ? { voices } : {}),
     }
   }
 
@@ -227,10 +229,10 @@ export function useMistaiNetworkProvider(options: UseNetworkProviderOptionsExten
 
   // --- fork addition ---------------------------------------------------------
   // Re-broadcast provider_hello, without leaving the room, whenever what it
-  // would announce (services + extraServices + advertised models) changes on
-  // a live session. Joining/connecting sessions are skipped: their own join
-  // broadcast reads the latest options from the ref anyway.
-  const helloKey = `${deriveHelloServices(options).join(',')}|${(options.extraServices ?? []).join(',')}|${(options.advertisedModels ?? []).join('\n')}`
+  // would announce (services + extraServices + advertised models/voices)
+  // changes on a live session. Joining/connecting sessions are skipped: their
+  // own join broadcast reads the latest options from the ref anyway.
+  const helloKey = `${deriveHelloServices(options).join(',')}|${(options.extraServices ?? []).join(',')}|${(options.advertisedModels ?? []).join('\n')}|${(options.advertisedVoices ?? []).join('\n')}`
   const helloKeyRef = useRef(helloKey)
   useEffect(() => {
     if (helloKeyRef.current === helloKey) return

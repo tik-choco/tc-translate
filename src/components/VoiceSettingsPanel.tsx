@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'preact/hooks'
+import { fetchVoices } from '@tik-choco/mistai'
+import { buildTtsVoiceOptionValues, resolveTtsVoiceOptions, shouldShowTtsVoiceRow } from '@tik-choco/mistai/preact'
 import { t } from '../i18n'
 import { NETWORK_VOICE_AUTO_MODEL } from '../lib/networkModels'
-import { OPENAI_TTS_VOICES, fetchVoices } from '../lib/voices'
+import type { ConsumerStatus } from '@tik-choco/mistai'
 import type { LlmProviderV1, ModelPresetV1 } from '../lib/llmConfig'
 import type { SttSettings, TtsSettings } from '../types'
 
@@ -74,6 +76,8 @@ type VoiceTaskRowsProps = {
   isNetworkPresetProvider: (providerId: string) => boolean
   /** Live AI Network room connection (as opposed to a `mist-network://` provider/preset merely existing in the shared config, which outlives any single connection). Network-origin choices are hidden from the pickers below while disconnected, and reappear selected on their own once `ttsSettings`/`sttSettings` still point at them and the room reconnects. */
   networkConnected: boolean
+  /** Consumer-side LLM Network connection state (from `networkClient.status`, see lib/network.ts), used to source the TTS voice picker's choices while `ttsSettings.engine === 'network'` (its `voices` union - see @tik-choco/mistai's ConsumerStatus/unionVoices). */
+  consumerStatus: ConsumerStatus
 }
 
 // TTS/STT ("voice") task rows, rendered inside SettingsModal's Tasks tab
@@ -98,6 +102,7 @@ export function VoiceTaskRows({
   networkVoiceProviderId,
   isNetworkPresetProvider,
   networkConnected,
+  consumerStatus,
 }: VoiceTaskRowsProps) {
   const { microphones, labelsHidden, enumerationSupported, unlockLabels } = useMicrophones()
   const knownMic = microphones.some((mic) => mic.deviceId === sttSettings.micDeviceId)
@@ -155,34 +160,47 @@ export function VoiceTaskRows({
   const sttProvider = sttSettings.providerId ? llmProviders.find((entry) => entry.id === sttSettings.providerId) : undefined
   const sttBaseUrl = sttSettings.providerId ? (sttProvider?.baseUrl ?? '') : defaultVoiceConnection.baseUrl
 
-  // Voice names offered in the TTS voice picker. OpenAI itself has no
-  // voices-listing endpoint, so failures (and the network/browser engines,
-  // which can't be probed over HTTP from here) quietly fall back to the
-  // documented OpenAI voice set; a voice saved from another server stays
-  // selectable via the extra <option> below either way.
-  const [voiceOptions, setVoiceOptions] = useState<string[]>(OPENAI_TTS_VOICES)
+  // Voice names fetched live from the api-engine TTS connection (fetchVoices,
+  // promoted to @tik-choco/mistai in v0.6.0 - OpenAI itself has no
+  // voices-listing endpoint, so this commonly resolves to []). Only feeds the
+  // 'api' branch of resolveTtsVoiceOptions below; the 'network' branch reads
+  // consumerStatus.voices instead (tts-voice-selection-v1 §2.4) and never
+  // falls back to a static list.
+  const [fetchedApiVoices, setFetchedApiVoices] = useState<string[]>([])
   useEffect(() => {
     if (ttsSettings.engine !== 'api' || !ttsBaseUrl.trim()) {
-      setVoiceOptions(OPENAI_TTS_VOICES)
+      setFetchedApiVoices([])
       return
     }
 
-    const controller = new AbortController()
+    let cancelled = false
     // Debounced like the model-list fetch, so switching providers quickly
     // doesn't fire a request per click.
     const timer = window.setTimeout(() => {
-      fetchVoices({ baseUrl: ttsBaseUrl, apiKey: ttsApiKey }, controller.signal)
-        .then((voices) => setVoiceOptions(voices))
-        .catch(() => {
-          if (!controller.signal.aborted) setVoiceOptions(OPENAI_TTS_VOICES)
-        })
+      fetchVoices(ttsBaseUrl, ttsApiKey).then((voices) => {
+        if (!cancelled) setFetchedApiVoices(voices)
+      })
     }, 300)
 
     return () => {
+      cancelled = true
       window.clearTimeout(timer)
-      controller.abort()
     }
   }, [ttsSettings.engine, ttsBaseUrl, ttsApiKey])
+
+  // Whether the TTS voice picker is shown at all (browser engine excluded -
+  // see shouldShowTtsVoiceRow) and, when shown, the choices it offers for the
+  // current engine (resolveTtsVoiceOptions - §2.4). Reused verbatim from
+  // @tik-choco/mistai/preact's LlmSettings implementation so this app's
+  // picker stays semantically identical to the shared component it's a
+  // pre-migration stand-in for.
+  const showTtsVoiceRow = shouldShowTtsVoiceRow(true, ttsSettings.engine)
+  const ttsVoiceOptionValues = showTtsVoiceRow
+    ? buildTtsVoiceOptionValues(
+        resolveTtsVoiceOptions({ engine: ttsSettings.engine, consumerStatus, fetchedApiVoices }),
+        ttsSettings.voice,
+      )
+    : []
 
   return (
     <>
@@ -239,23 +257,22 @@ export function VoiceTaskRows({
             ) : null}
           </div>
 
-          {/* Hidden for the auto sentinel too, alongside the browser engine:
-              the room's provider applies its own voice, so there's nothing
-              here to pick. */}
-          {ttsSettings.engine !== 'browser' && ttsSettings.model !== NETWORK_VOICE_AUTO_MODEL ? (
+          {/* Shown for every engine except browser (tts-voice-selection-v1
+              §2.4) - including the "AI Networkにおまかせ" auto sentinel: the
+              room's provider still applies its own model, but the voice can
+              be pinned independently. '' (the leading option built by
+              buildTtsVoiceOptionValues) means "provider default" - voice
+              omitted from the request. */}
+          {showTtsVoiceRow ? (
             <div class="task-model-field">
               <select
                 value={ttsSettings.voice}
                 onChange={(event) => onUpdateTtsSettings({ ...ttsSettings, voice: event.currentTarget.value })}
                 aria-label={t('voice-tts-voice-label')}
               >
-                {!ttsSettings.voice ? <option value="" disabled /> : null}
-                {ttsSettings.voice && !voiceOptions.includes(ttsSettings.voice) ? (
-                  <option value={ttsSettings.voice}>{ttsSettings.voice}</option>
-                ) : null}
-                {voiceOptions.map((voice) => (
-                  <option key={voice} value={voice}>
-                    {voice}
+                {ttsVoiceOptionValues.map((voice) => (
+                  <option key={voice || '__default__'} value={voice}>
+                    {voice === '' ? t('voice-provider-default-option') : voice}
                   </option>
                 ))}
               </select>
