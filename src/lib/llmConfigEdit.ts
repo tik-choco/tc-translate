@@ -9,9 +9,35 @@
 // via `SharedLlmConfigState.save`, see hooks/useSharedLlmConfig.ts).
 
 import type { LlmProviderV1, ModelPresetV1, SharedLlmConfigV1 } from './llmConfig'
+import { isNetworkProviderBaseUrl } from './networkModels'
 
 function newId(): string {
   return crypto.randomUUID()
+}
+
+/**
+ * Picks a safe replacement for `config.defaultPresetId` once its previous
+ * target preset has just been removed - the first preset that is NOT sitting
+ * under any `mist-network://` mirror provider (this room's or any other
+ * room's), never an arbitrary `config.presets[0]`.
+ *
+ * Why this matters: `resolvePreset(config)` (lib/llmConfig.ts) is the
+ * fallback target for ANY task (chat, and TTS/STT too) whose own
+ * `providerId` is left unset - the documented, legitimate way to configure
+ * them. Blindly reusing `config.presets[0]` here would silently promote
+ * whatever preset happens to be array-first - very plausibly a network
+ * mirror preset (see useNetworkModelSync.ts) - to "the default", flipping
+ * every unset-providerId task from the user's actual API provider onto the
+ * AI Network transport with no user action at all. Falls back to "" (unset)
+ * when every remaining preset happens to be network-owned, rather than
+ * picking one anyway.
+ */
+function safeDefaultPresetFallback(config: SharedLlmConfigV1): string {
+  const nonNetwork = config.presets.find((p) => {
+    const provider = config.providers.find((pr) => pr.id === p.providerId)
+    return provider !== undefined && !isNetworkProviderBaseUrl(provider.baseUrl)
+  })
+  return nonNetwork?.id ?? ''
 }
 
 export function createProvider(config: SharedLlmConfigV1, label: string): string {
@@ -48,7 +74,7 @@ export function patchPreset(config: SharedLlmConfigV1, id: string, patch: Partia
 /** Removes a preset. If it was the default, the next remaining preset (if any) takes over; the vision pointer referencing it is left to the caller to clear (see useProviderSettings). */
 export function deletePreset(config: SharedLlmConfigV1, id: string): void {
   config.presets = config.presets.filter((entry) => entry.id !== id)
-  if (config.defaultPresetId === id) config.defaultPresetId = config.presets[0]?.id ?? ''
+  if (config.defaultPresetId === id) config.defaultPresetId = safeDefaultPresetFallback(config)
 }
 
 /**
