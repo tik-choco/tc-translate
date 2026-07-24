@@ -266,7 +266,7 @@ export function useNetworkProvider(
     advertisedModels: advertisedModels.length ? advertisedModels : undefined,
     advertisedVoices: advertisedVoices.length ? advertisedVoices : undefined,
     synthesize: ttsConfigured
-      ? async (text, model, voice) => {
+      ? async (text, model, voice, lang) => {
           const conn = resolveTtsConnection(llmConfigRef.current)
           // Config may have changed since ttsConfigured was computed (e.g. the
           // resolved model got unset, falling back to the network
@@ -279,6 +279,8 @@ export function useNetworkProvider(
           // when it matches this provider's own configured TTS model;
           // anything else falls back to that own model instead of erroring.
           const ownTtsModel = ttsSettingsRef.current.model
+          // TODO: `lang` isn't used yet to pick a language-specific voice - synthesizeSpeech always uses ownTtsModel's single configured voice.
+          void lang
           const blob = await synthesizeSpeech({
             connection: conn,
             model: model === ownTtsModel ? model : ownTtsModel,
