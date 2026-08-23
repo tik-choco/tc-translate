@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { sendHistoryItemToLingo } from '../lib/shareToLingo'
 import { publishTranslationsInbox } from '../lib/shareToStorage'
-import { loadHistory, saveHistory } from '../lib/storage'
+import { loadHistory, loadHistoryPanelVisible, saveHistory, saveHistoryPanelVisible } from '../lib/storage'
 import type { TranslationHistoryItem, TranslationResult } from '../types'
 
 // How long the "sent" confirmation state stays on a history item's Lingo
@@ -10,7 +10,7 @@ import type { TranslationHistoryItem, TranslationResult } from '../types'
 const sentToLingoResetDelay = 1400
 
 export function useHistoryPanel() {
-  const [showHistory, setShowHistory] = useState(true)
+  const [showHistory, setShowHistory] = useState(loadHistoryPanelVisible)
   const [history, setHistory] = useState<TranslationHistoryItem[]>([])
   // Id of the history item whose "send to Lingo" just succeeded, for a
   // transient checkmark on its button; cleared after sentToLingoResetDelay.
@@ -100,7 +100,11 @@ export function useHistoryPanel() {
   }
 
   function toggleHistory(): void {
-    setShowHistory((current) => !current)
+    setShowHistory((current) => {
+      const next = !current
+      saveHistoryPanelVisible(next)
+      return next
+    })
   }
 
   return {
