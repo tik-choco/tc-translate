@@ -40,6 +40,15 @@ export const maxSimulEntries = 30
 // Rolling window of prior finalized segments fed to the orchestrator/workers
 // as translation context, mirroring the Translate tab's tone-context sizing.
 export const simulContextSize = 3
+// Final STT results are not always sentence-sized. Some recognizers finalize
+// very small chunks, so collect adjacent chunks briefly before invoking the
+// simultaneous-translation fan-out.
+export const simulSegmentDebounceMs = 650
+export const simulSegmentMaxWaitMs = 2000
+export const simulSegmentMinChars = 4
+export const simulSegmentMaxChars = 160
+// Protect against recognizers that emit the same finalized segment twice.
+export const simulSegmentDuplicateWindowMs = 300
 // Number of example sentences requested per "example" mode generation.
 export const exampleSentenceCount = 5
 

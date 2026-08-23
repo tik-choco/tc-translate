@@ -47,7 +47,11 @@ export function TranscribePanel({ settings, sttSettings, llmConfig, onOpenSettin
   })
   const usingApiStt = stt.configured
   const isListening = usingApiStt ? stt.isListening : speech.isListening
-  const toggleListening = usingApiStt ? stt.toggle : speech.toggle
+  const toggleListening = useCallback(() => {
+    if (isListening) simul.flushPending()
+    if (usingApiStt) stt.toggle()
+    else speech.toggle()
+  }, [isListening, simul.flushPending, speech.toggle, stt.toggle, usingApiStt])
   const listenError = usingApiStt ? stt.error : speech.error
   const prevTranscriptRef = useRef('')
   const bottomRef = useRef<HTMLDivElement | null>(null)
