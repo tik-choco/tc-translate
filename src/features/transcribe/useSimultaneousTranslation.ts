@@ -1,5 +1,15 @@
-import { useCallback, useMemo, useRef, useState } from 'preact/hooks'
-import { defaultResolvedProvider, maxSimulEntries, maxSimulTargetLanguages, simulContextSize } from '../../constants'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import {
+  defaultResolvedProvider,
+  maxSimulEntries,
+  maxSimulTargetLanguages,
+  simulContextSize,
+  simulSegmentDebounceMs,
+  simulSegmentDuplicateWindowMs,
+  simulSegmentMaxChars,
+  simulSegmentMaxWaitMs,
+  simulSegmentMinChars,
+} from '../../constants'
 import { normalizeBaseUrl } from '../../lib/format'
 import { localizeNetworkError } from '../../lib/network'
 import { planTranslationFanOut, translateSegmentForLanguage } from '../../lib/simultaneousTranslate'
@@ -28,6 +38,19 @@ export type SimulTranslationEntry = {
   results: SimulTranslationResult[]
 }
 
+const sentenceEndPattern = /[.!?。！？…][\]）)」』】〉》”’]*$/u
+const latinWordEndPattern = /[A-Za-z0-9]$/
+const latinWordStartPattern = /^[A-Za-z0-9]/
+
+function appendFinalizedSegment(current: string, next: string): string {
+  if (!current) return next
+  // Browser speech recognition often removes the leading space from an
+  // English final result. CJK fragments, on the other hand, should normally
+  // be joined without injecting spaces between characters.
+  const separator = latinWordEndPattern.test(current) && latinWordStartPattern.test(next) ? ' ' : ''
+  return `${current}${separator}${next}`
+}
+
 // Orchestrator (plans the fan-out) -> N parallel workers (one translation
 // call per planned target language) for each finalized speech segment from
 // the Transcribe tab. See lib/simultaneousTranslate.ts for the two LLM
@@ -39,6 +62,13 @@ export function useSimultaneousTranslation(settings: ProviderSettings) {
 
   const contextRef = useRef<string[]>([])
   const idCounterRef = useRef(0)
+  const pendingTextRef = useRef('')
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const maxWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const translationQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const translateBufferedSegmentRef = useRef<(text: string) => Promise<void>>(async () => {})
+  const lastQueuedRef = useRef<{ text: string; ts: number } | null>(null)
+  const generationRef = useRef(0)
 
   const hasProviderConfigured = useMemo(
     () =>
@@ -64,10 +94,46 @@ export function useSimultaneousTranslation(settings: ProviderSettings) {
 
   const canAddLanguage = targetLanguages.length < maxSimulTargetLanguages
 
-  const setEnabled = useCallback((next: boolean) => {
-    setEnabledState(next)
-    saveSimulTranslateEnabled(next)
+  const clearBufferTimers = useCallback(() => {
+    if (debounceTimerRef.current !== null) clearTimeout(debounceTimerRef.current)
+    if (maxWaitTimerRef.current !== null) clearTimeout(maxWaitTimerRef.current)
+    debounceTimerRef.current = null
+    maxWaitTimerRef.current = null
   }, [])
+
+  const discardPending = useCallback(() => {
+    clearBufferTimers()
+    pendingTextRef.current = ''
+  }, [clearBufferTimers])
+
+  const flushPending = useCallback(() => {
+    clearBufferTimers()
+    const text = pendingTextRef.current.trim()
+    pendingTextRef.current = ''
+    if (!text) return
+
+    const now = Date.now()
+    const lastQueued = lastQueuedRef.current
+    if (lastQueued?.text === text && now - lastQueued.ts < simulSegmentDuplicateWindowMs) return
+    lastQueuedRef.current = { text, ts: now }
+
+    const generation = generationRef.current
+    const translate = translateBufferedSegmentRef.current
+    translationQueueRef.current = translationQueueRef.current
+      .then(() => (generation === generationRef.current ? translate(text) : undefined))
+      // translateBufferedSegment handles per-request failures. This catch
+      // keeps an unexpected failure from permanently rejecting the queue.
+      .catch(() => {})
+  }, [clearBufferTimers])
+
+  const setEnabled = useCallback(
+    (next: boolean) => {
+      if (!next) discardPending()
+      setEnabledState(next)
+      saveSimulTranslateEnabled(next)
+    },
+    [discardPending],
+  )
 
   const addTargetLanguage = useCallback((language: string) => {
     setTargetLanguages((current) => {
@@ -87,18 +153,21 @@ export function useSimultaneousTranslation(settings: ProviderSettings) {
   }, [])
 
   const reset = useCallback(() => {
+    generationRef.current += 1
+    discardPending()
+    lastQueuedRef.current = null
     contextRef.current = []
     setEntries([])
-  }, [])
+  }, [discardPending])
 
   const updateEntry = useCallback((id: string, updater: (entry: SimulTranslationEntry) => SimulTranslationEntry) => {
     setEntries((current) => current.map((entry) => (entry.id === id ? updater(entry) : entry)))
   }, [])
 
-  const submitSegment = useCallback(
+  const translateBufferedSegment = useCallback(
     async (text: string) => {
       const trimmed = text.trim()
-      if (!enabled || !trimmed || targetLanguages.length === 0 || !hasProviderConfigured) return
+      if (!trimmed || targetLanguages.length === 0 || !hasProviderConfigured) return
 
       const id = `s${++idCounterRef.current}`
       const contextText = contextRef.current.join('\n')
@@ -166,8 +235,38 @@ export function useSimultaneousTranslation(settings: ProviderSettings) {
 
       contextRef.current = [...contextRef.current, trimmed].slice(-simulContextSize)
     },
-    [enabled, targetLanguages, hasProviderConfigured, settings, updateEntry],
+    [targetLanguages, hasProviderConfigured, settings, updateEntry],
   )
+
+  translateBufferedSegmentRef.current = translateBufferedSegment
+
+  const submitSegment = useCallback(
+    (text: string) => {
+      const trimmed = text.trim()
+      if (!enabled || !trimmed || targetLanguages.length === 0 || !hasProviderConfigured) return
+
+      const wasEmpty = !pendingTextRef.current
+      pendingTextRef.current = appendFinalizedSegment(pendingTextRef.current, trimmed)
+
+      if (debounceTimerRef.current !== null) clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = null
+      // A lone character is much more likely to be an over-eager recognizer
+      // boundary than a complete utterance. Keep it until more text arrives
+      // or the hard deadline fires; normal sentence-sized finals retain the
+      // shorter idle delay.
+      if (pendingTextRef.current.length >= simulSegmentMinChars) {
+        debounceTimerRef.current = setTimeout(flushPending, simulSegmentDebounceMs)
+      }
+      if (wasEmpty) maxWaitTimerRef.current = setTimeout(flushPending, simulSegmentMaxWaitMs)
+
+      if (sentenceEndPattern.test(pendingTextRef.current) || pendingTextRef.current.length >= simulSegmentMaxChars) {
+        flushPending()
+      }
+    },
+    [enabled, targetLanguages.length, hasProviderConfigured, flushPending],
+  )
+
+  useEffect(() => discardPending, [discardPending])
 
   return {
     enabled,
@@ -178,6 +277,7 @@ export function useSimultaneousTranslation(settings: ProviderSettings) {
     removeTargetLanguage,
     entries,
     submitSegment,
+    flushPending,
     reset,
     hasProviderConfigured,
     providerNeedsSetup,
