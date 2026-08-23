@@ -3,6 +3,7 @@ import {
   defaultLocalSttSettings,
   defaultNativeLanguage,
   defaultReplyTone,
+  historyPanelVisibleStorageKey,
   historyStorageKey,
   languageOptions,
   languageSpeechCodes,
@@ -293,6 +294,24 @@ export function saveOnboardingSeen(): void {
     localStorage.setItem(onboardingStorageKey, '1')
   } catch (err) {
     console.warn('tc-translate: failed to save onboarding-seen flag', err)
+  }
+}
+
+// Defaults to visible for existing users and fresh installs. Once the user
+// toggles the history panel, their choice is restored on the next launch.
+export function loadHistoryPanelVisible(): boolean {
+  try {
+    return localStorage.getItem(historyPanelVisibleStorageKey) !== '0'
+  } catch {
+    return true
+  }
+}
+
+export function saveHistoryPanelVisible(visible: boolean): void {
+  try {
+    localStorage.setItem(historyPanelVisibleStorageKey, visible ? '1' : '0')
+  } catch (err) {
+    console.warn('tc-translate: failed to save history panel visibility', err)
   }
 }
 
