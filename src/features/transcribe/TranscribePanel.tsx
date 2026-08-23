@@ -1,7 +1,7 @@
 import { LoaderCircle, Mic, MicOff, TriangleAlert, X } from 'lucide-preact'
 import type { JSX } from 'preact'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { languageOptions } from '../../constants'
+import { languageOptions, transcribeLangStorageKey } from '../../constants'
 import { t } from '../../i18n'
 import { appendTranscript } from '../../lib/format'
 import { languageOptionLabel } from '../../lib/language'
@@ -21,11 +21,24 @@ type TranscribePanelProps = {
   onOpenSettings: () => void
 }
 
+function loadTranscribeLang(): string {
+  const stored = localStorage.getItem(transcribeLangStorageKey)
+  return stored && languages.some((language) => language.code === stored) ? stored : 'ja'
+}
+
+function saveTranscribeLang(lang: string): void {
+  try {
+    localStorage.setItem(transcribeLangStorageKey, lang)
+  } catch (err) {
+    console.warn('tc-translate: failed to save transcribe language', err)
+  }
+}
+
 export function TranscribePanel({ settings, sttSettings, llmConfig, onOpenSettings }: TranscribePanelProps): JSX.Element {
   const simul = useSimultaneousTranslation(settings)
 
   const handleFinalResult = useCallback((text: string) => void simul.submitSegment(text), [simul.submitSegment])
-  const speech = useSpeechRecognition('ja', handleFinalResult)
+  const speech = useSpeechRecognition(loadTranscribeLang(), handleFinalResult)
   const [logText, setLogText] = useState('')
   const [keepLog, setKeepLog] = useState(true)
 
@@ -96,7 +109,11 @@ export function TranscribePanel({ settings, sttSettings, llmConfig, onOpenSettin
           class="transcribe-select"
           aria-label={t('transcribe-select-aria-label')}
           value={speech.lang}
-          onChange={(event) => speech.setLang(event.currentTarget.value)}
+          onChange={(event) => {
+            const lang = event.currentTarget.value
+            speech.setLang(lang)
+            saveTranscribeLang(lang)
+          }}
         >
           {languages.map((language) => (
             <option key={language.code} value={language.code}>
