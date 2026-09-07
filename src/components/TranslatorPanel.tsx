@@ -436,6 +436,13 @@ export function TranslatorPanel({
               result={explainResult}
               rubyStatus={explainRubyStatus}
               rubyTokens={explainRubyTokens}
+              speechSupported={speechSupported}
+              speakingId={speakingId}
+              speechLoadingId={speechLoadingId}
+              onSpeak={onSpeak}
+              speechDownloadSupported={speechDownloadSupported}
+              speechDownloadingId={speechDownloadingId}
+              onDownloadSpeech={onDownloadSpeech}
               providerNeedsSetup={providerNeedsSetup}
               onOpenSettings={onOpenSettings}
             />
@@ -443,6 +450,13 @@ export function TranslatorPanel({
             <ExampleOutput
               status={exampleStatus}
               result={exampleResult}
+              speechSupported={speechSupported}
+              speakingId={speakingId}
+              speechLoadingId={speechLoadingId}
+              onSpeak={onSpeak}
+              speechDownloadSupported={speechDownloadSupported}
+              speechDownloadingId={speechDownloadingId}
+              onDownloadSpeech={onDownloadSpeech}
               providerNeedsSetup={providerNeedsSetup}
               onOpenSettings={onOpenSettings}
             />
