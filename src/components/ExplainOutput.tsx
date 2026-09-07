@@ -1,7 +1,9 @@
 import { BookOpen, LoaderCircle } from 'lucide-preact'
 import { memo } from 'preact/compat'
 import { t } from '../i18n'
+import { detectScript, speechCodeForScript } from '../lib/language'
 import { ProviderSetupGuide } from './ProviderSetupGuide'
+import { SpeechControls } from './SpeechControls'
 import type { ExplanationResult, ExplanationRubyToken, Status } from '../types'
 
 type ExplainOutputProps = {
@@ -9,6 +11,13 @@ type ExplainOutputProps = {
   result: ExplanationResult | null
   rubyStatus: Status
   rubyTokens: ExplanationRubyToken[]
+  speechSupported: boolean
+  speakingId: string | null
+  speechLoadingId: string | null
+  onSpeak: (text: string, lang: string | undefined, id: string) => void
+  speechDownloadSupported: boolean
+  speechDownloadingId: string | null
+  onDownloadSpeech: (text: string, id: string) => void
   providerNeedsSetup: boolean
   onOpenSettings: () => void
 }
@@ -18,6 +27,13 @@ export const ExplainOutput = memo(function ExplainOutput({
   result,
   rubyStatus,
   rubyTokens,
+  speechSupported,
+  speakingId,
+  speechLoadingId,
+  onSpeak,
+  speechDownloadSupported,
+  speechDownloadingId,
+  onDownloadSpeech,
   providerNeedsSetup,
   onOpenSettings,
 }: ExplainOutputProps) {
@@ -44,6 +60,10 @@ export const ExplainOutput = memo(function ExplainOutput({
   }
 
   const hasReadings = rubyTokens.some((token) => token.reading)
+
+  // Explained material is in the source text's own language; the script is
+  // the only language hint available for these fragments.
+  const speechLangFor = (text: string) => speechCodeForScript(detectScript(text))
 
   return (
     <>
@@ -91,7 +111,24 @@ export const ExplainOutput = memo(function ExplainOutput({
             <article class="explain-point-card" key={`${point.pattern}-${index}`}>
               <span class="explain-pattern">{point.pattern}</span>
               <p>{point.explanation}</p>
-              {point.example ? <p class="explain-example">{point.example}</p> : null}
+              {point.example ? (
+                <div class="explain-speakable-row">
+                  <p class="explain-example">{point.example}</p>
+                  <SpeechControls
+                    text={point.example}
+                    lang={speechLangFor(point.example)}
+                    id={`explain-grammar-${index}`}
+                    label={t('translator-listen-sentence')}
+                    supported={speechSupported}
+                    speakingId={speakingId}
+                    loadingId={speechLoadingId}
+                    onSpeak={onSpeak}
+                    downloadSupported={speechDownloadSupported}
+                    downloadingId={speechDownloadingId}
+                    onDownload={onDownloadSpeech}
+                  />
+                </div>
+              ) : null}
             </article>
           ))}
         </section>
@@ -101,9 +138,24 @@ export const ExplainOutput = memo(function ExplainOutput({
           <h3 class="explain-section-title">{t('translator-vocabulary-label')}</h3>
           {result.vocabulary.map((entry, index) => (
             <article class="explain-vocab-card" key={`${entry.word}-${index}`}>
-              <div class="explain-vocab-row">
-                <span class="explain-word">{entry.word}</span>
-                {entry.reading ? <span class="explain-reading">{entry.reading}</span> : null}
+              <div class="explain-speakable-row">
+                <div class="explain-vocab-row">
+                  <span class="explain-word">{entry.word}</span>
+                  {entry.reading ? <span class="explain-reading">{entry.reading}</span> : null}
+                </div>
+                <SpeechControls
+                  text={entry.word}
+                  lang={speechLangFor(entry.word)}
+                  id={`explain-vocab-${index}`}
+                  label={t('translator-listen-word')}
+                  supported={speechSupported}
+                  speakingId={speakingId}
+                  loadingId={speechLoadingId}
+                  onSpeak={onSpeak}
+                  downloadSupported={speechDownloadSupported}
+                  downloadingId={speechDownloadingId}
+                  onDownload={onDownloadSpeech}
+                />
               </div>
               <p class="explain-meaning">{entry.meaning}</p>
               {entry.note ? <p class="explain-note">{entry.note}</p> : null}

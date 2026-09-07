@@ -109,3 +109,39 @@ p.explain-note {
   line-height: 1.55;
   color: var(--text-muted);
 }
+
+/* One explained fragment (example sentence, vocabulary word) next to its
+   play/download-audio controls. */
+.explain-speakable-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.explain-point-card > .explain-speakable-row:first-child,
+.explain-vocab-card > .explain-speakable-row:first-child {
+  margin-top: 0;
+}
+
+.explain-speakable-row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.explain-speakable-row > p:first-child {
+  margin-top: 0;
+}
+
+.explain-speakable-row .copy-control {
+  flex-shrink: 0;
+  /* Pulled in vertically so the taller-than-text buttons do not inflate the
+     gap between the sentence and the lines under it. */
+  margin: -4px 0;
+}
+
+.explain-speakable-row .icon-button.small {
+  width: 28px;
+  height: 28px;
+}
