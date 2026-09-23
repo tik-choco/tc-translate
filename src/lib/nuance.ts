@@ -41,7 +41,8 @@ const emotionPrompts: Record<NuanceEmotion, string> = {
   hesitant: 'hesitant, unsure',
 }
 
-export function isNuanceActive(nuance: TranslationNuance | null | undefined): nuance is TranslationNuance {
+/** True when any setting differs from the default, even while paused. */
+export function hasNuanceSettings(nuance: TranslationNuance | null | undefined): nuance is TranslationNuance {
   return Boolean(
     nuance &&
       (nuance.intimacy !== 'neutral' ||
@@ -50,6 +51,11 @@ export function isNuanceActive(nuance: TranslationNuance | null | undefined): nu
         nuance.emotion ||
         nuance.decoration !== 'none'),
   )
+}
+
+/** True when the nuance should be applied to a translation (set and not paused). */
+export function isNuanceActive(nuance: TranslationNuance | null | undefined): nuance is TranslationNuance {
+  return hasNuanceSettings(nuance) && !nuance.paused
 }
 
 export function emojiForEmotion(emotion: NuanceEmotion | null): string {
@@ -71,7 +77,7 @@ export function parseNuance(raw: unknown): TranslationNuance | null {
       ? 'emoji'
       : 'none'
   const stance = nuanceStances.includes(value.stance as NuanceStance) ? (value.stance as NuanceStance) : 'equal'
-  return { intimacy: value.intimacy as Intimacy, stance, moods, emotion, decoration }
+  return { intimacy: value.intimacy as Intimacy, stance, moods, emotion, decoration, paused: value.paused === true }
 }
 
 /** JSON-friendly nuance for LLM payloads, or undefined when no nuance applies. */

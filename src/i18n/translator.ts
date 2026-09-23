@@ -127,6 +127,9 @@ export const translatorMessages = {
     'translator-nuance-decoration-kaomoji': 'Kaomoji',
     'translator-nuance-decoration-both': 'Both',
     'translator-nuance-reset': 'Reset',
+    'translator-nuance-pause': 'Pause',
+    'translator-nuance-pause-hint': 'Turn nuance off for now without losing your settings',
+    'translator-nuance-paused': 'Nuance paused: {nuance}',
     'translator-nuance-applied': 'Nuance: {nuance}',
   },
   ja: {
@@ -254,6 +257,9 @@ export const translatorMessages = {
     'translator-nuance-decoration-kaomoji': '顔文字',
     'translator-nuance-decoration-both': '両方',
     'translator-nuance-reset': 'リセット',
+    'translator-nuance-pause': '一時オフ',
+    'translator-nuance-pause-hint': '設定を残したまま一時的にニュアンスをオフにします',
+    'translator-nuance-paused': 'ニュアンス一時オフ中: {nuance}',
     'translator-nuance-applied': 'ニュアンス: {nuance}',
   },
   'zh-CN': {
@@ -379,6 +385,9 @@ export const translatorMessages = {
     'translator-nuance-decoration-kaomoji': '颜文字',
     'translator-nuance-decoration-both': '两者',
     'translator-nuance-reset': '重置',
+    'translator-nuance-pause': '暂时关闭',
+    'translator-nuance-pause-hint': '保留设置，暂时关闭语气调整',
+    'translator-nuance-paused': '语气已暂时关闭：{nuance}',
     'translator-nuance-applied': '语气：{nuance}',
   },
   'zh-TW': {
@@ -504,6 +513,9 @@ export const translatorMessages = {
     'translator-nuance-decoration-kaomoji': '顏文字',
     'translator-nuance-decoration-both': '兩者',
     'translator-nuance-reset': '重設',
+    'translator-nuance-pause': '暫時關閉',
+    'translator-nuance-pause-hint': '保留設定，暫時關閉語氣調整',
+    'translator-nuance-paused': '語氣已暫時關閉：{nuance}',
     'translator-nuance-applied': '語氣：{nuance}',
   },
 } satisfies MessageBundle

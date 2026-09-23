@@ -71,9 +71,12 @@
   /* The layout stacks into one column below, so restore ordinary whole-page
      scrolling instead of the desktop's independent per-column scroll boxes —
      nested scroll regions feel wrong once everything is a single column. */
-  .workspace {
+  #app {
     height: auto;
     min-height: 100svh;
+  }
+
+  .workspace {
     overflow: visible;
   }
 
