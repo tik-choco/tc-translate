@@ -309,7 +309,8 @@ export function TranslatorPanel({
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDrop}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                // Shift+Ctrl+Enter is paste & translate (window listener in app.tsx).
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
                   event.preventDefault()
                   onTranslate()
                 }
@@ -471,17 +472,24 @@ export function TranslatorPanel({
               {exampleStatus === 'loading' ? <LoaderCircle size={16} /> : <NotebookText size={16} />}
               {t('translator-example')}
             </button>
-            <button
-              type="button"
-              class="secondary-button"
-              onClick={onPasteAndTranslate}
-              disabled={!canPasteAndTranslate || status === 'loading'}
-              title={providerNeedsSetup ? t('translator-setup-required-hint') : t('translator-paste-and-translate')}
-            >
-              <ClipboardPaste size={16} />
-              {t('translator-paste-and-translate')}
-            </button>
-            <div class="translate-action">
+            <div class="button-with-hint">
+              <button
+                type="button"
+                class="secondary-button"
+                onClick={onPasteAndTranslate}
+                disabled={!canPasteAndTranslate || status === 'loading'}
+                title={
+                  providerNeedsSetup
+                    ? t('translator-setup-required-hint')
+                    : `${t('translator-paste-and-translate')} (Ctrl + Shift + Enter)`
+                }
+              >
+                <ClipboardPaste size={16} />
+                {t('translator-paste-and-translate')}
+              </button>
+              <span class="shortcut-hint">Ctrl + Shift + Enter</span>
+            </div>
+            <div class="button-with-hint">
               <button
                 type="button"
                 class={`primary-button ${status === 'loading' ? 'loading' : ''}`}
@@ -498,7 +506,7 @@ export function TranslatorPanel({
                 {status === 'loading' ? <Square size={17} /> : <Play size={17} />}
                 {status === 'loading' ? t('translator-cancel') : t('translator-translate')}
               </button>
-              <span class="shortcut-hint">{t('translator-shortcut-hint')}</span>
+              <span class="shortcut-hint">Ctrl + Enter</span>
             </div>
           </div>
         </div>

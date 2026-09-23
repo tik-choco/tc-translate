@@ -84,6 +84,22 @@ export function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
+  // Ctrl/Cmd+Shift+Enter = paste & translate, the sibling of the textarea's
+  // Ctrl+Enter. Window-level so it works without focusing the input; the ref
+  // keeps the listener from re-binding on every render.
+  const pasteAndTranslateRef = useRef(t.runPasteAndTranslate)
+  pasteAndTranslateRef.current = t.runPasteAndTranslate
+  useEffect(() => {
+    if (activeTab !== 'translate') return
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key !== 'Enter' || !event.shiftKey || !(event.ctrlKey || event.metaKey) || event.repeat) return
+      event.preventDefault()
+      void pasteAndTranslateRef.current()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeTab])
+
   useEffect(() => subscribeUiMessages(() => setMessagesVersion((version) => version + 1)), [])
 
   // The UI language follows the native language. Languages without a built-in
