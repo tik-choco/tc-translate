@@ -1,4 +1,4 @@
-import { pinyin } from 'pinyin-pro'
+import { pinyin, polyphonic } from 'pinyin-pro'
 import { fromPinyin } from 'zhuyin'
 
 export type RubyToken = { text: string; reading: string }
@@ -111,4 +111,16 @@ export function toPinyinRuby(text: string): RubyToken[] {
 
 export function toZhuyinRuby(text: string): RubyToken[] {
   return buildRuby(text, toZhuyinSyllable)
+}
+
+// Every reading a single character can take (行 → xíng háng hàng héng),
+// for the hover popover. Unlike the ruby line this ignores context.
+export function getPinyinCandidates(char: string): string[] {
+  if (!HAN.test(char)) return []
+  const [readings = []] = polyphonic(char, { type: 'array' })
+  return readings.filter((py, index) => py && readings.indexOf(py) === index)
+}
+
+export function pinyinToZhuyin(py: string): string {
+  return toZhuyinSyllable(py)
 }
