@@ -60,6 +60,15 @@ export function App() {
     [t.openSettings, t.settings, t.nativeLanguage, t.providerNeedsSetup, t.addHistoryItem, t.nuance, t.updateNuance],
   )
 
+  const kanjiPanelProps = useMemo(
+    () => ({
+      settings: t.settings,
+      providerNeedsSetup: t.providerNeedsSetup,
+      onOpenSettings: t.openSettings,
+    }),
+    [t.settings, t.providerNeedsSetup, t.openSettings],
+  )
+
   function setActiveTab(tab: string): void {
     setActiveTabState(tab)
     if (window.location.hash.slice(1) !== tab) window.history.replaceState(null, '', `#${tab}`)
@@ -192,7 +201,7 @@ export function App() {
         role="tabpanel"
         aria-labelledby="tab-kanji"
       >
-        <LazyPanel active={activeTab === 'kanji'} load={loadKanjiPanel} />
+        <LazyPanel active={activeTab === 'kanji'} load={loadKanjiPanel} props={kanjiPanelProps} />
       </div>
       <div
         id="tab-panel-transcribe"

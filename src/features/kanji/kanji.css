@@ -29,6 +29,11 @@
   resize: vertical;
 }
 
+.kanji-source-hint {
+  font-size: 0.78rem;
+  color: var(--text-subtle);
+}
+
 .kanji-source-input::placeholder {
   color: var(--text-subtle);
 }
@@ -63,6 +68,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.kanji-result-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kanji-furigana-button {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .kanji-result-label {
@@ -112,9 +129,163 @@
   overflow-wrap: anywhere;
 }
 
+/* Characters with a reading popover: a faint dotted underline hints they're
+   interactive without cluttering the text. */
+.kanji-token {
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  text-decoration: underline dotted var(--border-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.kanji-token:hover,
+.kanji-token.active {
+  background: var(--primary-soft);
+  text-decoration-color: var(--primary-border);
+}
+
+.kanji-token:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.kanji-attribution {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-subtle);
+}
+
+.kanji-attribution a {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.kanji-attribution a:hover {
+  color: var(--primary);
+}
+
+/* Portaled to <body> and fixed-positioned by RubyText against the hovered
+   character, so it escapes the result card's overflow and stacking. */
+.kanji-reading-popover {
+  position: fixed;
+  z-index: 40;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: min(360px, calc(100dvh - 16px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-menu);
+  animation: dropdown-open var(--dur-fast) var(--ease-out);
+}
+
+.kanji-details {
+  display: grid;
+  gap: 8px;
+}
+
+.kanji-details-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.kanji-details-char {
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-strong);
+}
+
+.kanji-details-reading {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.kanji-details-section {
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.kanji-details-subchar {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.kanji-details-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.kanji-details-label {
+  flex: 0 0 auto;
+  min-width: 1.6em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.kanji-details-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kanji-details-list li {
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--surface-2);
+  font-size: 0.9rem;
+}
+
+.kanji-details-list li.current {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.kanji-details-okurigana,
+.kanji-details-note {
+  color: var(--text-subtle);
+}
+
+.kanji-details-note {
+  margin-left: 4px;
+  font-size: 0.72rem;
+}
+
+.kanji-details-empty {
+  font-size: 0.8rem;
+  color: var(--text-subtle);
+}
+
 @media (max-width: 640px) {
   .kanji-result {
     padding: 10px 12px 12px;
+  }
+
+  .kanji-result-header {
+    flex-wrap: wrap;
   }
 
   .kanji-ruby,

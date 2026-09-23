@@ -5,6 +5,10 @@ on:
     branches:
       - main
   workflow_dispatch:
+  # The EDRDG licence for KANJIDIC2 requires web deployments to refresh the
+  # dictionary data at least monthly; the rebuild below pulls the latest.
+  schedule:
+    - cron: '0 3 1 * *'
 
 concurrency:
   group: pages
@@ -36,6 +40,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Falls back to the committed ja-readings.json if EDRDG is unreachable.
+      - name: Refresh KANJIDIC2 readings
+        run: node scripts/build-kanji-readings.mjs
+        continue-on-error: true
 
       - name: Build
         run: npm run build
