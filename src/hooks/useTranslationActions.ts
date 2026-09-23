@@ -48,7 +48,6 @@ export function useStableCallback<Args extends unknown[], R>(fn: (...args: Args)
 export function useTranslationActions(params: UseTranslationActionsParams) {
   const {
     settings,
-    sourceText,
     targetLanguage,
     nativeLanguage,
     nuance,
@@ -71,8 +70,14 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
 
   const translateAbortRef = useRef<AbortController | null>(null)
 
-  async function handleTranslate(): Promise<void> {
-    if (!canTranslate || status === 'loading') return
+  // `textOverride` lets a caller translate text it just set (e.g. pasted from
+  // the clipboard) before the sourceText state update has propagated. The
+  // caller is then responsible for the provider-configured check that
+  // canTranslate would otherwise cover.
+  async function handleTranslate(textOverride?: string): Promise<void> {
+    const sourceText = textOverride ?? params.sourceText
+    if (status === 'loading') return
+    if (textOverride === undefined ? !canTranslate : !sourceText.trim()) return
 
     const controller = new AbortController()
     translateAbortRef.current = controller

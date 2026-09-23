@@ -386,10 +386,23 @@ textarea {
   margin-right: auto;
 }
 
+/* Shortcut hint hangs just under the Translate button, taken out of flow so
+   it neither widens the button nor makes the row taller. */
+.translate-action {
+  position: relative;
+  display: flex;
+}
+
 .submit-row .shortcut-hint {
+  position: absolute;
+  top: calc(100% + 3px);
+  right: 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
   opacity: 0.72;
+  pointer-events: none;
 }
 
 .performance-switch {
