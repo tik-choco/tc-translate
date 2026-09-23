@@ -198,7 +198,6 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
       const nextBackTranslation = await checkBackTranslation({
         settings,
         sourceText: backTranslationSourceText,
-        targetLanguage: result.translatedLanguage ?? targetLanguage,
         nativeLanguage,
         translations: result.translations,
       })

@@ -42,7 +42,6 @@ const {
     storage_kv_set: mist_storage_kv_set,
     storage_kv_get: mist_storage_kv_get,
     storage_kv_delete: mist_storage_kv_delete,
-    get_version: mist_get_version,
 } = mistWasm;
 
 export const EVENT_RAW = 0;
@@ -77,22 +76,6 @@ export const storage_kv_delete = mist_storage_kv_delete;
 let activeNode = null;
 let wasmInitPromise = null;
 
-function ensureWasmInitialized() {
-    if (!wasmInitPromise) {
-        wasmInitPromise = init().catch((err) => {
-            wasmInitPromise = null;
-            throw err;
-        });
-    }
-    return wasmInitPromise;
-}
-
-/** Returns the version embedded in the loaded mistlib WASM binary. */
-export async function getVersion() {
-    await ensureWasmInitialized();
-    return mist_get_version();
-}
-
 export class MistNode {
     constructor(nodeId, signalingUrl) {
         this.nodeId = nodeId;
@@ -115,7 +98,13 @@ export class MistNode {
 
         activeNode = this;
         this._initPromise = (async () => {
-            await ensureWasmInitialized();
+            if (!wasmInitPromise) {
+                wasmInitPromise = init().catch((err) => {
+                    wasmInitPromise = null;
+                    throw err;
+                });
+            }
+            await wasmInitPromise;
             if (this.config) {
                 if (typeof mist_init_with_config !== 'function') {
                     throw new Error("mistlib-wasm init_with_config export is missing; rebuild mistlib-wasm/pkg before using options object initialization.");

@@ -48,44 +48,25 @@ export function parseSourceText(parsed: unknown): string | undefined {
   return sourceText?.trim()
 }
 
-export function parseBackTranslation(content: string, translations: TranslationVariant[]): BackTranslationCheck {
+export function parseBackTranslationReview(
+  content: string,
+  backTranslations: Pick<BackTranslationItem, 'tone' | 'text'>[],
+): BackTranslationCheck {
   try {
     const parsed = JSON.parse(extractJsonContent(content)) as Partial<{
       checks: unknown
-      backTranslations: unknown
       summary: unknown
       issues: unknown
     }>
-    const rawChecks = Array.isArray(parsed.checks)
-      ? parsed.checks
-      : Array.isArray(parsed.backTranslations)
-        ? parsed.backTranslations
-        : []
-    const checks = rawChecks
-      .map((item, index) => {
-        const maybe = item as Partial<{
-          tone: unknown
-          text: unknown
-          backTranslation: unknown
-          backTranslatedText: unknown
-          verdict: unknown
-          issues: unknown
-        }>
-        const text = [maybe.text, maybe.backTranslation, maybe.backTranslatedText].find(
-          (value): value is string => typeof value === 'string' && Boolean(value.trim()),
-        )
-        if (!text) return null
-
-        return {
-          tone: typeof maybe.tone === 'string' && maybe.tone.trim()
-            ? maybe.tone
-            : translations[index]?.tone || `Translation ${index + 1}`,
-          text: text.trim(),
-          verdict: typeof maybe.verdict === 'string' ? maybe.verdict.trim() : '',
-          issues: parseNotes(maybe.issues),
-        }
-      })
-      .filter((item): item is BackTranslationItem => item !== null)
+    const rawChecks = Array.isArray(parsed.checks) ? parsed.checks : []
+    const checks = backTranslations.map((backTranslation, index): BackTranslationItem => {
+      const maybe = rawChecks[index] as Partial<{ verdict: unknown; issues: unknown }> | undefined
+      return {
+        ...backTranslation,
+        verdict: typeof maybe?.verdict === 'string' ? maybe.verdict.trim() : '',
+        issues: parseNotes(maybe?.issues),
+      }
+    })
 
     return {
       checks,
@@ -94,7 +75,7 @@ export function parseBackTranslation(content: string, translations: TranslationV
     }
   } catch {
     return {
-      checks: [],
+      checks: backTranslations.map((backTranslation) => ({ ...backTranslation, verdict: '', issues: [] })),
       summary: content.trim(),
       issues: [],
     }
