@@ -45,9 +45,10 @@ export type LocalProviderSettings = {
 
 /**
  * 'normal': full output. 'saver': fewest tokens (no notes, batched
- * back-translation, no explain ruby request, no auto checks or orchestrator).
+ * back-translation, no explain ruby request, no orchestrator).
  * 'fast': quickest result (no notes or readings, reasoning_effort 'none',
- * requests kept parallel, no auto checks or orchestrator).
+ * requests kept parallel, no orchestrator). The auto back-translation toggles
+ * are an explicit user opt-in and run in every mode.
  */
 export type PerformanceMode = 'normal' | 'saver' | 'fast'
 

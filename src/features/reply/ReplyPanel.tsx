@@ -2,6 +2,7 @@ import { Check, Clipboard, ClipboardPaste, Languages, LoaderCircle, RefreshCw, S
 import type { JSX } from 'preact'
 import { t } from '../../i18n'
 import { createId } from '../../lib/format'
+import { AutoOptionsPicker } from '../../components/AutoOptionsPicker'
 import { NuancePicker } from '../../components/NuancePicker'
 import { ProviderSetupGuide } from '../../components/ProviderSetupGuide'
 import type { ProviderSettings, ReplyResult, TranslationHistoryItem, TranslationNuance } from '../../types'
@@ -216,26 +217,12 @@ export function ReplyPanel({
       </div>
 
       <div class="reply-options">
-        <label
-          class="reply-option-toggle"
-          title={reply.autoBackCheckSuspended ? t('reply-autobackcheck-suspended') : undefined}
-        >
-          <input
-            type="checkbox"
-            checked={reply.autoBackCheck && !reply.autoBackCheckSuspended}
-            disabled={reply.autoBackCheckSuspended}
-            onChange={(event) => reply.setAutoBackCheck(event.currentTarget.checked)}
-          />
-          {t('reply-autobackcheck-toggle')}
-        </label>
-        <label class="reply-option-toggle">
-          <input
-            type="checkbox"
-            checked={reply.autoCopy}
-            onChange={(event) => reply.setAutoCopy(event.currentTarget.checked)}
-          />
-          {t('reply-autocopy-toggle')}
-        </label>
+        <AutoOptionsPicker
+          backTranslate={reply.autoBackCheck}
+          onBackTranslateChange={reply.setAutoBackCheck}
+          copy={reply.autoCopy}
+          onCopyChange={reply.setAutoCopy}
+        />
       </div>
     </div>
   )

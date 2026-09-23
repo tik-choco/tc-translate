@@ -5,6 +5,7 @@ import { t } from '../i18n'
 import type { PdfPageProgress } from '../hooks/usePdfImport'
 import { formatBytes, getFirstAudioFile, getFirstImageFile, getFirstPdfFile } from '../lib/format'
 import { detectScript, speechCodeForScript } from '../lib/language'
+import { AutoOptionsPicker } from './AutoOptionsPicker'
 import { ExampleOutput } from './ExampleOutput'
 import { ExplainOutput } from './ExplainOutput'
 import { NuancePicker } from './NuancePicker'
@@ -66,6 +67,10 @@ type TranslatorPanelProps = {
   copiedTone: string
   copiedProofread: boolean
   onCopyTranslation: (translation: TranslationVariant) => void
+  autoCopy: boolean
+  onAutoCopyChange: (value: boolean) => void
+  autoBackCheck: boolean
+  onAutoBackCheckChange: (value: boolean) => void
   onCopyProofread: () => void
   backTranslationStatus: Status
   canCheckBackTranslation: boolean
@@ -142,6 +147,10 @@ export function TranslatorPanel({
   copiedTone,
   copiedProofread,
   onCopyTranslation,
+  autoCopy,
+  onAutoCopyChange,
+  autoBackCheck,
+  onAutoBackCheckChange,
   onCopyProofread,
   backTranslationStatus,
   canCheckBackTranslation,
@@ -432,6 +441,14 @@ export function TranslatorPanel({
             ) : null}
             <span class="character-count">{t('translator-char-count', { count: sourceText.length })}</span>
           </div>
+          <div class="translate-options">
+            <AutoOptionsPicker
+              backTranslate={autoBackCheck}
+              onBackTranslateChange={onAutoBackCheckChange}
+              copy={autoCopy}
+              onCopyChange={onAutoCopyChange}
+            />
+          </div>
           {isRecording && liveTranscript ? (
             <p class="live-transcript" aria-live="polite">
               <Mic size={14} />
@@ -475,7 +492,7 @@ export function TranslatorPanel({
             <div class="button-with-hint">
               <button
                 type="button"
-                class="secondary-button"
+                class="secondary-button paste-translate-button"
                 onClick={onPasteAndTranslate}
                 disabled={!canPasteAndTranslate || status === 'loading'}
                 title={

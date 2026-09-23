@@ -107,14 +107,13 @@ export const TranslationOutput = memo(function TranslationOutput({
         </span>
       ) : hasTranslations ? (
         <div class="bubble-list">
-          {result?.translations.map((translation, index) => {
+          {result?.translations.map((translation) => {
             const speechId = `translation-${translation.tone}`
             return (
             <article class="tone-window" key={translation.tone}>
               <header>
                 {showToneLabels ? <span>{toneDisplayName(translation.tone)}</span> : null}
                 <div class="copy-control">
-                  <kbd>{t('translator-ctrl-shortcut', { n: index + 1 })}</kbd>
                   {speechSupported ? (
                     <button
                       type="button"

@@ -273,6 +273,10 @@ export function App() {
           copiedTone={t.copiedTone}
           copiedProofread={t.copiedProofread}
           onCopyTranslation={t.copyTranslation}
+          autoCopy={t.autoCopy}
+          onAutoCopyChange={t.setAutoCopy}
+          autoBackCheck={t.autoBackCheck}
+          onAutoBackCheckChange={t.setAutoBackCheck}
           onCopyProofread={t.copyProofread}
           backTranslationStatus={t.backTranslationStatus}
           canCheckBackTranslation={t.canCheckBackTranslation}

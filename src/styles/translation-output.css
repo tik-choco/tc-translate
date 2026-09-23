@@ -104,12 +104,6 @@
   gap: 6px;
 }
 
-.copy-control kbd {
-  color: var(--text-muted);
-  font: 11px/1 var(--sans);
-  opacity: 0.72;
-}
-
 .tone-body {
   flex: 1;
   min-height: 0;
