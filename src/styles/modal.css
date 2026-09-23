@@ -51,6 +51,11 @@
   margin-left: auto;
 }
 
+.onboarding-reopen {
+  align-self: flex-start;
+  margin-top: -8px;
+}
+
 .settings-section-title {
   margin: 4px 0 -6px;
   padding-top: 12px;

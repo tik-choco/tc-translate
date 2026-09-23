@@ -6,6 +6,7 @@ import { HistoryPanel } from './components/HistoryPanel'
 import { LanguageSelect } from './components/LanguageSelect'
 import { LazyPanel } from './components/LazyPanel'
 import { NetworkConsumerIndicator } from './components/NetworkStatusPanel'
+import { Onboarding } from './components/Onboarding'
 import { SettingsModal } from './components/SettingsModal'
 import { TabBar, type TabDefinition } from './components/TabBar'
 import { TranslatorPanel } from './components/TranslatorPanel'
@@ -353,6 +354,17 @@ export function App() {
           networkProviderConsumerCount={t.networkProvider.consumerCount}
           networkProviderLogs={t.networkProvider.logs}
           networkProviderUpstreamConfigured={t.networkProvider.upstreamConfigured}
+          onOpenOnboarding={t.openOnboarding}
+        />
+      ) : null}
+
+      {t.showOnboarding ? (
+        <Onboarding
+          nativeLanguage={t.nativeLanguage}
+          onNativeLanguageChange={t.updateNativeLanguage}
+          settings={t.settings}
+          onApplyConnection={t.applyQuickConnection}
+          onClose={t.closeOnboarding}
         />
       ) : null}
     </main>
