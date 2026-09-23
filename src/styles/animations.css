@@ -129,6 +129,31 @@
     flex-basis: 100%;
   }
 
+  /* The pill sits mid-row on phones; opening leftwards keeps the popover
+     on screen. */
+  .submit-row-lead .auto-options-popover {
+    right: 0;
+    left: auto;
+  }
+
+  /* Main actions first, as an even pair (Paste & translate | Translate),
+     then Proofread / Explain / Examples sharing the next row. */
+  .submit-row > .button-with-hint {
+    order: 1;
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .submit-row > .button-with-hint > button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .submit-row > .secondary-button {
+    order: 2;
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
   textarea {
     min-height: 120px;
   }

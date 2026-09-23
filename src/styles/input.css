@@ -333,12 +333,6 @@ textarea {
   opacity: 0.72;
 }
 
-/* Holds the "Auto" pill, right-aligned just under the input. */
-.translate-options {
-  display: flex;
-  align-self: flex-end;
-}
-
 /* "Auto" pill + popover (AutoOptionsPicker), shared with the Reply tab. */
 .auto-options {
   position: relative;
@@ -409,6 +403,11 @@ textarea {
   animation: soft-rise 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.submit-row-lead .auto-options-popover {
+  right: auto;
+  left: 0;
+}
+
 .auto-options-title {
   padding: 2px 6px 4px;
   color: var(--text-muted);
@@ -464,6 +463,16 @@ textarea {
 .submit-row .primary-button {
   min-height: 34px;
   padding: 0 10px;
+}
+
+/* Disabled Translate: neutral grey rather than faded teal, which looked just
+   like the (enabled) soft-teal Paste & translate button next to it. */
+.primary-button:disabled {
+  color: var(--text-muted);
+  border-color: var(--border);
+  background: var(--surface-3);
+  box-shadow: none;
+  opacity: 1;
 }
 
 /* Paste & translate: the Translate button's lighter sibling (soft teal), so

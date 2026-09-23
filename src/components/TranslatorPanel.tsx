@@ -441,14 +441,6 @@ export function TranslatorPanel({
             ) : null}
             <span class="character-count">{t('translator-char-count', { count: sourceText.length })}</span>
           </div>
-          <div class="translate-options">
-            <AutoOptionsPicker
-              backTranslate={autoBackCheck}
-              onBackTranslateChange={onAutoBackCheckChange}
-              copy={autoCopy}
-              onCopyChange={onAutoCopyChange}
-            />
-          </div>
           {isRecording && liveTranscript ? (
             <p class="live-transcript" aria-live="polite">
               <Mic size={14} />
@@ -458,6 +450,12 @@ export function TranslatorPanel({
           <div class="submit-row">
             <div class="submit-row-lead">
               <PerformanceModeSwitch mode={performanceMode} onChange={onPerformanceModeChange} />
+              <AutoOptionsPicker
+                backTranslate={autoBackCheck}
+                onBackTranslateChange={onAutoBackCheckChange}
+                copy={autoCopy}
+                onCopyChange={onAutoCopyChange}
+              />
             </div>
             <button
               type="button"

@@ -73,6 +73,9 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
   } = params
 
   const translateAbortRef = useRef<AbortController | null>(null)
+  // Bumped to drop a back-translation check whose result arrives after the
+  // input was cleared (or a newer check started).
+  const backCheckGenerationRef = useRef(0)
 
   // `textOverride` lets a caller translate text it just set (e.g. pasted from
   // the clipboard) before the sourceText state update has propagated. The
@@ -157,6 +160,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
 
   function cancelTranslate(): void {
     translateAbortRef.current?.abort()
+    backCheckGenerationRef.current += 1
   }
 
   async function handleCheckBackTranslation(): Promise<void> {
@@ -171,6 +175,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
     translations: TranslationVariant[],
     nuance: TranslationNuance | undefined,
   ): Promise<void> {
+    const generation = ++backCheckGenerationRef.current
     setBackTranslationStatus('loading')
     setError('')
 
@@ -182,9 +187,11 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         translations,
         nuance,
       })
+      if (backCheckGenerationRef.current !== generation) return
       setBackTranslation(nextBackTranslation)
       setBackTranslationStatus('done')
     } catch (checkError) {
+      if (backCheckGenerationRef.current !== generation) return
       setError(localizeNetworkError(checkError, 'Back-translation check failed.'))
       setBackTranslationStatus('error')
     }
