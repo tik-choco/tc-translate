@@ -88,7 +88,7 @@ export const HistoryPanel = memo(function HistoryPanel({ history, onSelect, onDe
                   <span class="history-variants">
                     {item.translations.map((translation) => (
                       <span key={translation.tone}>
-                        <b>{toneDisplayName(translation.tone)}</b>
+                        {item.translations.length > 1 ? <b>{toneDisplayName(translation.tone)}</b> : null}
                         {translation.text}
                       </span>
                     ))}

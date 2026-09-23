@@ -133,13 +133,6 @@
     min-height: 120px;
   }
 
-  /* On narrow screens the input is too short for text to clear the floating
-     action buttons (mic / speak / clear / image) pinned top-right, so start
-     the text below them. */
-  .input-shell textarea {
-    padding-top: 54px;
-  }
-
 }
 
 @media (max-width: 400px) {

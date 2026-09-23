@@ -17,6 +17,8 @@ export async function requestChatCompletion(params: {
   settings: ProviderSettings
   messages: ChatRequestMessage[]
   signal?: AbortSignal
+  /** Called with the reply accumulated so far as it streams in (both transports). */
+  onProgress?: (content: string) => void
 }): Promise<string> {
   // The network room's ConsumerService has no cancel API, so `signal` can't
   // abort that request at the transport level - withAbort below still makes
@@ -39,8 +41,9 @@ export async function requestChatCompletion(params: {
           isNetworkProviderBaseUrl(params.settings.baseUrl) && params.settings.model.trim()
             ? params.settings.model.trim()
             : undefined,
+          params.onProgress ? (_delta, full) => params.onProgress?.(full) : undefined,
         )
-      : requestApiChatCompletion(params.settings, params.messages, params.signal)
+      : requestApiChatCompletion(params.settings, params.messages, params.signal, params.onProgress)
 
   return params.signal ? withAbort(request, params.signal) : request
 }
@@ -112,14 +115,22 @@ async function requestApiChatCompletion(
   settings: ProviderSettings,
   messages: ChatRequestMessage[],
   signal?: AbortSignal,
+  onProgress?: (content: string) => void,
 ): Promise<string> {
+  let streamed = ''
+  const onDelta = onProgress
+    ? (delta: string) => {
+        streamed += delta
+        onProgress(streamed)
+      }
+    : undefined
   // streamChatCompletion doesn't take an AbortSignal, so inject it via a
   // custom fetchFn (same pattern as fetchModelIds in api.ts).
   const fetchWithSignal: typeof fetch = (input, init) => fetch(input, { ...init, signal })
 
   let content: string
   try {
-    content = await streamChatCompletion(apiConfig(settings), messages, undefined, signal ? fetchWithSignal : undefined)
+    content = await streamChatCompletion(apiConfig(settings), messages, onDelta, signal ? fetchWithSignal : undefined)
   } catch (err) {
     // streamChatCompletion wraps every fetch failure (aborts included) in a
     // MistaiError; resurface aborts so callers can keep their AbortError check.

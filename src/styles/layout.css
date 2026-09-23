@@ -153,6 +153,33 @@
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  /* Lets the pane grid switch to side-by-side from the translator's own
+     width, so opening the history panel is accounted for. */
+  container-type: inline-size;
+}
+
+/* Wide translator whose stacked layout overflowed (`.side-by-side`, set in
+   TranslatorPanel): input left, output right (like DeepL), so the text and
+   its translation read side by side without scrolling down. Output that fits
+   keeps the single stacked column. The input column sticks to the top while a
+   long result scrolls. */
+@container (min-width: 960px) {
+  .translator.side-by-side .pane-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: min(1440px, 100%);
+    margin-inline: auto;
+  }
+
+  .translator.side-by-side .pane-grid > .text-pane:first-child {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  /* A half-width column can't fit the hint as well as every action button. */
+  .translator.side-by-side .submit-row .shortcut-hint {
+    display: none;
+  }
 }
 
 .translator.no-output .text-pane textarea {

@@ -54,8 +54,10 @@ export function App() {
       nativeLanguage: t.nativeLanguage,
       providerNeedsSetup: t.providerNeedsSetup,
       onAddHistoryItem: t.addHistoryItem,
+      nuance: t.nuance,
+      onNuanceChange: t.updateNuance,
     }),
-    [t.openSettings, t.settings, t.nativeLanguage, t.providerNeedsSetup, t.addHistoryItem],
+    [t.openSettings, t.settings, t.nativeLanguage, t.providerNeedsSetup, t.addHistoryItem, t.nuance, t.updateNuance],
   )
 
   function setActiveTab(tab: string): void {
@@ -231,6 +233,7 @@ export function App() {
           onExample={t.runExample}
           selectedHistory={t.selectedHistory}
           result={t.result}
+          streamingTranslations={t.streamingTranslations}
           proofreadStatus={t.proofreadStatus}
           proofreadResult={t.proofreadResult}
           explainStatus={t.explainStatus}
@@ -244,10 +247,6 @@ export function App() {
           copiedProofread={t.copiedProofread}
           onCopyTranslation={t.copyTranslation}
           onCopyProofread={t.copyProofread}
-          missingToneOptions={t.missingToneOptions}
-          toneStatus={t.toneStatus}
-          canGenerateTones={t.canGenerateTones}
-          onGenerateTones={t.handleGenerateTones}
           backTranslationStatus={t.backTranslationStatus}
           canCheckBackTranslation={t.canCheckBackTranslation}
           onCheckBackTranslation={t.handleCheckBackTranslation}

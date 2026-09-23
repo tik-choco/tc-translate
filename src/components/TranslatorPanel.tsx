@@ -1,6 +1,6 @@
 import { BookOpen, Download, FileUp, LoaderCircle, Mic, NotebookText, PenLine, Play, ScanText, Square, Volume2, X } from 'lucide-preact'
 import type { Ref } from 'preact'
-import { useEffect, useMemo } from 'preact/hooks'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { t } from '../i18n'
 import type { PdfPageProgress } from '../hooks/usePdfImport'
 import { formatBytes, getFirstAudioFile, getFirstImageFile, getFirstPdfFile } from '../lib/format'
@@ -51,6 +51,7 @@ type TranslatorPanelProps = {
   onExample: () => void
   selectedHistory: TranslationHistoryItem | null
   result: TranslationResult | null
+  streamingTranslations: TranslationVariant[]
   proofreadStatus: Status
   proofreadResult: ProofreadResult | null
   explainStatus: Status
@@ -64,10 +65,6 @@ type TranslatorPanelProps = {
   copiedProofread: boolean
   onCopyTranslation: (translation: TranslationVariant) => void
   onCopyProofread: () => void
-  missingToneOptions: string[]
-  toneStatus: Status
-  canGenerateTones: boolean
-  onGenerateTones: () => void
   backTranslationStatus: Status
   canCheckBackTranslation: boolean
   onCheckBackTranslation: () => void
@@ -100,6 +97,10 @@ type TranslatorPanelProps = {
   onOpenSettings: () => void
 }
 
+function paneRects(translator: HTMLElement): DOMRect[] {
+  return [...translator.querySelectorAll('.pane-grid > .text-pane')].map((pane) => pane.getBoundingClientRect())
+}
+
 export function TranslatorPanel({
   inputRef,
   fileInputRef,
@@ -124,6 +125,7 @@ export function TranslatorPanel({
   onExample,
   selectedHistory,
   result,
+  streamingTranslations,
   proofreadStatus,
   proofreadResult,
   explainStatus,
@@ -137,10 +139,6 @@ export function TranslatorPanel({
   copiedProofread,
   onCopyTranslation,
   onCopyProofread,
-  missingToneOptions,
-  toneStatus,
-  canGenerateTones,
-  onGenerateTones,
   backTranslationStatus,
   canCheckBackTranslation,
   onCheckBackTranslation,
@@ -188,6 +186,64 @@ export function TranslatorPanel({
         : mode === 'example'
           ? Boolean(exampleResult) || exampleStatus === 'loading'
           : Boolean(result) || Boolean(selectedHistory) || status === 'loading')
+  // Side-by-side (wide screens only, see layout.css) kicks in once the
+  // stacked layout overflows the translator, i.e. the result would need
+  // scrolling to read. The decision sticks until the text behind the output or
+  // the mode changes: side-by-side is shorter, so re-measuring there would
+  // flip straight back. Judged on the text the shown output came from, so
+  // typing a new input doesn't flip the layout.
+  const translatorRef = useRef<HTMLDivElement>(null)
+  const [sideBySide, setSideBySide] = useState(false)
+  const outputSourceText =
+    mode === 'translate' ? (result?.sourceText ?? selectedHistory?.sourceText ?? sourceText) : sourceText
+  const layoutKey = hasOutput ? `${mode}:${outputSourceText}` : ''
+
+  useLayoutEffect(() => {
+    setSideBySide(false)
+  }, [layoutKey])
+
+  // FLIP: after switching to side-by-side, slide each pane from where it was
+  // in the stacked layout to its new spot instead of jumping.
+  const flipFromRef = useRef<DOMRect[] | null>(null)
+  useLayoutEffect(() => {
+    const from = flipFromRef.current
+    flipFromRef.current = null
+    const translator = translatorRef.current
+    if (!sideBySide || !from || !translator) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const panes = translator.querySelectorAll<HTMLElement>('.pane-grid > .text-pane')
+    paneRects(translator).forEach((to, index) => {
+      const start = from[index]
+      const pane = panes[index]
+      if (!start || !pane) return
+      const dx = start.left - to.left
+      const dy = start.top - to.top
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
+      pane.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
+        duration: 420,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      })
+    })
+  }, [sideBySide])
+
+  useLayoutEffect(() => {
+    const translator = translatorRef.current
+    const grid = translator?.querySelector('.pane-grid')
+    if (!layoutKey || sideBySide || !translator || !grid) return
+    const el: HTMLDivElement = translator
+
+    function check(): void {
+      if (el.scrollHeight <= el.clientHeight + 1) return
+      flipFromRef.current = paneRects(el)
+      setSideBySide(true)
+    }
+    check()
+    // Re-check as the output grows (streaming, late notes) or the pane resizes.
+    const observer = new ResizeObserver(check)
+    observer.observe(grid)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [layoutKey, sideBySide])
 
   // Fallback auto-grow for browsers without `field-sizing: content` support.
   useEffect(() => {
@@ -222,7 +278,10 @@ export function TranslatorPanel({
   }
 
   return (
-    <div class={`translator ${hasOutput ? 'has-output' : 'no-output'}`}>
+    <div
+      ref={translatorRef}
+      class={`translator ${hasOutput ? 'has-output' : 'no-output'} ${hasOutput && sideBySide ? 'side-by-side' : ''}`}
+    >
       <div class="pane-grid">
         <div class="text-pane">
           <div class={`input-shell ${imageInput ? 'has-image' : ''}`}>
@@ -481,13 +540,10 @@ export function TranslatorPanel({
               status={status}
               selectedHistory={selectedHistory}
               result={result}
+              streamingTranslations={streamingTranslations}
               targetLanguage={targetLanguage}
               copiedTone={copiedTone}
               onCopyTranslation={onCopyTranslation}
-              missingToneOptions={missingToneOptions}
-              toneStatus={toneStatus}
-              canGenerateTones={canGenerateTones}
-              onGenerateTones={onGenerateTones}
               backTranslationStatus={backTranslationStatus}
               canCheckBackTranslation={canCheckBackTranslation}
               onCheckBackTranslation={onCheckBackTranslation}

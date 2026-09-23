@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Check, HeartHandshake, Clipboard, Download, LoaderCircle, Play, RefreshCw, ScrollText, Square, Volume2 } from 'lucide-preact'
+import { ArrowLeftRight, Check, HeartHandshake, Clipboard, Download, LoaderCircle, RefreshCw, ScrollText, Square, Volume2 } from 'lucide-preact'
 import { memo } from 'preact/compat'
 import { t } from '../i18n'
 import { speechCodeForLanguage, toneDisplayName } from '../lib/language'
@@ -16,13 +16,11 @@ type TranslationOutputProps = {
   status: Status
   selectedHistory: TranslationHistoryItem | null
   result: TranslationResult | null
+  // Partial translations shown while the request is still streaming.
+  streamingTranslations: TranslationVariant[]
   targetLanguage: string
   copiedTone: string
   onCopyTranslation: (translation: TranslationVariant) => void
-  missingToneOptions: string[]
-  toneStatus: Status
-  canGenerateTones: boolean
-  onGenerateTones: () => void
   backTranslationStatus: Status
   canCheckBackTranslation: boolean
   onCheckBackTranslation: () => void
@@ -42,13 +40,10 @@ export const TranslationOutput = memo(function TranslationOutput({
   status,
   selectedHistory,
   result,
+  streamingTranslations,
   targetLanguage,
   copiedTone,
   onCopyTranslation,
-  missingToneOptions,
-  toneStatus,
-  canGenerateTones,
-  onGenerateTones,
   backTranslationStatus,
   canCheckBackTranslation,
   onCheckBackTranslation,
@@ -64,6 +59,9 @@ export const TranslationOutput = memo(function TranslationOutput({
   onOpenSettings,
 }: TranslationOutputProps) {
   const hasTranslations = Boolean(result?.translations.length)
+  // Only one tone (Natural) is generated now; the tone name only tells
+  // translations apart in older history items that have several.
+  const showToneLabels = (result?.translations.length ?? 0) > 1
   const speechLang = speechCodeForLanguage(result?.translatedLanguage ?? targetLanguage)
   const appliedNuance = nuanceSummary(result?.nuance)
 
@@ -87,7 +85,22 @@ export const TranslationOutput = memo(function TranslationOutput({
           {t('translator-nuance-applied', { nuance: appliedNuance })}
         </div>
       ) : null}
-      {status === 'loading' ? (
+      {status === 'loading' && streamingTranslations.length ? (
+        // Read-only while streaming: copy/speak/tones appear once it's done.
+        <div class="bubble-list" aria-busy="true">
+          {streamingTranslations.map((translation) => (
+            <article class="tone-window streaming" key={translation.tone}>
+              <header>
+                {streamingTranslations.length > 1 ? <span>{toneDisplayName(translation.tone)}</span> : null}
+                <LoaderCircle size={16} class="spin" aria-label={t('translator-translating')} />
+              </header>
+              <div class="tone-body">
+                <pre>{translation.text}</pre>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : status === 'loading' ? (
         <span class="loading-line">
           <LoaderCircle size={18} />
           {t('translator-translating')}
@@ -99,7 +112,7 @@ export const TranslationOutput = memo(function TranslationOutput({
             return (
             <article class="tone-window" key={translation.tone}>
               <header>
-                <span>{toneDisplayName(translation.tone)}</span>
+                {showToneLabels ? <span>{toneDisplayName(translation.tone)}</span> : null}
                 <div class="copy-control">
                   <kbd>{t('translator-ctrl-shortcut', { n: index + 1 })}</kbd>
                   {speechSupported ? (
@@ -183,17 +196,6 @@ export const TranslationOutput = memo(function TranslationOutput({
       ) : null}
       {hasTranslations ? (
         <div class="tone-actions">
-          {missingToneOptions.length ? (
-            <button
-              type="button"
-              class={`secondary-button ${toneStatus === 'loading' ? 'loading' : ''}`}
-              onClick={onGenerateTones}
-              disabled={!canGenerateTones}
-            >
-              {toneStatus === 'loading' ? <LoaderCircle size={16} /> : <Play size={16} />}
-              {toneStatus === 'loading' ? t('translator-generating-tones') : t('translator-generate-tones')}
-            </button>
-          ) : null}
           <button
             type="button"
             class={`secondary-button ${backTranslationStatus === 'loading' ? 'loading' : ''}`}

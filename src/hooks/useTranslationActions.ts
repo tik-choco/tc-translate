@@ -6,7 +6,6 @@ import { createId, writeClipboard } from '../lib/format'
 import { detectScript, scriptMatchesLanguage } from '../lib/language'
 import { localizeNetworkError } from '../lib/network'
 import { isNuanceActive } from '../lib/nuance'
-import { mergeNotes, mergeTranslations } from '../lib/parse'
 import type {
   BackTranslationCheck,
   ProviderSettings,
@@ -25,23 +24,17 @@ type UseTranslationActionsParams = {
   nuance: TranslationNuance
   status: Status
   result: TranslationResult | null
-  selectedHistory: TranslationHistoryItem | null
   setSelectedHistory: (item: TranslationHistoryItem | null) => void
-  activeHistoryId: string
-  setActiveHistoryId: (id: string) => void
-  missingToneOptions: string[]
   canTranslate: boolean
-  canGenerateTones: boolean
   canCheckBackTranslation: boolean
   backTranslationSourceText: string
   history: TranslationHistoryItem[]
   updateHistory: (history: TranslationHistoryItem[]) => void
-  updateHistoryItem: (id: string, result: TranslationResult) => void
   setStatus: (status: Status) => void
-  setToneStatus: (status: Status) => void
   setBackTranslationStatus: (status: Status) => void
   setBackTranslation: (value: BackTranslationCheck | null) => void
   setResult: (value: TranslationResult | null) => void
+  setStreamingTranslations: (value: TranslationVariant[]) => void
   setError: (value: string) => void
   setCopiedTone: (value: string) => void
 }
@@ -61,23 +54,17 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
     nuance,
     status,
     result,
-    selectedHistory,
     setSelectedHistory,
-    activeHistoryId,
-    setActiveHistoryId,
-    missingToneOptions,
     canTranslate,
-    canGenerateTones,
     canCheckBackTranslation,
     backTranslationSourceText,
     history,
     updateHistory,
-    updateHistoryItem,
     setStatus,
-    setToneStatus,
     setBackTranslationStatus,
     setBackTranslation,
     setResult,
+    setStreamingTranslations,
     setError,
     setCopiedTone,
   } = params
@@ -91,12 +78,12 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
     translateAbortRef.current = controller
 
     setStatus('loading')
-    setToneStatus('idle')
     setBackTranslation(null)
     setBackTranslationStatus('idle')
     setError('')
     setCopiedTone('')
     setSelectedHistory(null)
+    setStreamingTranslations([])
 
     try {
       const detectedScript = detectScript(sourceText)
@@ -115,6 +102,10 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         tones: initialTranslationTones,
         nuance: activeNuance,
         signal: controller.signal,
+        onPartial: (partial) => {
+          // A cancelled request can still deliver buffered chunks.
+          if (!controller.signal.aborted) setStreamingTranslations(partial)
+        },
       })
       const nextResult = {
         ...translatedResult,
@@ -135,7 +126,6 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         nuance: activeNuance,
       }
       setResult(nextResult)
-      setActiveHistoryId(id)
       updateHistory([historyItem, ...history])
       setStatus('done')
     } catch (translationError) {
@@ -146,56 +136,13 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         setStatus('error')
       }
     } finally {
+      setStreamingTranslations([])
       if (translateAbortRef.current === controller) translateAbortRef.current = null
     }
   }
 
   function cancelTranslate(): void {
     translateAbortRef.current?.abort()
-  }
-
-  async function handleGenerateTones(): Promise<void> {
-    if (!result || !canGenerateTones) return
-
-    const toneSourceText = selectedHistory?.sourceText ?? sourceText
-    setToneStatus('loading')
-    setBackTranslation(null)
-    setBackTranslationStatus('idle')
-    setError('')
-
-    try {
-      const nextToneResult = await translateText({
-        settings,
-        sourceText: toneSourceText,
-        sourceLanguage: 'auto',
-        targetLanguage: result.translatedLanguage ?? targetLanguage,
-        nativeLanguage,
-        tones: missingToneOptions,
-        nuance: result.nuance,
-      })
-      const mergedResult = {
-        translations: mergeTranslations(result.translations, nextToneResult.translations),
-        notes: mergeNotes(result.notes, nextToneResult.notes),
-        sourceText: result.sourceText ?? toneSourceText,
-        translatedLanguage: result.translatedLanguage,
-        reversed: result.reversed,
-        nuance: result.nuance,
-      }
-      setResult(mergedResult)
-      if (selectedHistory) {
-        const mergedHistoryItem = {
-          ...selectedHistory,
-          translations: mergedResult.translations,
-          notes: mergedResult.notes,
-        }
-        setSelectedHistory(mergedHistoryItem)
-      }
-      updateHistoryItem(activeHistoryId, mergedResult)
-      setToneStatus('done')
-    } catch (translationError) {
-      setError(localizeNetworkError(translationError, 'Tone generation failed.'))
-      setToneStatus('error')
-    }
   }
 
   async function handleCheckBackTranslation(): Promise<void> {
@@ -232,7 +179,6 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
 
   return {
     handleTranslate: useStableCallback(handleTranslate),
-    handleGenerateTones: useStableCallback(handleGenerateTones),
     handleCheckBackTranslation: useStableCallback(handleCheckBackTranslation),
     copyTranslation: useStableCallback(copyTranslation),
     cancelTranslate: useStableCallback(cancelTranslate),

@@ -97,6 +97,8 @@
 }
 
 .copy-control {
+  /* Stays right-aligned when the header has no tone label before it. */
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -287,4 +289,29 @@
 
 .setup-guide .primary-button {
   margin-top: 4px;
+}
+
+/* Still streaming: a blinking caret after the text read so far. */
+.tone-window.streaming header svg {
+  margin-left: auto;
+  color: var(--primary);
+}
+
+.tone-window.streaming pre::after {
+  content: '▍';
+  margin-left: 1px;
+  color: var(--primary);
+  animation: stream-caret 1s steps(2, start) infinite;
+}
+
+@keyframes stream-caret {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tone-window.streaming pre::after {
+    animation: none;
+  }
 }

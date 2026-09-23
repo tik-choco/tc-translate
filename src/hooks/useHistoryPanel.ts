@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { sendHistoryItemToLingo } from '../lib/shareToLingo'
 import { publishTranslationsInbox } from '../lib/shareToStorage'
 import { loadHistory, loadHistoryPanelVisible, saveHistory, saveHistoryPanelVisible } from '../lib/storage'
-import type { TranslationHistoryItem, TranslationResult } from '../types'
+import type { TranslationHistoryItem } from '../types'
 
 // How long the "sent" confirmation state stays on a history item's Lingo
 // button after a successful send, mirroring copiedTone's 1400ms window in
@@ -41,26 +41,11 @@ export function useHistoryPanel() {
     publishTranslationsInbox(nextHistory).catch(() => {})
   }
 
-  function updateHistoryItem(id: string, nextResult: TranslationResult): void {
-    if (!id) return
-    updateHistory(
-      history.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              translations: nextResult.translations,
-              notes: nextResult.notes,
-            }
-          : item,
-      ),
-    )
-  }
-
   function addHistoryItem(item: TranslationHistoryItem): void {
     updateHistory([item, ...history])
   }
 
-  // Unlike updateHistory/updateHistoryItem (which close over `history`), this
+  // Unlike updateHistory (which closes over `history`), this
   // uses the functional setState form so late-arriving patches (e.g. explain
   // ruby tokens resolving after a newer history item was added) never clobber
   // a concurrent addition.
@@ -111,7 +96,6 @@ export function useHistoryPanel() {
     showHistory,
     history,
     updateHistory,
-    updateHistoryItem,
     addHistoryItem,
     patchHistoryItem,
     deleteHistoryItem,

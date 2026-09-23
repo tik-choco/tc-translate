@@ -1,20 +1,14 @@
 import { extractJsonContent } from './parse'
 import { backTranslateText } from './backTranslation'
 import { requestChatCompletion } from './llm'
-import type { ReplyTone } from '../constants'
-import type { ProviderSettings } from '../types'
-
-// Plain-English instruction appended to the reply-translation prompt so the
-// LLM adjusts formality/register for who the reply is going to.
-const replyToneInstructions: Record<ReplyTone, string> = {
-  neutral: 'Use a natural, appropriately neutral tone.',
-  friend: 'The recipient is a close friend or casual acquaintance - write in a warm, casual, friendly tone.',
-  work: 'The recipient is a work or business contact - write in a polite, professional, appropriately formal tone.',
-}
+import { nuanceInstructions, nuancePromptPayload } from './nuance'
+import type { ProviderSettings, TranslationNuance } from '../types'
 
 export type ReplyTranslateResult = {
   detectedLanguage: string
   translatedReply: string
+  // Nuance the reply was translated with; the back-check allows for it.
+  nuance?: TranslationNuance
 }
 
 function parseReplyTranslation(content: string): ReplyTranslateResult {
@@ -74,14 +68,15 @@ export async function translateReply(params: {
   partnerMessage: string
   ownReply: string
   nativeLanguage: string
-  tone: ReplyTone
+  nuance?: TranslationNuance
 }): Promise<ReplyTranslateResult> {
+  const nuance = nuancePromptPayload(params.nuance)
   const content = await requestChatCompletion({
     settings: params.settings,
     messages: [
       {
         role: 'system',
-        content: `You are tc-translate reply mode. The user received partnerMessage from someone and wrote ownReply (in their own language, nativeLanguage, as context) as what they want to say back. Detect the language partnerMessage is written in, then translate ownReply into that language naturally and accurately, preserving intent. ${replyToneInstructions[params.tone]} Return only JSON of the shape {"detectedLanguage": "...", "translatedReply": "..."}. "detectedLanguage" is the language name in English (e.g. "Japanese", "Spanish").`,
+        content: `You are tc-translate reply mode. The user received partnerMessage from someone and wrote ownReply (in their own language, nativeLanguage, as context) as what they want to say back. Detect the language partnerMessage is written in, then translate ownReply into that language naturally and accurately, preserving intent. Return only JSON of the shape {"detectedLanguage": "...", "translatedReply": "..."}. "detectedLanguage" is the language name in English (e.g. "Japanese", "Spanish").${nuance ? nuanceInstructions : ''}`,
       },
       {
         role: 'user',
@@ -89,6 +84,7 @@ export async function translateReply(params: {
           nativeLanguage: params.nativeLanguage,
           partnerMessage: params.partnerMessage,
           ownReply: params.ownReply,
+          ...(nuance ? { nuance } : {}),
         }),
       },
     ],
@@ -127,7 +123,9 @@ export async function checkReplyBackTranslation(params: {
   ownReply: string
   translatedReply: string
   nativeLanguage: string
+  nuance?: TranslationNuance
 }): Promise<ReplyBackTranslationResult> {
+  const intendedNuance = nuancePromptPayload(params.nuance)
   const backTranslatedText = await backTranslateText(params.settings, params.translatedReply, params.nativeLanguage)
   const content = await requestChatCompletion({
     settings: params.settings,
@@ -135,13 +133,17 @@ export async function checkReplyBackTranslation(params: {
       {
         role: 'system',
         content:
-          'Compare the independently produced backTranslatedText with ownReply (what the user originally wrote) to identify meaning drift, omissions, additions, and tone/register problems. Return only JSON of the shape {"verdict": "...", "issues": ["..."]}. Write "verdict" and "issues" in nativeLanguage. Keep issues short and concrete. Use an empty issues array when the meaning is preserved. Do not rewrite the back-translation.',
+          'Compare the independently produced backTranslatedText with ownReply (what the user originally wrote) to identify meaning drift, omissions, additions, and tone/register problems. Return only JSON of the shape {"verdict": "...", "issues": ["..."]}. Write "verdict" and "issues" in nativeLanguage. Keep issues short and concrete. Use an empty issues array when the meaning is preserved. Do not rewrite the back-translation.' +
+          (intendedNuance
+            ? ' The reply was intentionally adjusted to intendedNuance (relationship register, stance, impression, and/or emotion). Do not report register, politeness, stance, sentence-ending style, emotional coloring, emoji, or kaomoji that match intendedNuance as issues; still report meaning drift.'
+            : ''),
       },
       {
         role: 'user',
         content: JSON.stringify({
           nativeLanguage: params.nativeLanguage,
           ownReply: params.ownReply,
+          ...(intendedNuance ? { intendedNuance } : {}),
           backTranslatedText,
         }),
       },
