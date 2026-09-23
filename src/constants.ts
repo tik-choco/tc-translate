@@ -28,7 +28,6 @@ export const onboardingStorageKey = 'tc-translate-onboarding-seen-v1'
 export const simulTranslateEnabledStorageKey = 'tc-translate-simul-translate-enabled-v1'
 export const simulTranslateLanguagesStorageKey = 'tc-translate-simul-translate-languages-v1'
 export const replyAutoCopyStorageKey = 'tc-translate-reply-auto-copy-v1'
-export const replyToneStorageKey = 'tc-translate-reply-tone-v1'
 export const nuanceStorageKey = 'tc-translate-nuance-v1'
 export const replyAutoBackCheckStorageKey = 'tc-translate-reply-auto-back-check-v1'
 export const transcribeLangStorageKey = 'tc-translate-transcribe-lang-v1'
@@ -62,12 +61,6 @@ export const simulSegmentDuplicateWindowMs = 300
 // Number of example sentences requested per "example" mode generation.
 export const exampleSentenceCount = 5
 
-// Reply tab: relationship-based tone for the outgoing reply, remembered
-// across sessions so the user doesn't have to re-pick it every time (see
-// loadReplyTone/saveReplyTone in lib/storage.ts).
-export type ReplyTone = 'neutral' | 'friend' | 'work'
-export const replyToneOptions: ReplyTone[] = ['neutral', 'friend', 'work']
-export const defaultReplyTone: ReplyTone = 'neutral'
 
 // Translate tab nuance picker: intimacy slider stops (formal -> intimate,
 // 'neutral' in the middle as the default), mood chips, and the emotion palette.
@@ -295,7 +288,6 @@ export const languageChineseTraditionalNames: Record<string, string> = {
 }
 
 export const initialTranslationTones = ['Natural']
-export const extraTranslationTones = ['Polite', 'Casual', 'Business', 'Literal']
 
 // Japanese display names for tones, used when the UI language is ja.
 export const toneJapaneseNames: Record<string, string> = {

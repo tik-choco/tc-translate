@@ -3,7 +3,6 @@ import {
   defaultLocalSttSettings,
   defaultNativeLanguage,
   defaultNuance,
-  defaultReplyTone,
   historyPanelVisibleStorageKey,
   historyStorageKey,
   languageOptions,
@@ -16,8 +15,6 @@ import {
   onboardingStorageKey,
   replyAutoBackCheckStorageKey,
   replyAutoCopyStorageKey,
-  replyToneOptions,
-  replyToneStorageKey,
   settingsStorageKey,
   simulTranslateEnabledStorageKey,
   simulTranslateLanguagesStorageKey,
@@ -26,7 +23,6 @@ import {
 } from '../constants'
 import { storageAddJson, storageGetJson } from './mistStorage'
 import { isNuanceActive, parseNuance } from './nuance'
-import type { ReplyTone } from '../constants'
 import type {
   AppMode,
   ExampleResult,
@@ -284,19 +280,6 @@ export function saveNuance(nuance: TranslationNuance): void {
     localStorage.setItem(nuanceStorageKey, JSON.stringify(nuance))
   } catch (err) {
     console.warn('tc-translate: failed to save nuance', err)
-  }
-}
-
-export function loadReplyTone(): ReplyTone {
-  const stored = localStorage.getItem(replyToneStorageKey)
-  return replyToneOptions.includes(stored as ReplyTone) ? (stored as ReplyTone) : defaultReplyTone
-}
-
-export function saveReplyTone(tone: ReplyTone): void {
-  try {
-    localStorage.setItem(replyToneStorageKey, tone)
-  } catch (err) {
-    console.warn('tc-translate: failed to save reply tone', err)
   }
 }
 

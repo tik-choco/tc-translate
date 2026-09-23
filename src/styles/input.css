@@ -86,13 +86,47 @@ textarea {
   field-sizing: content;
 }
 
+/* The shell, not the textarea, draws the input's box. The textarea ends
+   above the bottom strip holding the character count and action buttons
+   (margin, not padding), so long text scrolls inside its own area instead of
+   passing underneath those controls, and its scrollbar stops above them. */
 .input-shell {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  transition:
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.input-shell:has(textarea:focus) {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.input-shell textarea,
+.input-shell textarea:focus,
+.input-shell textarea:focus-visible {
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  box-shadow: none;
+  /* The shell's own focus ring replaces the global :focus-visible outline. */
+  outline: none;
+}
+
+.input-shell textarea {
+  padding-bottom: 12px;
+  /* Controls strip: action buttons (34px) + character count. */
+  margin-bottom: 46px;
 }
 
 .input-shell.has-image textarea {
   /* Image chip (64px) + action buttons stacked above it. */
-  padding-bottom: 136px;
+  margin-bottom: 124px;
 }
 
 /* With an image chip pinned to the bottom edge, lift the actions above it. */

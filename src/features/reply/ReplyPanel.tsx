@@ -1,18 +1,12 @@
 import { Check, Clipboard, ClipboardPaste, Languages, LoaderCircle, RefreshCw, Send } from 'lucide-preact'
 import type { JSX } from 'preact'
-import { replyToneOptions, type ReplyTone } from '../../constants'
 import { t } from '../../i18n'
 import { createId } from '../../lib/format'
+import { NuancePicker } from '../../components/NuancePicker'
 import { ProviderSetupGuide } from '../../components/ProviderSetupGuide'
-import type { ProviderSettings, ReplyResult, TranslationHistoryItem } from '../../types'
+import type { ProviderSettings, ReplyResult, TranslationHistoryItem, TranslationNuance } from '../../types'
 import './reply.css'
 import { useReplyTranslate } from './useReplyTranslate'
-
-function replyToneLabel(tone: ReplyTone): string {
-  if (tone === 'friend') return t('reply-tone-friend')
-  if (tone === 'work') return t('reply-tone-work')
-  return t('reply-tone-neutral')
-}
 
 type ReplyPanelProps = {
   settings: ProviderSettings
@@ -20,6 +14,8 @@ type ReplyPanelProps = {
   onOpenSettings: () => void
   providerNeedsSetup: boolean
   onAddHistoryItem: (item: TranslationHistoryItem) => void
+  nuance: TranslationNuance
+  onNuanceChange: (nuance: TranslationNuance) => void
 }
 
 export function ReplyPanel({
@@ -28,6 +24,8 @@ export function ReplyPanel({
   onOpenSettings,
   providerNeedsSetup,
   onAddHistoryItem,
+  nuance,
+  onNuanceChange,
 }: ReplyPanelProps): JSX.Element {
   function handleReplyDone(partnerMessage: string, result: ReplyResult): void {
     onAddHistoryItem({
@@ -42,7 +40,7 @@ export function ReplyPanel({
     })
   }
 
-  const reply = useReplyTranslate({ settings, nativeLanguage, onDone: handleReplyDone })
+  const reply = useReplyTranslate({ settings, nativeLanguage, nuance, onDone: handleReplyDone })
 
   async function handleCopy(): Promise<void> {
     if (!reply.result) return
@@ -114,19 +112,9 @@ export function ReplyPanel({
           <label class="reply-label" for="reply-own-message">
             {t('reply-own-label')}
           </label>
-          <div class="reply-tone-group" role="radiogroup" aria-label={t('reply-tone-aria-label')}>
-            {replyToneOptions.map((tone) => (
-              <button
-                key={tone}
-                type="button"
-                class={`reply-tone-chip ${reply.tone === tone ? 'active' : ''}`}
-                role="radio"
-                aria-checked={reply.tone === tone}
-                onClick={() => reply.setTone(tone)}
-              >
-                {replyToneLabel(tone)}
-              </button>
-            ))}
+          {/* Shared with the Translate tab: how the reply should come across. */}
+          <div class="reply-nuance">
+            <NuancePicker nuance={nuance} onChange={onNuanceChange} />
           </div>
         </div>
         <textarea

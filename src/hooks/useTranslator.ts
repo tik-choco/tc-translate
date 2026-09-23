@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { defaultResolvedProvider, extraTranslationTones } from '../constants'
+import { defaultResolvedProvider } from '../constants'
 import { appendTranscript, createId, normalizeBaseUrl } from '../lib/format'
 import { speechCodeForLanguage } from '../lib/language'
 import {
@@ -40,6 +40,7 @@ import type {
   Status,
   TranslationHistoryItem,
   TranslationNuance,
+  TranslationVariant,
   TranslationResult,
 } from '../types'
 
@@ -50,7 +51,7 @@ export function useTranslator() {
   const voiceSettingsHook = useVoiceSettings(llmConfigState)
   const { ttsSettings, sttSettings } = voiceSettingsHook
   const historyPanel = useHistoryPanel()
-  const { history, updateHistory, updateHistoryItem, addHistoryItem, patchHistoryItem } = historyPanel
+  const { history, updateHistory, addHistoryItem, patchHistoryItem } = historyPanel
   const networkProvider = useNetworkProvider(settings, ttsSettings, sttSettings, llmConfigState.config)
   useNetworkConsumerConnection(settings)
   const { status: networkConsumerStatus, updatedAt: networkConsumerUpdatedAt } = useNetworkConsumerStatusWithTimestamp()
@@ -67,12 +68,12 @@ export function useTranslator() {
   const [nativeLanguage, setNativeLanguage] = useState(() => loadNativeLanguage())
   const [nuance, setNuance] = useState<TranslationNuance>(() => loadNuance())
   const [status, setStatus] = useState<Status>('idle')
-  const [toneStatus, setToneStatus] = useState<Status>('idle')
   const [result, setResult] = useState<TranslationResult | null>(null)
+  // Translations decoded so far while a translate request streams in.
+  const [streamingTranslations, setStreamingTranslations] = useState<TranslationVariant[]>([])
   const [backTranslation, setBackTranslation] = useState<BackTranslationCheck | null>(null)
   const [backTranslationStatus, setBackTranslationStatus] = useState<Status>('idle')
   const [selectedHistory, setSelectedHistory] = useState<TranslationHistoryItem | null>(null)
-  const [activeHistoryId, setActiveHistoryId] = useState('')
   const [error, setError] = useState('')
   const [copiedTone, setCopiedTone] = useState('')
 
@@ -203,11 +204,6 @@ export function useTranslator() {
     [settings, sourceText],
   )
 
-  const missingToneOptions = useMemo(() => {
-    const generated = new Set(result?.translations.map((translation) => translation.tone) ?? [])
-    return extraTranslationTones.filter((tone) => !generated.has(tone))
-  }, [result])
-
   const hasProviderConfigured =
     settings.connection === 'network' ? Boolean(settings.roomId.trim()) : Boolean(settings.model.trim() && normalizeBaseUrl(settings.baseUrl))
 
@@ -222,22 +218,12 @@ export function useTranslator() {
       : !settings.apiKey.trim() &&
         (!normalizeBaseUrl(settings.baseUrl) || normalizeBaseUrl(settings.baseUrl) === normalizeBaseUrl(defaultResolvedProvider.baseUrl))
 
-  const canGenerateTones = Boolean(
-    result?.translations.length &&
-      missingToneOptions.length &&
-      (selectedHistory?.sourceText || sourceText.trim()) &&
-      hasProviderConfigured &&
-      status !== 'loading' &&
-      toneStatus !== 'loading',
-  )
-
   const backTranslationSourceText = selectedHistory?.sourceText ?? result?.sourceText ?? sourceText
   const canCheckBackTranslation = Boolean(
     result?.translations.length &&
       backTranslationSourceText.trim() &&
       hasProviderConfigured &&
       status !== 'loading' &&
-      toneStatus !== 'loading' &&
       backTranslationStatus !== 'loading',
   )
 
@@ -276,12 +262,10 @@ export function useTranslator() {
       setSourceText(item.sourceText)
       proofread.restoreProofread(item.proofread)
       setSelectedHistory(item)
-      setActiveHistoryId(item.id)
       setResult(null)
       setBackTranslation(null)
       setBackTranslationStatus('idle')
       setStatus('idle')
-      setToneStatus('idle')
       setError('')
       setCopiedTone('')
       return
@@ -295,12 +279,10 @@ export function useTranslator() {
       setSourceText(item.sourceText)
       explain.restoreExplain(item.explanation)
       setSelectedHistory(item)
-      setActiveHistoryId(item.id)
       setResult(null)
       setBackTranslation(null)
       setBackTranslationStatus('idle')
       setStatus('idle')
-      setToneStatus('idle')
       setError('')
       setCopiedTone('')
       return
@@ -314,12 +296,10 @@ export function useTranslator() {
       setSourceText(item.sourceText)
       example.restoreExample(item.example)
       setSelectedHistory(item)
-      setActiveHistoryId(item.id)
       setResult(null)
       setBackTranslation(null)
       setBackTranslationStatus('idle')
       setStatus('idle')
-      setToneStatus('idle')
       setError('')
       setCopiedTone('')
       return
@@ -331,7 +311,6 @@ export function useTranslator() {
     example.resetExample()
     updateTargetLanguage(item.targetLanguage)
     setSelectedHistory(item)
-    setActiveHistoryId(item.id)
     setResult({
       translations: item.translations,
       notes: item.notes,
@@ -341,7 +320,6 @@ export function useTranslator() {
     setBackTranslation(null)
     setBackTranslationStatus('idle')
     setStatus('done')
-    setToneStatus('idle')
     setError('')
     setCopiedTone('')
   }
@@ -350,7 +328,6 @@ export function useTranslator() {
     if (!file) return
 
     setSelectedHistory(null)
-    setActiveHistoryId('')
     setBackTranslation(null)
     setBackTranslationStatus('idle')
     setError('')
@@ -366,7 +343,6 @@ export function useTranslator() {
     setSourceText('')
     clearImageInput()
     setSelectedHistory(null)
-    setActiveHistoryId('')
     setBackTranslation(null)
     setBackTranslationStatus('idle')
     setError('')
@@ -411,7 +387,7 @@ export function useTranslator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { handleTranslate, handleGenerateTones, handleCheckBackTranslation, copyTranslation, cancelTranslate } = useTranslationActions({
+  const { handleTranslate, handleCheckBackTranslation, copyTranslation, cancelTranslate } = useTranslationActions({
     settings,
     sourceText,
     targetLanguage,
@@ -419,23 +395,17 @@ export function useTranslator() {
     nuance,
     status,
     result,
-    selectedHistory,
     setSelectedHistory,
-    activeHistoryId,
-    setActiveHistoryId,
-    missingToneOptions,
     canTranslate,
-    canGenerateTones,
     canCheckBackTranslation,
     backTranslationSourceText,
     history,
     updateHistory,
-    updateHistoryItem,
     setStatus,
-    setToneStatus,
     setBackTranslationStatus,
     setBackTranslation,
     setResult,
+    setStreamingTranslations,
     setError,
     setCopiedTone,
   })
@@ -522,8 +492,8 @@ export function useTranslator() {
     nuance,
     updateNuance: stableUpdateNuance,
     status,
-    toneStatus,
     result,
+    streamingTranslations,
     backTranslation,
     backTranslationStatus,
     selectedHistory,
@@ -541,8 +511,6 @@ export function useTranslator() {
     canProofread: proofread.canProofread,
     canExplain: explain.canExplain,
     canExample: example.canExample,
-    missingToneOptions,
-    canGenerateTones,
     canCheckBackTranslation,
     proofreadStatus: proofread.proofreadStatus,
     proofreadResult: proofread.proofreadResult,
@@ -563,7 +531,6 @@ export function useTranslator() {
     runProofread,
     runExplain,
     runExample,
-    handleGenerateTones,
     handleCheckBackTranslation,
     copyProofread: stableCopyProofread,
     copyTranslation,

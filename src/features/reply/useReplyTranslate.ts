@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from 'preact/hooks'
-import type { ReplyTone } from '../../constants'
 import { normalizeBaseUrl, writeClipboard } from '../../lib/format'
 import { localizeNetworkError } from '../../lib/network'
 import {
@@ -12,16 +11,17 @@ import {
 import {
   loadReplyAutoBackCheck,
   loadReplyAutoCopy,
-  loadReplyTone,
   saveReplyAutoBackCheck,
   saveReplyAutoCopy,
-  saveReplyTone,
 } from '../../lib/storage'
-import type { ProviderSettings, ReplyResult, Status } from '../../types'
+import { isNuanceActive } from '../../lib/nuance'
+import type { ProviderSettings, ReplyResult, Status, TranslationNuance } from '../../types'
 
 type UseReplyTranslateParams = {
   settings: ProviderSettings
   nativeLanguage: string
+  // Shared with the Translate tab (same person, same relationship).
+  nuance: TranslationNuance
   onDone?: (partnerMessage: string, result: ReplyResult) => void
 }
 
@@ -29,14 +29,13 @@ type UseReplyTranslateParams = {
 // automatic copy, mirroring copiedTone's window in useTranslationActions.ts.
 const copiedResetDelay = 1500
 
-export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReplyTranslateParams) {
+export function useReplyTranslate({ settings, nativeLanguage, nuance, onDone }: UseReplyTranslateParams) {
   const [partnerMessage, setPartnerMessageState] = useState('')
   const [ownReply, setOwnReply] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [result, setResult] = useState<ReplyTranslateResult | null>(null)
   const [error, setError] = useState('')
   const [autoCopy, setAutoCopyState] = useState(() => loadReplyAutoCopy())
-  const [tone, setToneState] = useState<ReplyTone>(() => loadReplyTone())
   const [copied, setCopied] = useState(false)
   const copiedTimeoutRef = useRef<number | undefined>(undefined)
 
@@ -67,17 +66,16 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
     saveReplyAutoCopy(value)
   }
 
-  function setTone(value: ReplyTone): void {
-    setToneState(value)
-    saveReplyTone(value)
-  }
-
   function setAutoBackCheck(value: boolean): void {
     setAutoBackCheckState(value)
     saveReplyAutoBackCheck(value)
   }
 
-  async function runBackCheck(ownReplyText: string, translatedReplyText: string): Promise<void> {
+  async function runBackCheck(
+    ownReplyText: string,
+    translatedReplyText: string,
+    replyNuance: TranslationNuance | undefined,
+  ): Promise<void> {
     const currentGeneration = ++backCheckGeneration.current
     setBackCheckStatus('loading')
     setBackCheckError('')
@@ -88,6 +86,7 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
         ownReply: ownReplyText,
         translatedReply: translatedReplyText,
         nativeLanguage,
+        nuance: replyNuance,
       })
       if (backCheckGeneration.current !== currentGeneration) return
       setBackCheckResult(checkResult)
@@ -101,7 +100,7 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
 
   async function handleCheckBackTranslation(): Promise<void> {
     if (!result || backCheckStatus === 'loading') return
-    await runBackCheck(ownReply, result.translatedReply)
+    await runBackCheck(ownReply, result.translatedReply, result.nuance)
   }
 
   // Best-effort: a failed clipboard write (permission denied, insecure
@@ -136,7 +135,11 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
     setError('')
 
     try {
-      const nextResult = await translateReply({ settings, partnerMessage, ownReply, nativeLanguage, tone })
+      const activeNuance = isNuanceActive(nuance) ? nuance : undefined
+      const nextResult = {
+        ...(await translateReply({ settings, partnerMessage, ownReply, nativeLanguage, nuance: activeNuance })),
+        nuance: activeNuance,
+      }
       if (generation.current !== currentGeneration) return
       setResult(nextResult)
       setStatus('done')
@@ -147,7 +150,7 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
       setBackCheckError('')
       // Saver/fast modes suspend the automatic check (the manual button still
       // works) without touching the saved preference.
-      if (autoBackCheck && settings.performanceMode === 'normal') void runBackCheck(ownReply, nextResult.translatedReply)
+      if (autoBackCheck && settings.performanceMode === 'normal') void runBackCheck(ownReply, nextResult.translatedReply, nextResult.nuance)
       onDone?.(partnerMessage, {
         ownReply,
         detectedLanguage: nextResult.detectedLanguage,
@@ -232,8 +235,6 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
     handleTranslate,
     autoCopy,
     setAutoCopy,
-    tone,
-    setTone,
     copied,
     copyResult,
     autoBackCheck,

@@ -1,4 +1,4 @@
-import { extraTranslationTones, initialTranslationTones } from '../constants'
+import { initialTranslationTones } from '../constants'
 import type {
   BackTranslationCheck,
   BackTranslationItem,
@@ -26,6 +26,55 @@ export function extractJsonContent(content: string): string {
   }
 
   return trimmed
+}
+
+const jsonEscapes: Record<string, string> = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', '"': '"', '\\': '\\', '/': '/' }
+
+// Decodes a JSON string body starting at `start` (just past the opening
+// quote) up to its closing quote, or to the end of an unfinished stream. An
+// escape cut off mid-way is dropped rather than shown half-decoded.
+function readPartialJsonString(content: string, start: number): string {
+  let out = ''
+  for (let index = start; index < content.length; index += 1) {
+    const char = content[index]
+    if (char === '"') break
+    if (char !== '\\') {
+      out += char
+      continue
+    }
+    const next = content[index + 1]
+    if (next === undefined) break
+    if (next === 'u') {
+      const hex = content.slice(index + 2, index + 6)
+      if (!/^[0-9a-fA-F]{4}$/.test(hex)) break
+      out += String.fromCharCode(Number.parseInt(hex, 16))
+      index += 5
+    } else {
+      out += jsonEscapes[next] ?? next
+      index += 1
+    }
+  }
+  return out
+}
+
+/**
+ * Best-effort translations from a still-streaming translation reply, for live
+ * display: each `"text"` value read so far (possibly cut off mid-string),
+ * paired with the `"tone"` before it. The final reply is still parsed with
+ * parseTranslation; this never throws and returns [] until a text starts.
+ */
+export function parsePartialTranslations(content: string): TranslationVariant[] {
+  const translations: TranslationVariant[] = []
+  const textKey = /"text"\s*:\s*"/g
+  let match: RegExpExecArray | null
+  while ((match = textKey.exec(content))) {
+    const before = content.slice(0, match.index)
+    const tones = [...before.matchAll(/"tone"\s*:\s*"((?:[^"\\]|\\.)*)"/g)]
+    const tone = tones.length ? readPartialJsonString(tones[tones.length - 1][1] + '"', 0) : initialTranslationTones[0]
+    const text = readPartialJsonString(content, match.index + match[0].length)
+    if (text) translations.push({ tone, text })
+  }
+  return translations
 }
 
 export function parseNotes(notes: unknown): string[] {
@@ -318,15 +367,3 @@ export function parseTranslation(content: string): TranslationResult {
   }
 }
 
-export function mergeTranslations(current: TranslationVariant[], incoming: TranslationVariant[]): TranslationVariant[] {
-  const byTone = new Map<string, TranslationVariant>()
-  for (const translation of current) byTone.set(translation.tone, translation)
-  for (const translation of incoming) byTone.set(translation.tone, translation)
-  return [...initialTranslationTones, ...extraTranslationTones]
-    .map((tone) => byTone.get(tone))
-    .filter((translation): translation is TranslationVariant => Boolean(translation))
-}
-
-export function mergeNotes(current: string[], incoming: string[]): string[] {
-  return [...new Set([...current, ...incoming].map((note) => note.trim()).filter(Boolean))]
-}

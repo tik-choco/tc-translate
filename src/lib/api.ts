@@ -4,8 +4,8 @@ import { backTranslateTexts, detectBackTranslationLanguage } from './backTransla
 import { requestChatCompletion } from './llm'
 import { requestNetworkOpenAi } from './network'
 import { isNetworkProviderBaseUrl } from './networkModels'
-import { nuancePromptPayload } from './nuance'
-import { parseBackTranslationReview, parseTranslation } from './parse'
+import { nuanceInstructions, nuancePromptPayload } from './nuance'
+import { parseBackTranslationReview, parsePartialTranslations, parseTranslation } from './parse'
 import type {
   BackTranslationCheck,
   ImageInput,
@@ -50,22 +50,28 @@ export async function translateText(params: {
   nativeLanguage: string
   tones: string[]
   nuance?: TranslationNuance
-  /** false skips notes (e.g. extra tones merged into a result that already has them). */
-  includeNotes?: boolean
   signal?: AbortSignal
+  /** Translations decoded so far while the reply streams in (see parsePartialTranslations). */
+  onPartial?: (translations: TranslationVariant[]) => void
 }): Promise<TranslationResult> {
   const nuance = nuancePromptPayload(params.nuance)
   const mode = params.settings.performanceMode
   // Saver and fast both return just the translations; fast also drops the
   // pronunciation fields to get the result back sooner.
   const notesRule =
-    params.includeNotes === false || mode !== 'normal'
+    mode !== 'normal'
       ? ' Return "notes" as an empty array.'
       : ' Include 2 to 5 notes when there is something useful to explain.'
   const readingRule = mode === 'fast' ? ' Do not include "reading" or "pinyin".' : READING_RULE
   const content = await requestChatCompletion({
     settings: params.settings,
     signal: params.signal,
+    onProgress: params.onPartial
+      ? (content) => {
+          const partial = parsePartialTranslations(content)
+          if (partial.length) params.onPartial?.(partial)
+        }
+      : undefined,
     messages: [
       {
         role: 'system',
@@ -75,7 +81,7 @@ export async function translateText(params: {
           ' Preserve meaning, names, units, line breaks, and formatting. "notes" must explain the source input text, not the output translation. Write notes in nativeLanguage about the source text nuance, idioms, domain terms, implied context, grammar, and culturally loaded wording. Do not explain your translation choices.' +
           notesRule +
           (nuance
-            ? ' The input includes "nuance" describing how the speaker wants to come across. "relationship" is who the speaker is addressing: adjust register, politeness, honorifics, pronouns, and sentence endings to fit it. It shapes the Natural tone; explicitly requested tones such as Polite, Casual, or Business keep their own register. "stance" is the conversational position the speaker takes toward the listener, from deferential to dominant, independent of politeness: convey it through sentence mood (commands versus permission-seeking), assertiveness, teasing or pleading, and rhetorical questions. The grammatical form may change to fit the stance (for example a request may become a command or a humble plea), but never add insults, demands, or content that are not in the source. Stance is purely a conversational attitude and must never be given sexual connotations. With a polite relationship, keep the honorifics (a dominant stance then reads as politely condescending). "impression" is how the text should sound to the reader: express it with devices native to the target language, such as sentence-final particles and endings (for example Japanese ね/よ/かな, Korean -요/-거든요, Chinese 呢/吧/啦), softeners, hedges, and word choice; in languages without such endings (for example English), use word choice and phrasing instead. "impression" colors every tone except Literal within the politeness level of that tone and never drops honorifics the relationship or tone requires. "emotion" is the feeling the speaker wants to convey: reflect it naturally through word choice, interjections, and phrasing in every tone except Literal, without adding facts or content that are not in the source. "decoration" adds expressive symbols to each non-Literal translation, matching the emotion and impression: "emoji" means add one or two fitting emoji; "kaomoji" means add one fitting kaomoji (a Japanese-style text face such as (＾▽＾), (´・ω・`), or (；・∀・)) and no emoji; "both" means add one or two fitting emoji and one fitting kaomoji. Place them where they read naturally, usually at the end of a sentence. Without "decoration", do not add emoji or kaomoji that are not in the source.'
+            ? nuanceInstructions
             : ''),
       },
       {
