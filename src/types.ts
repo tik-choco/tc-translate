@@ -39,7 +39,17 @@ export type LocalProviderSettings = {
   /** Per-task reasoning_effort, always sent with the request (default 'none'). */
   defaultReasoningEffort: ReasoningEffort
   visionReasoningEffort: ReasoningEffort
+  /** Speed/cost trade-off for LLM work; see PerformanceMode. */
+  performanceMode: PerformanceMode
 }
+
+/**
+ * 'normal': full output. 'saver': fewest tokens (no notes, batched
+ * back-translation, no explain ruby request, no auto checks or orchestrator).
+ * 'fast': quickest result (no notes or readings, reasoning_effort 'none',
+ * requests kept parallel, no auto checks or orchestrator).
+ */
+export type PerformanceMode = 'normal' | 'saver' | 'fast'
 
 // Runtime settings used throughout the app: `LocalProviderSettings` merged
 // with the resolved default preset/provider (and, for `visionModel`, the
@@ -67,6 +77,7 @@ export type ProviderSettings = {
    * matching preset's connection.
    */
   networkProviderPresetIds: string[]
+  performanceMode: PerformanceMode
   /** Every connection/preset in the shared llm config, for the Settings UI's connection/preset management lists and pickers. */
   providers: LlmProviderV1[]
   presets: ModelPresetV1[]

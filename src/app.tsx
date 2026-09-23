@@ -256,6 +256,8 @@ export function App() {
           nativeLanguage={t.nativeLanguage}
           nuance={t.nuance}
           onNuanceChange={t.updateNuance}
+          performanceMode={t.settings.performanceMode}
+          onPerformanceModeChange={t.setPerformanceMode}
           speechSupported={t.speechSupported}
           speakingId={t.speakingId}
           speechLoadingId={t.speechLoadingId}

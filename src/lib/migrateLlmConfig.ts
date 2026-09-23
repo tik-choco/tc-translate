@@ -167,6 +167,7 @@ export function migrateLegacyLocalSettings(): void {
       networkProviderPresetIds: [],
       defaultReasoningEffort: 'none',
       visionReasoningEffort: 'none',
+      performanceMode: 'normal',
     }
     localStorage.setItem(settingsStorageKey, JSON.stringify(newLocalProvider))
   }

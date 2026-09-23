@@ -1,4 +1,5 @@
 import { requestChatCompletion } from './llm'
+import { extractJsonContent } from './parse'
 import type { ProviderSettings } from '../types'
 
 // Language detection may read the original. The reverse-translation request
@@ -27,4 +28,39 @@ export async function backTranslateText(settings: ProviderSettings, translatedTe
   const text = content.trim()
   if (!text) throw new Error('Back-translation returned no text.')
   return text
+}
+
+/**
+ * Back-translates several texts into `language`. Normally one request per
+ * text, all in parallel (each fully independent); saver mode puts all texts
+ * in one request (fewer tokens, but slower), falling back to per-text requests if the batched reply can't be
+ * matched up. Either way the original source text is never sent.
+ */
+export async function backTranslateTexts(settings: ProviderSettings, texts: string[], language: string): Promise<string[]> {
+  if (settings.performanceMode === 'saver' && texts.length > 1) {
+    try {
+      const content = await requestChatCompletion({
+        settings,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Translate each supplied text into the specified language, independently of the others. Use only the supplied texts as evidence. Preserve meaning, tone, names, numbers, and line breaks. Return only JSON of the shape {"translations": ["..."]} with one entry per input text, in the same order.',
+          },
+          { role: 'user', content: JSON.stringify({ language, texts }) },
+        ],
+      })
+      const parsed = JSON.parse(extractJsonContent(content)) as { translations?: unknown }
+      const translations = Array.isArray(parsed.translations) ? parsed.translations : []
+      if (
+        translations.length === texts.length &&
+        translations.every((text): text is string => typeof text === 'string' && Boolean(text.trim()))
+      ) {
+        return translations.map((text) => text.trim())
+      }
+    } catch {
+      // Fall through to the per-text requests below.
+    }
+  }
+  return Promise.all(texts.map((text) => backTranslateText(settings, text, language)))
 }

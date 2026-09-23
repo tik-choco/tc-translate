@@ -8,7 +8,14 @@ import { isNetworkProviderBaseUrl } from '../lib/networkModels'
 import { loadSettings, saveSettings } from '../lib/storage'
 import type { SharedLlmConfigState } from './useSharedLlmConfig'
 import type { LlmProviderV1, ModelPresetV1 } from '../lib/llmConfig'
-import type { LocalProviderSettings, ModelStatus, ProviderSettings, ReasoningEffort, ReasoningTask } from '../types'
+import type {
+  LocalProviderSettings,
+  ModelStatus,
+  PerformanceMode,
+  ProviderSettings,
+  ReasoningEffort,
+  ReasoningTask,
+} from '../types'
 
 function mergeSettings(local: LocalProviderSettings, llmConfigState: SharedLlmConfigState): ProviderSettings {
   const config = llmConfigState.config
@@ -21,13 +28,15 @@ function mergeSettings(local: LocalProviderSettings, llmConfigState: SharedLlmCo
     model: resolved?.model ?? defaultResolvedProvider.model,
     visionModel: visionResolved?.model ?? resolved?.model ?? defaultResolvedProvider.visionModel,
     temperature: resolved?.temperature ?? defaultResolvedProvider.temperature,
-    reasoningEffort: local.defaultReasoningEffort,
+    // Fast mode drops reasoning for text tasks; vision (OCR) keeps its setting.
+    reasoningEffort: local.performanceMode === 'fast' ? 'none' : local.defaultReasoningEffort,
     visionReasoningEffort: local.visionReasoningEffort,
     connection: local.connection,
     roomId: config.network.roomId,
     networkProviderEnabled: local.networkProviderEnabled,
     visionPresetId: local.visionPresetId,
     networkProviderPresetIds: local.networkProviderPresetIds,
+    performanceMode: local.performanceMode,
     providers: config.providers,
     presets: config.presets,
     defaultPresetId: config.defaultPresetId,
@@ -139,6 +148,12 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
     saveSettings(nextLocal)
   }
 
+  function setPerformanceMode(mode: PerformanceMode): void {
+    const nextLocal: LocalProviderSettings = { ...local, performanceMode: mode }
+    setLocal(nextLocal)
+    saveSettings(nextLocal)
+  }
+
   async function loadModels(signal?: AbortSignal): Promise<void> {
     // The default preset can now resolve to a network-imported preset (see
     // useNetworkModelSync) whose baseUrl is the `mist-network://` pseudo-
@@ -206,6 +221,7 @@ export function useProviderSettings(llmConfigState: SharedLlmConfigState) {
     setVisionPresetId,
     setNetworkProviderPresetIds,
     setReasoningEffort,
+    setPerformanceMode,
     modelOptions,
     modelStatus,
     modelError,

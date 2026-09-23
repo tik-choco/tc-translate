@@ -123,6 +123,12 @@
     display: none;
   }
 
+  /* Give the mode switch its own row so the action buttons don't wrap
+     unevenly around it. */
+  .submit-row-lead {
+    flex-basis: 100%;
+  }
+
   textarea {
     min-height: 120px;
   }

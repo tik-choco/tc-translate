@@ -1,4 +1,5 @@
 import { requestChatCompletion } from './llm'
+import { detectScript, scriptMatchesLanguage } from './language'
 import { extractJsonContent } from './parse'
 import type { ProviderSettings } from '../types'
 
@@ -60,6 +61,23 @@ export async function planTranslationFanOut(params: {
   })
 
   return parsePlan(content, params.candidateLanguages)
+}
+
+// Scripts used by essentially one language, so a match reliably means the
+// segment is already in that language (unlike Latin, Cyrillic, Han, ...).
+const singleLanguageScripts = new Set(['japanese', 'korean', 'thai', 'hebrew', 'bengali'])
+
+/**
+ * Saver/fast-mode replacement for planTranslationFanOut: no orchestrator request,
+ * just a script heuristic that drops a candidate only when the segment is
+ * unambiguously already written in it. Anything uncertain is still dispatched.
+ */
+export function planTranslationFanOutLocally(text: string, candidateLanguages: string[]): TranslationPlan {
+  const script = detectScript(text)
+  if (!singleLanguageScripts.has(script)) return { sourceLanguage: '', targets: candidateLanguages }
+  const targets = candidateLanguages.filter((language) => !scriptMatchesLanguage(script, language))
+  const source = candidateLanguages.find((language) => scriptMatchesLanguage(script, language)) ?? ''
+  return { sourceLanguage: source, targets: targets.length ? targets : candidateLanguages }
 }
 
 // Worker step: translates one finalized segment into one target language.
