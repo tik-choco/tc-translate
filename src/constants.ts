@@ -86,7 +86,7 @@ export const nuanceEmotions: { id: NuanceEmotion; emoji: string }[] = [
   { id: 'hesitant', emoji: '🤔' },
 ]
 export const nuanceDecorations: NuanceDecoration[] = ['none', 'emoji', 'kaomoji', 'both']
-export const defaultNuance: TranslationNuance = { intimacy: 'neutral', stance: 'equal', moods: [], emotion: null, decoration: 'none' }
+export const defaultNuance: TranslationNuance = { intimacy: 'neutral', stance: 'equal', moods: [], emotion: null, decoration: 'none', paused: false }
 
 // New app-local defaults (post shared-llm-config migration / fresh installs).
 export const defaultLocalSettings: LocalProviderSettings = {

@@ -188,6 +188,9 @@ export type TranslationNuance = {
   emotion: NuanceEmotion | null
   // Replaced the old `addEmoji: boolean` (read as 'emoji' when true).
   decoration: NuanceDecoration
+  // Temporarily off (e.g. while translating the other person's words) without
+  // losing the settings above. Absent in values saved before pausing existed.
+  paused: boolean
 }
 
 export type TranslationResult = {

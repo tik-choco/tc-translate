@@ -1,6 +1,10 @@
-﻿.pane-grid {
+﻿/* No `min-height: 0`: the grid must never shrink below its content inside the
+   scrolling .translator, or long output overflows it — losing the bottom
+   padding and letting the error/loading lines below overlap the output. The
+   input stays pinned to the top even when empty, leaving the space below for
+   the nuance popover and other dropdowns. */
+.pane-grid {
   flex: 1;
-  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, min(760px, 100%));
   justify-content: center;
@@ -394,6 +398,17 @@ textarea {
   background: var(--primary-soft);
 }
 
+/* Settings kept but temporarily off: muted, dashed pill instead of teal. */
+.nuance-button.paused {
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+.nuance-button.paused .nuance-button-emoji,
+.nuance-button.paused .nuance-button-label {
+  opacity: 0.55;
+}
+
 .nuance-button-emoji {
   font-size: 16px;
   line-height: 1;
@@ -418,8 +433,9 @@ textarea {
   z-index: 20;
   width: min(320px, calc(100vw - 48px));
   /* Five sections outgrow short viewports: scroll inside the popover rather
-     than pushing the page. ~240px covers header + input above the popover. */
-  max-height: max(280px, calc(100dvh - 240px));
+     than pushing the page. NuancePicker overrides this with the space actually
+     left below the popover; this is only the pre-measure fallback. */
+  max-height: max(240px, calc(100dvh - 240px));
   overflow-y: auto;
   overscroll-behavior: contain;
   display: grid;
@@ -636,11 +652,59 @@ textarea {
   white-space: nowrap;
 }
 
+/* Sticky so the pause toggle stays reachable while the sections scroll. The
+   negative offset/margins cancel the popover's 14px padding so the header's
+   background covers content scrolling underneath it. */
+.nuance-header {
+  position: sticky;
+  top: -14px;
+  z-index: 1;
+  margin: -14px -14px 0;
+  padding: 10px 14px;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nuance-header-title {
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* Pinned to the popover's bottom edge while more content is below, so the
+   clipped edge reads as scrollable. The negative top margin cancels its own
+   height plus the grid gap so it overlays the footer instead of adding height;
+   the side margins span the popover's padding. */
+.nuance-scroll-fade {
+  position: sticky;
+  bottom: 0;
+  height: 32px;
+  margin: -44px -14px 0;
+  background: linear-gradient(to bottom, transparent, var(--surface));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.nuance-scroll-fade.visible {
+  opacity: 1;
+}
+
 .nuance-footer {
   display: flex;
   justify-content: flex-end;
 }
 
+/* While paused the settings stay editable, just visibly not in effect. */
+.nuance-popover.paused .nuance-section {
+  opacity: 0.55;
+}
+
+.nuance-pause,
 .nuance-reset {
   padding: 5px 10px;
   border: 1px solid var(--border);
@@ -652,6 +716,20 @@ textarea {
   cursor: pointer;
 }
 
+.nuance-pause {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nuance-pause.selected {
+  color: var(--primary);
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+}
+
+.nuance-pause:hover:not(:disabled),
+.nuance-pause:focus-visible,
 .nuance-reset:hover:not(:disabled),
 .nuance-reset:focus-visible {
   color: var(--text-strong);
@@ -659,6 +737,7 @@ textarea {
   outline: none;
 }
 
+.nuance-pause:disabled,
 .nuance-reset:disabled {
   opacity: 0.5;
   cursor: default;
