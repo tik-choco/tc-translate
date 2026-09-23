@@ -349,6 +349,11 @@ export function useTranslator() {
     setSourceText('')
     clearImageInput()
     setSelectedHistory(null)
+    // Clearing the input clears what was produced from it too; an in-flight
+    // translation is cancelled so it can't land after the clear.
+    cancelTranslate()
+    setResult(null)
+    setStreamingTranslations([])
     setBackTranslation(null)
     setBackTranslationStatus('idle')
     setError('')
