@@ -1,21 +1,74 @@
 import { HeartHandshake, SmilePlus } from 'lucide-preact'
 import { memo } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { defaultNuance, intimacyLevels, maxNuanceMoods, nuanceDecorations, nuanceEmotions, nuanceMoods } from '../constants'
+import {
+  defaultNuance,
+  intimacyLevels,
+  maxNuanceMoods,
+  nuanceDecorations,
+  nuanceEmotions,
+  nuanceMoods,
+  nuanceStances,
+} from '../constants'
 import { t } from '../i18n'
 import { emojiForEmotion, isNuanceActive } from '../lib/nuance'
 import type { NuanceMood, TranslationNuance } from '../types'
+
+// One stepped slider (intimacy, stance). Labels come from
+// `translator-nuance-<group>-<level>` and `...-<level>-hint`; the two ends of
+// the scale are labelled under the track.
+function NuanceSlider<T extends string>({
+  group,
+  levels,
+  value,
+  onChange,
+}: {
+  group: 'intimacy' | 'stance'
+  levels: T[]
+  value: T
+  onChange: (value: T) => void
+}) {
+  const index = Math.max(0, levels.indexOf(value))
+  return (
+    <div class="nuance-section">
+      <div class="nuance-section-head">
+        <span class="nuance-section-title">{t(`translator-nuance-${group}`)}</span>
+        <strong class="nuance-level-name">{t(`translator-nuance-${group}-${value}`)}</strong>
+      </div>
+      <input
+        class="nuance-slider"
+        type="range"
+        min={0}
+        max={levels.length - 1}
+        step={1}
+        value={index}
+        aria-label={t(`translator-nuance-${group}`)}
+        aria-valuetext={t(`translator-nuance-${group}-${value}`)}
+        onInput={(event) => {
+          const next = levels[Number(event.currentTarget.value)]
+          if (next) onChange(next)
+        }}
+      />
+      <div class="nuance-slider-ends" aria-hidden="true">
+        <span>{t(`translator-nuance-${group}-${levels[0]}`)}</span>
+        <span>{t(`translator-nuance-${group}-${levels[levels.length - 1]}`)}</span>
+      </div>
+      <p class="nuance-hint">{t(`translator-nuance-${group}-${value}-hint`)}</p>
+    </div>
+  )
+}
 
 type NuancePickerProps = {
   nuance: TranslationNuance
   onChange: (nuance: TranslationNuance) => void
 }
 
-// Text labels for the active intimacy (unless neutral), moods, and
+// Text labels for the active (non-default) intimacy, stance, moods, and
 // decoration, in order.
 function nuanceLabels(nuance: TranslationNuance): string[] {
   return [
     ...(nuance.intimacy !== 'neutral' ? [t(`translator-nuance-intimacy-${nuance.intimacy}`)] : []),
+    ...(nuance.stance !== 'equal' ? [t(`translator-nuance-stance-${nuance.stance}`)] : []),
     ...nuance.moods.map((mood) => t(`translator-nuance-mood-${mood}`)),
     ...(nuance.decoration !== 'none' ? [t(`translator-nuance-decoration-${nuance.decoration}`)] : []),
   ]
@@ -36,7 +89,6 @@ export const NuancePicker = memo(function NuancePicker({ nuance, onChange }: Nua
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const active = isNuanceActive(nuance)
-  const levelIndex = Math.max(0, intimacyLevels.indexOf(nuance.intimacy))
   const summary = nuanceSummary(nuance)
   // The collapsed pill shows only the first label plus a "+N" count, so it
   // stays small in the crowded action row; the full summary is in the title.
@@ -98,31 +150,18 @@ export const NuancePicker = memo(function NuancePicker({ nuance, onChange }: Nua
       </button>
       {open ? (
         <div class="nuance-popover" role="dialog" aria-label={t('translator-nuance')}>
-          <div class="nuance-section">
-            <div class="nuance-section-head">
-              <span class="nuance-section-title">{t('translator-nuance-intimacy')}</span>
-              <strong class="nuance-level-name">{t(`translator-nuance-intimacy-${nuance.intimacy}`)}</strong>
-            </div>
-            <input
-              class="nuance-slider"
-              type="range"
-              min={0}
-              max={intimacyLevels.length - 1}
-              step={1}
-              value={levelIndex}
-              aria-label={t('translator-nuance-intimacy')}
-              aria-valuetext={t(`translator-nuance-intimacy-${nuance.intimacy}`)}
-              onInput={(event) => {
-                const next = intimacyLevels[Number(event.currentTarget.value)]
-                if (next) onChange({ ...nuance, intimacy: next })
-              }}
-            />
-            <div class="nuance-slider-ends" aria-hidden="true">
-              <span>{t('translator-nuance-intimacy-formal')}</span>
-              <span>{t('translator-nuance-intimacy-intimate')}</span>
-            </div>
-            <p class="nuance-hint">{t(`translator-nuance-intimacy-${nuance.intimacy}-hint`)}</p>
-          </div>
+          <NuanceSlider
+            group="intimacy"
+            levels={intimacyLevels}
+            value={nuance.intimacy}
+            onChange={(intimacy) => onChange({ ...nuance, intimacy })}
+          />
+          <NuanceSlider
+            group="stance"
+            levels={nuanceStances}
+            value={nuance.stance}
+            onChange={(stance) => onChange({ ...nuance, stance })}
+          />
           <div class="nuance-section">
             <div class="nuance-section-head">
               <span class="nuance-section-title">{t('translator-nuance-mood')}</span>

@@ -8,6 +8,7 @@ import type {
   NuanceDecoration,
   NuanceEmotion,
   NuanceMood,
+  NuanceStance,
   ReasoningEffort,
   TranslationNuance,
 } from './types'
@@ -70,6 +71,7 @@ export const defaultReplyTone: ReplyTone = 'neutral'
 // Translate tab nuance picker: intimacy slider stops (formal -> intimate,
 // 'neutral' in the middle as the default), mood chips, and the emotion palette.
 export const intimacyLevels: Intimacy[] = ['formal', 'polite', 'neutral', 'friendly', 'intimate']
+export const nuanceStances: NuanceStance[] = ['humble', 'modest', 'equal', 'assertive', 'dominant']
 export const nuanceMoods: NuanceMood[] = ['soft', 'gentle', 'bright', 'calm', 'elegant', 'cute', 'crisp', 'energetic']
 // More than two moods tend to conflict and blur each other in the output.
 export const maxNuanceMoods = 2
@@ -84,7 +86,7 @@ export const nuanceEmotions: { id: NuanceEmotion; emoji: string }[] = [
   { id: 'hesitant', emoji: '🤔' },
 ]
 export const nuanceDecorations: NuanceDecoration[] = ['none', 'emoji', 'kaomoji', 'both']
-export const defaultNuance: TranslationNuance = { intimacy: 'neutral', moods: [], emotion: null, decoration: 'none' }
+export const defaultNuance: TranslationNuance = { intimacy: 'neutral', stance: 'equal', moods: [], emotion: null, decoration: 'none' }
 
 // New app-local defaults (post shared-llm-config migration / fresh installs).
 export const defaultLocalSettings: LocalProviderSettings = {
