@@ -1,5 +1,5 @@
-import { intimacyLevels, maxNuanceMoods, nuanceDecorations, nuanceEmotions, nuanceMoods } from '../constants'
-import type { Intimacy, NuanceDecoration, NuanceEmotion, NuanceMood, TranslationNuance } from '../types'
+import { intimacyLevels, maxNuanceMoods, nuanceDecorations, nuanceEmotions, nuanceMoods, nuanceStances } from '../constants'
+import type { Intimacy, NuanceDecoration, NuanceEmotion, NuanceMood, NuanceStance, TranslationNuance } from '../types'
 
 // English descriptions handed to the LLM. Kept separate from the UI labels
 // (i18n) so prompt wording stays stable regardless of the UI language.
@@ -9,6 +9,14 @@ const intimacyPrompts: Record<Intimacy, string> = {
   neutral: 'no particular relationship: natural default register',
   friendly: 'a friend: casual and warm',
   intimate: 'a close friend, partner, or family member: very casual and intimate',
+}
+
+const stancePrompts: Record<NuanceStance, string> = {
+  humble: 'deferential and self-effacing: asks permission, puts themself down, pleads or leans on the listener',
+  modest: 'modest and reserved: hedges, asks softly, does not push',
+  equal: 'on equal footing',
+  assertive: 'assertive and confident: states things firmly, makes direct requests',
+  dominant: 'dominant with a playful, teasing edge: talks down, takes the lead, may use commands and pressing rhetorical questions',
 }
 
 const moodPrompts: Record<NuanceMood, string> = {
@@ -35,7 +43,12 @@ const emotionPrompts: Record<NuanceEmotion, string> = {
 
 export function isNuanceActive(nuance: TranslationNuance | null | undefined): nuance is TranslationNuance {
   return Boolean(
-    nuance && (nuance.intimacy !== 'neutral' || nuance.moods.length || nuance.emotion || nuance.decoration !== 'none'),
+    nuance &&
+      (nuance.intimacy !== 'neutral' ||
+        nuance.stance !== 'equal' ||
+        nuance.moods.length ||
+        nuance.emotion ||
+        nuance.decoration !== 'none'),
   )
 }
 
@@ -57,7 +70,8 @@ export function parseNuance(raw: unknown): TranslationNuance | null {
     : value.addEmoji === true
       ? 'emoji'
       : 'none'
-  return { intimacy: value.intimacy as Intimacy, moods, emotion, decoration }
+  const stance = nuanceStances.includes(value.stance as NuanceStance) ? (value.stance as NuanceStance) : 'equal'
+  return { intimacy: value.intimacy as Intimacy, stance, moods, emotion, decoration }
 }
 
 /** JSON-friendly nuance for LLM payloads, or undefined when no nuance applies. */
@@ -65,6 +79,7 @@ export function nuancePromptPayload(nuance: TranslationNuance | null | undefined
   if (!isNuanceActive(nuance)) return undefined
   return {
     relationship: nuance.intimacy === 'neutral' ? undefined : intimacyPrompts[nuance.intimacy],
+    stance: nuance.stance === 'equal' ? undefined : stancePrompts[nuance.stance],
     impression: nuance.moods.length ? nuance.moods.map((mood) => moodPrompts[mood]).join('; ') : undefined,
     emotion: nuance.emotion ? emotionPrompts[nuance.emotion] : undefined,
     decoration: nuance.decoration === 'none' ? undefined : nuance.decoration,

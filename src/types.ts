@@ -156,9 +156,9 @@ export type LegacyVoiceSettings = {
 }
 
 // Optional pre-translation nuance (Translate tab): how close the speaker is
-// to the recipient, how the text should sound (mood), and the feeling it
-// should carry. 'neutral' intimacy with no moods and no emotion means
-// "no nuance" (see lib/nuance.ts).
+// to the recipient, the stance taken toward them, how the text should sound
+// (mood), the feeling it should carry, and emoji/kaomoji decoration. The
+// all-default value means "no nuance" (see lib/nuance.ts).
 export type Intimacy = 'formal' | 'polite' | 'neutral' | 'friendly' | 'intimate'
 export type NuanceEmotion =
   | 'happy'
@@ -172,11 +172,17 @@ export type NuanceEmotion =
 
 export type NuanceMood = 'soft' | 'gentle' | 'bright' | 'calm' | 'elegant' | 'cute' | 'crisp' | 'energetic'
 
+// Conversational position toward the listener, independent of politeness:
+// deferential ("M-ish") <- 'equal' -> dominant/teasing ("S-ish").
+export type NuanceStance = 'humble' | 'modest' | 'equal' | 'assertive' | 'dominant'
+
 // Emoji and/or kaomoji (text faces like (＾▽＾)) appended to the translation.
 export type NuanceDecoration = 'none' | 'emoji' | 'kaomoji' | 'both'
 
 export type TranslationNuance = {
   intimacy: Intimacy
+  // Absent in values saved before stance existed (read as 'equal').
+  stance: NuanceStance
   // At most maxNuanceMoods entries; absent in values saved before moods existed.
   moods: NuanceMood[]
   emotion: NuanceEmotion | null
