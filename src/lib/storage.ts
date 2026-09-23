@@ -20,6 +20,8 @@ import {
   simulTranslateLanguagesStorageKey,
   sttSettingsStorageKey,
   targetLanguageStorageKey,
+  translateAutoBackCheckStorageKey,
+  translateAutoCopyStorageKey,
 } from '../constants'
 import { storageAddJson, storageGetJson } from './mistStorage'
 import { isNuanceActive, parseNuance } from './nuance'
@@ -621,5 +623,31 @@ export async function saveHistory(history: TranslationHistoryItem[]): Promise<vo
     localStorage.setItem(historyStorageKey, JSON.stringify(persisted))
   } catch (err) {
     console.warn('tc-translate: failed to save history', err)
+  }
+}
+
+// Translate tab counterparts of the Reply toggles. Both default to off: unlike
+// a reply, a translation isn't necessarily headed straight for the clipboard.
+export function loadTranslateAutoCopy(): boolean {
+  return localStorage.getItem(translateAutoCopyStorageKey) === '1'
+}
+
+export function saveTranslateAutoCopy(enabled: boolean): void {
+  try {
+    localStorage.setItem(translateAutoCopyStorageKey, enabled ? '1' : '0')
+  } catch (err) {
+    console.warn('tc-translate: failed to save translate auto-copy setting', err)
+  }
+}
+
+export function loadTranslateAutoBackCheck(): boolean {
+  return localStorage.getItem(translateAutoBackCheckStorageKey) === '1'
+}
+
+export function saveTranslateAutoBackCheck(enabled: boolean): void {
+  try {
+    localStorage.setItem(translateAutoBackCheckStorageKey, enabled ? '1' : '0')
+  } catch (err) {
+    console.warn('tc-translate: failed to save translate auto-back-check setting', err)
   }
 }

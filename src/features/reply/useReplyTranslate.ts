@@ -150,7 +150,7 @@ export function useReplyTranslate({ settings, nativeLanguage, nuance, onDone }: 
       setBackCheckError('')
       // Saver/fast modes suspend the automatic check (the manual button still
       // works) without touching the saved preference.
-      if (autoBackCheck && settings.performanceMode === 'normal') void runBackCheck(ownReply, nextResult.translatedReply, nextResult.nuance)
+      if (autoBackCheck) void runBackCheck(ownReply, nextResult.translatedReply, nextResult.nuance)
       onDone?.(partnerMessage, {
         ownReply,
         detectedLanguage: nextResult.detectedLanguage,
@@ -238,7 +238,6 @@ export function useReplyTranslate({ settings, nativeLanguage, nuance, onDone }: 
     copied,
     copyResult,
     autoBackCheck,
-    autoBackCheckSuspended: settings.performanceMode !== 'normal',
     setAutoBackCheck,
     backCheckStatus,
     backCheckResult,

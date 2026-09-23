@@ -37,6 +37,8 @@ type UseTranslationActionsParams = {
   setStreamingTranslations: (value: TranslationVariant[]) => void
   setError: (value: string) => void
   setCopiedTone: (value: string) => void
+  autoCopy: boolean
+  autoBackCheck: boolean
 }
 
 export function useStableCallback<Args extends unknown[], R>(fn: (...args: Args) => R): (...args: Args) => R {
@@ -66,6 +68,8 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
     setStreamingTranslations,
     setError,
     setCopiedTone,
+    autoCopy,
+    autoBackCheck,
   } = params
 
   const translateAbortRef = useRef<AbortController | null>(null)
@@ -133,6 +137,11 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
       setResult(nextResult)
       updateHistory([historyItem, ...history])
       setStatus('done')
+      const first = nextResult.translations[0]
+      if (autoCopy && first) void copyTranslation(first, true)
+      if (autoBackCheck && nextResult.translations.length) {
+        void runBackCheck(sourceText, nextResult.translations, activeNuance)
+      }
     } catch (translationError) {
       if (isAbortError(translationError)) {
         setStatus('idle')
@@ -152,17 +161,26 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
 
   async function handleCheckBackTranslation(): Promise<void> {
     if (!result || !canCheckBackTranslation) return
+    await runBackCheck(backTranslationSourceText, result.translations, result.nuance)
+  }
 
+  // Takes its inputs explicitly so the auto check can run on a result that
+  // was just produced, before the result state update has propagated.
+  async function runBackCheck(
+    sourceText: string,
+    translations: TranslationVariant[],
+    nuance: TranslationNuance | undefined,
+  ): Promise<void> {
     setBackTranslationStatus('loading')
     setError('')
 
     try {
       const nextBackTranslation = await checkBackTranslation({
         settings,
-        sourceText: backTranslationSourceText,
+        sourceText,
         nativeLanguage,
-        translations: result.translations,
-        nuance: result.nuance,
+        translations,
+        nuance,
       })
       setBackTranslation(nextBackTranslation)
       setBackTranslationStatus('done')
@@ -172,12 +190,16 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
     }
   }
 
-  async function copyTranslation(translation: TranslationVariant): Promise<void> {
+  // `silent` is for the auto copy: a clipboard write outside a user gesture
+  // (e.g. the window lost focus while translating) can be refused, and that
+  // shouldn't surface as an error the user never asked for.
+  async function copyTranslation(translation: TranslationVariant, silent = false): Promise<void> {
     try {
       await writeClipboard(translation.text)
       setCopiedTone(translation.tone)
       window.setTimeout(() => setCopiedTone(''), 1400)
     } catch (copyError) {
+      if (silent) return
       setError(copyError instanceof Error ? copyError.message : 'Copy failed.')
     }
   }

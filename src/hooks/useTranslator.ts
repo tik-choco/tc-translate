@@ -8,11 +8,15 @@ import {
   loadNuance,
   loadOnboardingSeen,
   loadTargetLanguage,
+  loadTranslateAutoBackCheck,
+  loadTranslateAutoCopy,
   saveMode,
   saveNativeLanguage,
   saveNuance,
   saveOnboardingSeen,
   saveTargetLanguage,
+  saveTranslateAutoBackCheck,
+  saveTranslateAutoCopy,
 } from '../lib/storage'
 import { useExample } from './useExample'
 import { useExplain } from './useExplain'
@@ -64,6 +68,8 @@ export function useTranslator() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [sourceText, setSourceText] = useState('')
   const [mode, setMode] = useState<AppMode>(() => loadMode())
+  const [autoCopy, setAutoCopyState] = useState(() => loadTranslateAutoCopy())
+  const [autoBackCheck, setAutoBackCheckState] = useState(() => loadTranslateAutoBackCheck())
   const [targetLanguage, setTargetLanguage] = useState(() => loadTargetLanguage())
   const [nativeLanguage, setNativeLanguage] = useState(() => loadNativeLanguage())
   const [nuance, setNuance] = useState<TranslationNuance>(() => loadNuance())
@@ -408,7 +414,19 @@ export function useTranslator() {
     setStreamingTranslations,
     setError,
     setCopiedTone,
+    autoCopy,
+    autoBackCheck,
   })
+
+  function setAutoCopy(value: boolean): void {
+    setAutoCopyState(value)
+    saveTranslateAutoCopy(value)
+  }
+
+  function setAutoBackCheck(value: boolean): void {
+    setAutoBackCheckState(value)
+    saveTranslateAutoBackCheck(value)
+  }
 
   function runTranslate(): void {
     selectMode('translate')
@@ -453,24 +471,6 @@ export function useTranslator() {
     selectMode('example')
     void example.handleExample()
   }
-
-  useEffect(() => {
-    if (mode !== 'translate') return
-    if (!result?.translations.length) return
-
-    function handleCopyShortcut(event: KeyboardEvent): void {
-      if (!event.ctrlKey && !event.metaKey) return
-      const index = Number(event.key) - 1
-      const translation = result?.translations[index]
-      if (!translation) return
-
-      event.preventDefault()
-      void copyTranslation(translation)
-    }
-
-    window.addEventListener('keydown', handleCopyShortcut)
-    return () => window.removeEventListener('keydown', handleCopyShortcut)
-  }, [mode, result])
 
   const stableUpdateTargetLanguage = useStableCallback(updateTargetLanguage)
   const stableUpdateNuance = useStableCallback(updateNuance)
@@ -557,6 +557,10 @@ export function useTranslator() {
     handleCheckBackTranslation,
     copyProofread: stableCopyProofread,
     copyTranslation,
+    autoCopy,
+    setAutoCopy: useStableCallback(setAutoCopy),
+    autoBackCheck,
+    setAutoBackCheck: useStableCallback(setAutoBackCheck),
     speechSupported: speech.supported,
     speakingId: speech.speakingId,
     speechLoadingId: speech.loadingId,
