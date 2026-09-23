@@ -8,6 +8,7 @@ import { detectScript, speechCodeForScript } from '../lib/language'
 import { ExampleOutput } from './ExampleOutput'
 import { ExplainOutput } from './ExplainOutput'
 import { NuancePicker } from './NuancePicker'
+import { PerformanceModeSwitch } from './PerformanceModeSwitch'
 import { ProofreadOutput } from './ProofreadOutput'
 import { TranslationOutput } from './TranslationOutput'
 import type {
@@ -17,6 +18,7 @@ import type {
   ExplanationResult,
   ExplanationRubyToken,
   ImageInput,
+  PerformanceMode,
   ProofreadResult,
   Status,
   TranslationHistoryItem,
@@ -74,6 +76,8 @@ type TranslatorPanelProps = {
   nativeLanguage: string
   nuance: TranslationNuance
   onNuanceChange: (nuance: TranslationNuance) => void
+  performanceMode: PerformanceMode
+  onPerformanceModeChange: (mode: PerformanceMode) => void
   speechSupported: boolean
   speakingId: string | null
   speechLoadingId: string | null
@@ -145,6 +149,8 @@ export function TranslatorPanel({
   nativeLanguage,
   nuance,
   onNuanceChange,
+  performanceMode,
+  onPerformanceModeChange,
   speechSupported,
   speakingId,
   speechLoadingId,
@@ -369,7 +375,10 @@ export function TranslatorPanel({
             </p>
           ) : null}
           <div class="submit-row">
-            <span class="shortcut-hint">{t('translator-shortcut-hint')}</span>
+            <div class="submit-row-lead">
+              <PerformanceModeSwitch mode={performanceMode} onChange={onPerformanceModeChange} />
+              <span class="shortcut-hint">{t('translator-shortcut-hint')}</span>
+            </div>
             <button
               type="button"
               class={`secondary-button ${proofreadStatus === 'loading' ? 'loading' : ''}`}

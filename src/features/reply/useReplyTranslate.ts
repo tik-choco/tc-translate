@@ -145,7 +145,9 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
       setBackCheckStatus('idle')
       setBackCheckResult(null)
       setBackCheckError('')
-      if (autoBackCheck) void runBackCheck(ownReply, nextResult.translatedReply)
+      // Saver/fast modes suspend the automatic check (the manual button still
+      // works) without touching the saved preference.
+      if (autoBackCheck && settings.performanceMode === 'normal') void runBackCheck(ownReply, nextResult.translatedReply)
       onDone?.(partnerMessage, {
         ownReply,
         detectedLanguage: nextResult.detectedLanguage,
@@ -235,6 +237,7 @@ export function useReplyTranslate({ settings, nativeLanguage, onDone }: UseReply
     copied,
     copyResult,
     autoBackCheck,
+    autoBackCheckSuspended: settings.performanceMode !== 'normal',
     setAutoBackCheck,
     backCheckStatus,
     backCheckResult,

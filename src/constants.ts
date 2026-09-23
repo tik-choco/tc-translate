@@ -9,6 +9,7 @@ import type {
   NuanceEmotion,
   NuanceMood,
   NuanceStance,
+  PerformanceMode,
   ReasoningEffort,
   TranslationNuance,
 } from './types'
@@ -96,8 +97,10 @@ export const defaultLocalSettings: LocalProviderSettings = {
   networkProviderPresetIds: [],
   defaultReasoningEffort: 'none',
   visionReasoningEffort: 'none',
+  performanceMode: 'normal',
 }
 
+export const performanceModes: PerformanceMode[] = ['normal', 'saver', 'fast']
 export const reasoningEffortOptions: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high']
 
 export const defaultLocalSttSettings: LocalSttSettings = {

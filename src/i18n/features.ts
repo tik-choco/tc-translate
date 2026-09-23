@@ -53,6 +53,7 @@ export const featureMessages = {
     'reply-backcheck-label': 'Back-translation',
     'reply-autocopy-toggle': 'Auto-copy',
     'reply-autobackcheck-toggle': 'Auto-check',
+    'reply-autobackcheck-suspended': 'Off in Saver and Fast modes',
   },
   ja: {
     'kanji-input-label': '入力',
@@ -104,6 +105,7 @@ export const featureMessages = {
     'reply-backcheck-label': '逆翻訳',
     'reply-autocopy-toggle': '自動コピー',
     'reply-autobackcheck-toggle': '自動チェック',
+    'reply-autobackcheck-suspended': '節約・高速モード中はオフになります',
   },
   'zh-CN': {
     'kanji-input-label': '输入',
@@ -155,6 +157,7 @@ export const featureMessages = {
     'reply-backcheck-label': '回译',
     'reply-autocopy-toggle': '自动复制',
     'reply-autobackcheck-toggle': '自动检查',
+    'reply-autobackcheck-suspended': '节省和高速模式下已关闭',
   },
   'zh-TW': {
     'kanji-input-label': '輸入',
@@ -206,5 +209,6 @@ export const featureMessages = {
     'reply-backcheck-label': '回譯',
     'reply-autocopy-toggle': '自動複製',
     'reply-autobackcheck-toggle': '自動檢查',
+    'reply-autobackcheck-suspended': '節省和高速模式下已關閉',
   },
 } satisfies MessageBundle

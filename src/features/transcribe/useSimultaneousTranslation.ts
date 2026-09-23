@@ -12,7 +12,11 @@ import {
 } from '../../constants'
 import { normalizeBaseUrl } from '../../lib/format'
 import { localizeNetworkError } from '../../lib/network'
-import { planTranslationFanOut, translateSegmentForLanguage } from '../../lib/simultaneousTranslate'
+import {
+  planTranslationFanOut,
+  planTranslationFanOutLocally,
+  translateSegmentForLanguage,
+} from '../../lib/simultaneousTranslate'
 import {
   loadSimulTargetLanguages,
   loadSimulTranslateEnabled,
@@ -187,12 +191,15 @@ export function useSimultaneousTranslation(settings: ProviderSettings) {
 
       let targets = candidates
       try {
-        const plan = await planTranslationFanOut({
-          settings,
-          text: trimmed,
-          candidateLanguages: candidates,
-          contextText,
-        })
+        // Saver/fast modes skip the per-segment orchestrator request.
+        const plan = settings.performanceMode !== 'normal'
+          ? planTranslationFanOutLocally(trimmed, candidates)
+          : await planTranslationFanOut({
+              settings,
+              text: trimmed,
+              candidateLanguages: candidates,
+              contextText,
+            })
         targets = plan.targets
         updateEntry(id, (entry) => ({
           ...entry,

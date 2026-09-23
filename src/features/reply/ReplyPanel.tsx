@@ -228,10 +228,14 @@ export function ReplyPanel({
       </div>
 
       <div class="reply-options">
-        <label class="reply-option-toggle">
+        <label
+          class="reply-option-toggle"
+          title={reply.autoBackCheckSuspended ? t('reply-autobackcheck-suspended') : undefined}
+        >
           <input
             type="checkbox"
-            checked={reply.autoBackCheck}
+            checked={reply.autoBackCheck && !reply.autoBackCheckSuspended}
+            disabled={reply.autoBackCheckSuspended}
             onChange={(event) => reply.setAutoBackCheck(event.currentTarget.checked)}
           />
           {t('reply-autobackcheck-toggle')}

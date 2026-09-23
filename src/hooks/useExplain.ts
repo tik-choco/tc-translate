@@ -46,20 +46,27 @@ export function useExplain({ settings, sourceText, nativeLanguage, onDone, onRub
 
     setExplainStatus('loading')
     setExplainError('')
-    setExplainRubyStatus('loading')
     setExplainRubyTokens([])
 
-    explainRuby({ settings, sourceText })
-      .then((nextTokens) => {
-        if (explainGeneration.current !== generation) return
-        setExplainRubyTokens(nextTokens)
-        setExplainRubyStatus('done')
-        onRubyTokens?.(sourceText, nextTokens)
-      })
-      .catch(() => {
-        if (explainGeneration.current !== generation) return
-        setExplainRubyStatus('error')
-      })
+    // The ruby (furigana/pinyin) line is a separate, parallel request: it
+    // never delays the explanation (so fast mode keeps it), but saver mode
+    // skips it, leaving readings to the vocabulary list.
+    if (settings.performanceMode === 'saver') {
+      setExplainRubyStatus('idle')
+    } else {
+      setExplainRubyStatus('loading')
+      explainRuby({ settings, sourceText })
+        .then((nextTokens) => {
+          if (explainGeneration.current !== generation) return
+          setExplainRubyTokens(nextTokens)
+          setExplainRubyStatus('done')
+          onRubyTokens?.(sourceText, nextTokens)
+        })
+        .catch(() => {
+          if (explainGeneration.current !== generation) return
+          setExplainRubyStatus('error')
+        })
+    }
 
     try {
       const nextResult = await explainText({

@@ -37,6 +37,7 @@ import type {
   HistoryItemBody,
   HistoryKind,
   LocalProviderSettings,
+  PerformanceMode,
   LocalSttSettings,
   PersistedHistoryItem,
   ProofreadCorrection,
@@ -73,6 +74,13 @@ function parseReasoningEffort(value: unknown): ReasoningEffort {
   return value === 'minimal' || value === 'low' || value === 'medium' || value === 'high' ? value : 'none'
 }
 
+// `tokenSaver: true` was the on/off predecessor of performanceMode.
+function parsePerformanceMode(stored: Partial<LocalProviderSettings> & { tokenSaver?: unknown }): PerformanceMode {
+  const mode = stored.performanceMode
+  if (mode === 'saver' || mode === 'fast') return mode
+  return stored.tokenSaver === true ? 'saver' : 'normal'
+}
+
 export function loadSettings(): LocalProviderSettings {
   try {
     const stored = JSON.parse(localStorage.getItem(settingsStorageKey) ?? '{}') as Partial<LocalProviderSettings>
@@ -88,6 +96,7 @@ export function loadSettings(): LocalProviderSettings {
         : defaultLocalSettings.networkProviderPresetIds,
       defaultReasoningEffort: parseReasoningEffort(stored.defaultReasoningEffort),
       visionReasoningEffort: parseReasoningEffort(stored.visionReasoningEffort),
+      performanceMode: parsePerformanceMode(stored),
     }
   } catch {
     return defaultLocalSettings
