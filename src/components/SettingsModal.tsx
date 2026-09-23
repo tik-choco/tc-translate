@@ -1,5 +1,5 @@
 import { MistBuildBanner } from "./MistBuildBanner";
-import { Network, Plus, Server, X } from 'lucide-preact'
+import { Network, Plus, Server, Sparkles, X } from 'lucide-preact'
 import { memo } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { languageOptions, reasoningEffortOptions } from '../constants'
@@ -48,6 +48,7 @@ type SettingsModalProps = {
   networkProviderConsumerCount: number
   networkProviderLogs: ProviderLogEntry[]
   networkProviderUpstreamConfigured: boolean
+  onOpenOnboarding: () => void
 }
 
 type SettingsTab = 'connection' | 'network' | 'tasks'
@@ -98,6 +99,7 @@ export const SettingsModal = memo(function SettingsModal({
   networkProviderConsumerCount,
   networkProviderLogs,
   networkProviderUpstreamConfigured,
+  onOpenOnboarding,
 }: SettingsModalProps) {
   const overlayPressStarted = useRef(false)
   const [activeTab, setActiveTab] = useState<SettingsTab>('connection')
@@ -947,6 +949,10 @@ export const SettingsModal = memo(function SettingsModal({
           </select>
         </label>
         <p class="hint">{t('ui-language-hint')}</p>
+        <button type="button" class="secondary-button onboarding-reopen" onClick={onOpenOnboarding}>
+          <Sparkles size={15} />
+          {t('ob-reopen')}
+        </button>
 
         <div class="settings-tab-bar" role="tablist" aria-label={t('settings-tabs')}>
           {TABS.map((tab) => (

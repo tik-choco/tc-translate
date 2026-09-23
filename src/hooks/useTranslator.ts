@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { defaultResolvedProvider } from '../constants'
 import { appendTranscript, createId, normalizeBaseUrl } from '../lib/format'
 import { speechCodeForLanguage } from '../lib/language'
+import { ensurePreset, ensureProvider } from '../lib/llmConfig'
+import { isNetworkProviderBaseUrl } from '../lib/networkModels'
 import {
   loadMode,
   loadNativeLanguage,
@@ -387,16 +389,32 @@ export function useTranslator() {
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [showLanguageMenu])
 
-  // First-run onboarding: instead of a separate tour, drop straight into the
-  // existing Settings modal so a fresh install is guided to configure an LLM
-  // right away, rather than waiting for a translate/proofread attempt to
-  // surface the ProviderSetupGuide.
-  useEffect(() => {
-    if (loadOnboardingSeen()) return
-    saveOnboardingSeen()
-    if (providerNeedsSetup) setShowSettings(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // First-run onboarding wizard (components/Onboarding.tsx): shown once on a
+  // fresh install and re-openable from Settings. Closing it by any path marks
+  // it seen.
+  const [showOnboarding, setShowOnboarding] = useState(() => !loadOnboardingSeen())
+
+  /**
+   * Quick setup from the onboarding wizard: writes one connection into the
+   * shared config's default preset (edited in place unless it is a
+   * network-imported preset, otherwise a new preset becomes the default) and
+   * switches translation to the direct API.
+   */
+  function applyQuickConnection(input: { baseUrl: string; apiKey: string; model: string }): void {
+    const model = input.model.trim()
+    llmConfigState.save((config) => {
+      const providerId = ensureProvider(config, { baseUrl: input.baseUrl, apiKey: input.apiKey })
+      const current = config.presets.find((preset) => preset.id === config.defaultPresetId)
+      const currentProvider = config.providers.find((provider) => provider.id === current?.providerId)
+      if (current && !(currentProvider && isNetworkProviderBaseUrl(currentProvider.baseUrl))) {
+        current.providerId = providerId
+        current.model = model
+      } else {
+        config.defaultPresetId = ensurePreset(config, { providerId, model, label: model })
+      }
+    })
+    if (settings.connection !== 'api') providerSettings.updateSettings({ ...settings, connection: 'api' })
+  }
 
   const { handleTranslate, handleCheckBackTranslation, copyTranslation, cancelTranslate } = useTranslationActions({
     settings,
@@ -488,6 +506,14 @@ export function useTranslator() {
   const stableDownloadSpeech = useStableCallback(speech.downloadAudio)
   const stableCopyProofread = useStableCallback(proofread.copyProofread)
   const openSettings = useCallback(() => setShowSettings(true), [])
+  const openOnboarding = useCallback(() => {
+    setShowSettings(false)
+    setShowOnboarding(true)
+  }, [])
+  const closeOnboarding = useCallback(() => {
+    saveOnboardingSeen()
+    setShowOnboarding(false)
+  }, [])
   const closeSettings = useCallback(() => setShowSettings(false), [])
   const refreshModels = useStableCallback(() => void providerSettings.loadModels())
 
@@ -593,5 +619,9 @@ export function useTranslator() {
     networkConsumerStatus,
     networkConsumerUpdatedAt,
     providerNeedsSetup,
+    showOnboarding,
+    openOnboarding,
+    closeOnboarding,
+    applyQuickConnection,
   }
 }

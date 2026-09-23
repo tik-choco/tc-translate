@@ -3,6 +3,7 @@ import { loadNativeLanguage } from '../lib/storage'
 import { appMessages } from './app'
 import { featureMessages } from './features'
 import { llmSettingsMessages } from './llmSettings'
+import { onboardingMessages } from './onboarding'
 import { settingsMessages } from './settings'
 import { translatorMessages } from './translator'
 import type { MessageTable, UiLanguage } from './types'
@@ -16,6 +17,7 @@ const tables: Record<UiLanguage, MessageTable> = {
     ...translatorMessages.en,
     ...featureMessages.en,
     ...llmSettingsMessages.en,
+    ...onboardingMessages.en,
   },
   ja: {
     ...appMessages.ja,
@@ -23,6 +25,7 @@ const tables: Record<UiLanguage, MessageTable> = {
     ...translatorMessages.ja,
     ...featureMessages.ja,
     ...llmSettingsMessages.ja,
+    ...onboardingMessages.ja,
   },
   'zh-CN': {
     ...appMessages['zh-CN'],
@@ -30,6 +33,7 @@ const tables: Record<UiLanguage, MessageTable> = {
     ...translatorMessages['zh-CN'],
     ...featureMessages['zh-CN'],
     ...llmSettingsMessages['zh-CN'],
+    ...onboardingMessages['zh-CN'],
   },
   'zh-TW': {
     ...appMessages['zh-TW'],
@@ -37,6 +41,7 @@ const tables: Record<UiLanguage, MessageTable> = {
     ...translatorMessages['zh-TW'],
     ...featureMessages['zh-TW'],
     ...llmSettingsMessages['zh-TW'],
+    ...onboardingMessages['zh-TW'],
   },
 }
 
