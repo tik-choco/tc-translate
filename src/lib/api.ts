@@ -99,7 +99,17 @@ export async function translateText(params: {
     ],
   })
 
-  return parseTranslation(content)
+  // The prompt rules above are only a request - models sometimes return notes
+  // or readings anyway - so enforce the mode's output shape here too.
+  const parsed = parseTranslation(content)
+  return {
+    ...parsed,
+    notes: mode === 'normal' ? parsed.notes : [],
+    translations:
+      mode === 'fast'
+        ? parsed.translations.map(({ reading: _reading, pinyin: _pinyin, ...rest }) => rest)
+        : parsed.translations,
+  }
 }
 
 // Stays app-local instead of riding mistai's streamChatCompletion: the

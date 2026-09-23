@@ -236,6 +236,8 @@ export function App() {
           canExplain={t.canExplain}
           canExample={t.canExample}
           onTranslate={t.runTranslate}
+          canPasteAndTranslate={t.canPasteAndTranslate}
+          onPasteAndTranslate={() => void t.runPasteAndTranslate()}
           onCancelTranslate={t.cancelTranslate}
           onProofread={t.runProofread}
           onExplain={t.runExplain}

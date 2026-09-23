@@ -1,4 +1,4 @@
-import { BookOpen, Download, FileUp, LoaderCircle, Mic, NotebookText, PenLine, Play, ScanText, Square, Volume2, X } from 'lucide-preact'
+import { BookOpen, ClipboardPaste, Download, FileUp, LoaderCircle, Mic, NotebookText, PenLine, Play, ScanText, Square, Volume2, X } from 'lucide-preact'
 import type { Ref } from 'preact'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { t } from '../i18n'
@@ -45,6 +45,8 @@ type TranslatorPanelProps = {
   canExplain: boolean
   canExample: boolean
   onTranslate: () => void
+  canPasteAndTranslate: boolean
+  onPasteAndTranslate: () => void
   onCancelTranslate: () => void
   onProofread: () => void
   onExplain: () => void
@@ -119,6 +121,8 @@ export function TranslatorPanel({
   canExplain,
   canExample,
   onTranslate,
+  canPasteAndTranslate,
+  onPasteAndTranslate,
   onCancelTranslate,
   onProofread,
   onExplain,
@@ -436,7 +440,6 @@ export function TranslatorPanel({
           <div class="submit-row">
             <div class="submit-row-lead">
               <PerformanceModeSwitch mode={performanceMode} onChange={onPerformanceModeChange} />
-              <span class="shortcut-hint">{t('translator-shortcut-hint')}</span>
             </div>
             <button
               type="button"
@@ -470,20 +473,33 @@ export function TranslatorPanel({
             </button>
             <button
               type="button"
-              class={`primary-button ${status === 'loading' ? 'loading' : ''}`}
-              onClick={status === 'loading' ? onCancelTranslate : onTranslate}
-              disabled={status !== 'loading' && !canTranslate}
-              title={
-                status === 'loading'
-                  ? t('translator-cancel')
-                  : providerNeedsSetup
-                    ? t('translator-setup-required-hint')
-                    : t('translator-translate')
-              }
+              class="secondary-button"
+              onClick={onPasteAndTranslate}
+              disabled={!canPasteAndTranslate || status === 'loading'}
+              title={providerNeedsSetup ? t('translator-setup-required-hint') : t('translator-paste-and-translate')}
             >
-              {status === 'loading' ? <Square size={17} /> : <Play size={17} />}
-              {status === 'loading' ? t('translator-cancel') : t('translator-translate')}
+              <ClipboardPaste size={16} />
+              {t('translator-paste-and-translate')}
             </button>
+            <div class="translate-action">
+              <button
+                type="button"
+                class={`primary-button ${status === 'loading' ? 'loading' : ''}`}
+                onClick={status === 'loading' ? onCancelTranslate : onTranslate}
+                disabled={status !== 'loading' && !canTranslate}
+                title={
+                  status === 'loading'
+                    ? t('translator-cancel')
+                    : providerNeedsSetup
+                      ? t('translator-setup-required-hint')
+                      : t('translator-translate')
+                }
+              >
+                {status === 'loading' ? <Square size={17} /> : <Play size={17} />}
+                {status === 'loading' ? t('translator-cancel') : t('translator-translate')}
+              </button>
+              <span class="shortcut-hint">{t('translator-shortcut-hint')}</span>
+            </div>
           </div>
         </div>
 

@@ -415,6 +415,27 @@ export function useTranslator() {
     void handleTranslate()
   }
 
+  // Always reads the clipboard fresh and replaces sourceText with it, then
+  // translates that pasted text - pressing it again after copying a new
+  // message overwrites the old one rather than re-translating stale text.
+  async function runPasteAndTranslate(): Promise<void> {
+    if (status === 'loading' || !hasProviderConfigured) return
+
+    let text: string
+    try {
+      text = await navigator.clipboard.readText()
+    } catch {
+      // Clipboard read unavailable or denied; nothing to paste.
+      return
+    }
+    if (!text.trim()) return
+
+    setSourceText(text)
+    clearImageInput()
+    selectMode('translate')
+    void handleTranslate(text)
+  }
+
   function runProofread(): void {
     selectMode('proofread')
     proofreadHistoryIdRef.current = ''
@@ -527,6 +548,8 @@ export function useTranslator() {
     clearImageInput,
     clearSourceInput,
     runTranslate,
+    runPasteAndTranslate,
+    canPasteAndTranslate: hasProviderConfigured,
     cancelTranslate,
     runProofread,
     runExplain,
