@@ -7,6 +7,7 @@ import { formatBytes, getFirstAudioFile, getFirstImageFile, getFirstPdfFile } fr
 import { detectScript, speechCodeForScript } from '../lib/language'
 import { ExampleOutput } from './ExampleOutput'
 import { ExplainOutput } from './ExplainOutput'
+import { NuancePicker } from './NuancePicker'
 import { ProofreadOutput } from './ProofreadOutput'
 import { TranslationOutput } from './TranslationOutput'
 import type {
@@ -19,6 +20,7 @@ import type {
   ProofreadResult,
   Status,
   TranslationHistoryItem,
+  TranslationNuance,
   TranslationResult,
   TranslationVariant,
 } from '../types'
@@ -70,6 +72,8 @@ type TranslatorPanelProps = {
   backTranslation: BackTranslationCheck | null
   error: string
   nativeLanguage: string
+  nuance: TranslationNuance
+  onNuanceChange: (nuance: TranslationNuance) => void
   speechSupported: boolean
   speakingId: string | null
   speechLoadingId: string | null
@@ -139,6 +143,8 @@ export function TranslatorPanel({
   backTranslation,
   error,
   nativeLanguage,
+  nuance,
+  onNuanceChange,
   speechSupported,
   speakingId,
   speechLoadingId,
@@ -335,6 +341,7 @@ export function TranslatorPanel({
                   {isTranscribing ? <LoaderCircle size={16} class="spin" /> : <Mic size={16} />}
                 </button>
               ) : null}
+              <NuancePicker nuance={nuance} onChange={onNuanceChange} />
             </div>
             {imageInput ? (
               <div class="image-chip">

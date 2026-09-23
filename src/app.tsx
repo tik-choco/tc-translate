@@ -254,6 +254,8 @@ export function App() {
           backTranslation={t.backTranslation}
           error={t.error}
           nativeLanguage={t.nativeLanguage}
+          nuance={t.nuance}
+          onNuanceChange={t.updateNuance}
           speechSupported={t.speechSupported}
           speakingId={t.speakingId}
           speechLoadingId={t.speechLoadingId}

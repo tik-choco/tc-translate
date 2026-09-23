@@ -155,12 +155,44 @@ export type LegacyVoiceSettings = {
   engine: VoiceEngine
 }
 
+// Optional pre-translation nuance (Translate tab): how close the speaker is
+// to the recipient, how the text should sound (mood), and the feeling it
+// should carry. 'neutral' intimacy with no moods and no emotion means
+// "no nuance" (see lib/nuance.ts).
+export type Intimacy = 'formal' | 'polite' | 'neutral' | 'friendly' | 'intimate'
+export type NuanceEmotion =
+  | 'happy'
+  | 'affectionate'
+  | 'grateful'
+  | 'apologetic'
+  | 'sad'
+  | 'annoyed'
+  | 'surprised'
+  | 'hesitant'
+
+export type NuanceMood = 'soft' | 'gentle' | 'bright' | 'calm' | 'elegant' | 'cute' | 'crisp' | 'energetic'
+
+// Emoji and/or kaomoji (text faces like (＾▽＾)) appended to the translation.
+export type NuanceDecoration = 'none' | 'emoji' | 'kaomoji' | 'both'
+
+export type TranslationNuance = {
+  intimacy: Intimacy
+  // At most maxNuanceMoods entries; absent in values saved before moods existed.
+  moods: NuanceMood[]
+  emotion: NuanceEmotion | null
+  // Replaced the old `addEmoji: boolean` (read as 'emoji' when true).
+  decoration: NuanceDecoration
+}
+
 export type TranslationResult = {
   translations: TranslationVariant[]
   notes: string[]
   sourceText?: string
   translatedLanguage?: string
   reversed?: boolean
+  // Nuance the translation was generated with; reused for later tone
+  // generation and back-translation checks of the same result.
+  nuance?: TranslationNuance
 }
 
 export type TranslationVariant = {
@@ -193,6 +225,7 @@ export type TranslationHistoryItem = {
   targetLanguage: string
   translations: TranslationVariant[]
   notes: string[]
+  nuance?: TranslationNuance
   proofread?: ProofreadResult
   explanation?: ExplanationResult
   example?: ExampleResult
@@ -225,6 +258,8 @@ export type PersistedHistoryItem = {
   targetLanguage: string
   notes: string[]
   sourcePreview: string
+  // Small, so kept inline rather than in the bodyCid payload.
+  nuance?: TranslationNuance
   bodyCid?: string
   // Legacy inline fields (pre-migration), read-only fallback.
   sourceText?: string

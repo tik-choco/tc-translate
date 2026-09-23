@@ -1,10 +1,15 @@
 import type {
+  Intimacy,
   LegacyProviderSettings,
   LegacySttSettings,
   LegacyTtsSettings,
   LocalProviderSettings,
   LocalSttSettings,
+  NuanceDecoration,
+  NuanceEmotion,
+  NuanceMood,
   ReasoningEffort,
+  TranslationNuance,
 } from './types'
 
 export const settingsStorageKey = 'tc-translate-provider-settings-v1'
@@ -22,6 +27,7 @@ export const simulTranslateEnabledStorageKey = 'tc-translate-simul-translate-ena
 export const simulTranslateLanguagesStorageKey = 'tc-translate-simul-translate-languages-v1'
 export const replyAutoCopyStorageKey = 'tc-translate-reply-auto-copy-v1'
 export const replyToneStorageKey = 'tc-translate-reply-tone-v1'
+export const nuanceStorageKey = 'tc-translate-nuance-v1'
 export const replyAutoBackCheckStorageKey = 'tc-translate-reply-auto-back-check-v1'
 export const transcribeLangStorageKey = 'tc-translate-transcribe-lang-v1'
 export const defaultNativeLanguage = 'Japanese'
@@ -60,6 +66,25 @@ export const exampleSentenceCount = 5
 export type ReplyTone = 'neutral' | 'friend' | 'work'
 export const replyToneOptions: ReplyTone[] = ['neutral', 'friend', 'work']
 export const defaultReplyTone: ReplyTone = 'neutral'
+
+// Translate tab nuance picker: intimacy slider stops (formal -> intimate,
+// 'neutral' in the middle as the default), mood chips, and the emotion palette.
+export const intimacyLevels: Intimacy[] = ['formal', 'polite', 'neutral', 'friendly', 'intimate']
+export const nuanceMoods: NuanceMood[] = ['soft', 'gentle', 'bright', 'calm', 'elegant', 'cute', 'crisp', 'energetic']
+// More than two moods tend to conflict and blur each other in the output.
+export const maxNuanceMoods = 2
+export const nuanceEmotions: { id: NuanceEmotion; emoji: string }[] = [
+  { id: 'happy', emoji: '😊' },
+  { id: 'affectionate', emoji: '🥰' },
+  { id: 'grateful', emoji: '🙏' },
+  { id: 'apologetic', emoji: '😅' },
+  { id: 'sad', emoji: '😢' },
+  { id: 'annoyed', emoji: '😠' },
+  { id: 'surprised', emoji: '😮' },
+  { id: 'hesitant', emoji: '🤔' },
+]
+export const nuanceDecorations: NuanceDecoration[] = ['none', 'emoji', 'kaomoji', 'both']
+export const defaultNuance: TranslationNuance = { intimacy: 'neutral', moods: [], emotion: null, decoration: 'none' }
 
 // New app-local defaults (post shared-llm-config migration / fresh installs).
 export const defaultLocalSettings: LocalProviderSettings = {

@@ -5,10 +5,12 @@ import { speechCodeForLanguage } from '../lib/language'
 import {
   loadMode,
   loadNativeLanguage,
+  loadNuance,
   loadOnboardingSeen,
   loadTargetLanguage,
   saveMode,
   saveNativeLanguage,
+  saveNuance,
   saveOnboardingSeen,
   saveTargetLanguage,
 } from '../lib/storage'
@@ -37,6 +39,7 @@ import type {
   ProofreadResult,
   Status,
   TranslationHistoryItem,
+  TranslationNuance,
   TranslationResult,
 } from '../types'
 
@@ -62,6 +65,7 @@ export function useTranslator() {
   const [mode, setMode] = useState<AppMode>(() => loadMode())
   const [targetLanguage, setTargetLanguage] = useState(() => loadTargetLanguage())
   const [nativeLanguage, setNativeLanguage] = useState(() => loadNativeLanguage())
+  const [nuance, setNuance] = useState<TranslationNuance>(() => loadNuance())
   const [status, setStatus] = useState<Status>('idle')
   const [toneStatus, setToneStatus] = useState<Status>('idle')
   const [result, setResult] = useState<TranslationResult | null>(null)
@@ -247,6 +251,11 @@ export function useTranslator() {
     saveNativeLanguage(language)
   }
 
+  function updateNuance(next: TranslationNuance): void {
+    setNuance(next)
+    saveNuance(next)
+  }
+
   function selectMode(nextMode: AppMode): void {
     setMode(nextMode)
     saveMode(nextMode)
@@ -327,6 +336,7 @@ export function useTranslator() {
       translations: item.translations,
       notes: item.notes,
       sourceText: item.sourceText,
+      nuance: item.nuance,
     })
     setBackTranslation(null)
     setBackTranslationStatus('idle')
@@ -406,6 +416,7 @@ export function useTranslator() {
     sourceText,
     targetLanguage,
     nativeLanguage,
+    nuance,
     status,
     result,
     selectedHistory,
@@ -471,6 +482,7 @@ export function useTranslator() {
   }, [mode, result])
 
   const stableUpdateTargetLanguage = useStableCallback(updateTargetLanguage)
+  const stableUpdateNuance = useStableCallback(updateNuance)
   const stableRestoreHistoryItem = useStableCallback(restoreHistoryItem)
   const stableHandleImageFile = useStableCallback(handleImageFile)
   const stableDeleteHistoryItem = useStableCallback(historyPanel.deleteHistoryItem)
@@ -507,6 +519,8 @@ export function useTranslator() {
     mode,
     targetLanguage,
     nativeLanguage,
+    nuance,
+    updateNuance: stableUpdateNuance,
     status,
     toneStatus,
     result,
