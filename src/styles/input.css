@@ -345,3 +345,332 @@ textarea {
   opacity: 0.72;
   margin-right: auto;
 }
+
+/* Nuance picker: intimacy slider + emotion palette, opened from the input's
+   action row. The popover drops below the input (not above) so it's never
+   clipped when the input sits at the top of the scrolling translator pane.
+   The picker itself stays unpositioned so the popover anchors to the
+   `.input-actions` row and right-aligns with the input, even on phones. */
+.nuance-picker {
+  display: flex;
+}
+
+.nuance-button {
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.nuance-button:hover,
+.nuance-button:focus-visible,
+.nuance-button.open {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  outline: none;
+}
+
+.nuance-button:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.nuance-button.active {
+  color: var(--primary);
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+}
+
+.nuance-button-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.nuance-button-label {
+  white-space: nowrap;
+}
+
+.nuance-button-more {
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft-strong);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.nuance-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: min(320px, calc(100vw - 48px));
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  box-shadow: var(--shadow-menu);
+  animation: soft-rise 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nuance-section {
+  display: grid;
+  gap: 8px;
+}
+
+.nuance-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nuance-section-title {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nuance-level-name {
+  color: var(--primary);
+  font-size: 13px;
+}
+
+.nuance-slider {
+  width: 100%;
+  min-height: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nuance-slider-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -4px;
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.nuance-limit {
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.nuance-moods {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.nuance-mood {
+  min-height: 30px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.nuance-mood:hover:not(:disabled),
+.nuance-mood:focus-visible {
+  border-color: var(--border-strong);
+  outline: none;
+}
+
+.nuance-mood:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.nuance-mood.selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.nuance-mood:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.nuance-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.nuance-emotions {
+  display: grid;
+  /* 5 columns: "None" (2 wide) + 8 emoji fill exactly two rows. */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.nuance-emotion {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.nuance-emotion.none {
+  grid-column: span 2;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nuance-emotion:hover,
+.nuance-emotion:focus-visible {
+  border-color: var(--border-strong);
+  outline: none;
+}
+
+.nuance-emotion:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.nuance-emotion:active {
+  transform: scale(0.94);
+}
+
+.nuance-emotion.selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.nuance-decorations {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+}
+
+.nuance-decoration {
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 3px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.nuance-decoration:hover,
+.nuance-decoration:focus-visible {
+  color: var(--text-strong);
+  outline: none;
+}
+
+.nuance-decoration:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.nuance-decoration.selected {
+  border-color: var(--primary-border);
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-1);
+}
+
+.nuance-decoration-sample {
+  color: var(--text-subtle);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nuance-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.nuance-reset {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nuance-reset:hover:not(:disabled),
+.nuance-reset:focus-visible {
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  outline: none;
+}
+
+.nuance-reset:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nuance-popover {
+    animation: none;
+  }
+}
+
+/* Up to six action buttons can share the row on a phone; drop the text label
+   (and its "+N", which would miscount without it) so the active pill doesn't
+   run into the character count. The teal pill alone still signals "active". */
+@media (max-width: 400px) {
+  .nuance-button-label,
+  .nuance-button-more {
+    display: none;
+  }
+}

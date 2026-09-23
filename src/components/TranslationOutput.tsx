@@ -1,7 +1,8 @@
-import { ArrowLeftRight, Check, Clipboard, Download, LoaderCircle, Play, RefreshCw, ScrollText, Square, Volume2 } from 'lucide-preact'
+import { ArrowLeftRight, Check, HeartHandshake, Clipboard, Download, LoaderCircle, Play, RefreshCw, ScrollText, Square, Volume2 } from 'lucide-preact'
 import { memo } from 'preact/compat'
 import { t } from '../i18n'
 import { speechCodeForLanguage, toneDisplayName } from '../lib/language'
+import { nuanceSummary } from './NuancePicker'
 import { ProviderSetupGuide } from './ProviderSetupGuide'
 import type {
   BackTranslationCheck,
@@ -64,6 +65,7 @@ export const TranslationOutput = memo(function TranslationOutput({
 }: TranslationOutputProps) {
   const hasTranslations = Boolean(result?.translations.length)
   const speechLang = speechCodeForLanguage(result?.translatedLanguage ?? targetLanguage)
+  const appliedNuance = nuanceSummary(result?.nuance)
 
   return (
     <>
@@ -77,6 +79,12 @@ export const TranslationOutput = memo(function TranslationOutput({
         <div class="reversed-badge">
           <ArrowLeftRight size={14} />
           {t('translator-direction-reversed', { language: result.translatedLanguage ?? targetLanguage })}
+        </div>
+      ) : null}
+      {appliedNuance && status !== 'loading' ? (
+        <div class="reversed-badge nuance-badge">
+          <HeartHandshake size={14} />
+          {t('translator-nuance-applied', { nuance: appliedNuance })}
         </div>
       ) : null}
       {status === 'loading' ? (

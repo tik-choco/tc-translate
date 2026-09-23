@@ -2,6 +2,7 @@ import {
   defaultLocalSettings,
   defaultLocalSttSettings,
   defaultNativeLanguage,
+  defaultNuance,
   defaultReplyTone,
   historyPanelVisibleStorageKey,
   historyStorageKey,
@@ -11,6 +12,7 @@ import {
   maxSimulTargetLanguages,
   modeStorageKey,
   nativeLanguageStorageKey,
+  nuanceStorageKey,
   onboardingStorageKey,
   replyAutoBackCheckStorageKey,
   replyAutoCopyStorageKey,
@@ -23,6 +25,7 @@ import {
   targetLanguageStorageKey,
 } from '../constants'
 import { storageAddJson, storageGetJson } from './mistStorage'
+import { isNuanceActive, parseNuance } from './nuance'
 import type { ReplyTone } from '../constants'
 import type {
   AppMode,
@@ -41,6 +44,7 @@ import type {
   ReasoningEffort,
   ReplyResult,
   TranslationHistoryItem,
+  TranslationNuance,
   TranslationVariant,
   VocabularyEntry,
 } from '../types'
@@ -258,6 +262,22 @@ export function saveReplyAutoCopy(enabled: boolean): void {
   }
 }
 
+export function loadNuance(): TranslationNuance {
+  try {
+    return parseNuance(JSON.parse(localStorage.getItem(nuanceStorageKey) ?? 'null')) ?? defaultNuance
+  } catch {
+    return defaultNuance
+  }
+}
+
+export function saveNuance(nuance: TranslationNuance): void {
+  try {
+    localStorage.setItem(nuanceStorageKey, JSON.stringify(nuance))
+  } catch (err) {
+    console.warn('tc-translate: failed to save nuance', err)
+  }
+}
+
 export function loadReplyTone(): ReplyTone {
   const stored = localStorage.getItem(replyToneStorageKey)
   return replyToneOptions.includes(stored as ReplyTone) ? (stored as ReplyTone) : defaultReplyTone
@@ -470,6 +490,7 @@ async function hydrateHistoryItem(raw: unknown): Promise<TranslationHistoryItem 
       targetLanguage: historyItem.targetLanguage,
       translations: body.translations,
       notes,
+      nuance: parseNuance(historyItem.nuance) ?? undefined,
     }
   }
 
@@ -566,6 +587,7 @@ async function toPersistedHistoryItem(item: TranslationHistoryItem): Promise<Per
     notes: item.notes,
     sourcePreview: buildSourcePreview(item.sourceText),
   }
+  if (isNuanceActive(item.nuance)) preview.nuance = item.nuance
 
   const body: HistoryItemBody = {
     sourceText: item.sourceText,

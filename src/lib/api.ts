@@ -4,8 +4,16 @@ import { backTranslateText, detectBackTranslationLanguage } from './backTranslat
 import { requestChatCompletion } from './llm'
 import { requestNetworkOpenAi } from './network'
 import { isNetworkProviderBaseUrl } from './networkModels'
+import { nuancePromptPayload } from './nuance'
 import { parseBackTranslationReview, parseTranslation } from './parse'
-import type { BackTranslationCheck, ImageInput, ProviderSettings, TranslationResult, TranslationVariant } from '../types'
+import type {
+  BackTranslationCheck,
+  ImageInput,
+  ProviderSettings,
+  TranslationNuance,
+  TranslationResult,
+  TranslationVariant,
+} from '../types'
 
 export async function fetchModelIds(
   connection: Pick<ProviderSettings, 'baseUrl' | 'apiKey'>,
@@ -37,8 +45,10 @@ export async function translateText(params: {
   targetLanguage: string
   nativeLanguage: string
   tones: string[]
+  nuance?: TranslationNuance
   signal?: AbortSignal
 }): Promise<TranslationResult> {
+  const nuance = nuancePromptPayload(params.nuance)
   const content = await requestChatCompletion({
     settings: params.settings,
     signal: params.signal,
@@ -46,7 +56,10 @@ export async function translateText(params: {
       {
         role: 'system',
         content:
-          'You are tc-translate, a precise translation engine. Detect the source language automatically. The final translation language must always be targetLanguage. Do not translate into nativeLanguage unless nativeLanguage is also targetLanguage. Return only JSON with "translations" and "notes". Generate only the requested tones. "translations" must be an array of objects with "tone" and "text". Add pronunciation help based on the final output language: for Chinese, include "pinyin" and do not include "reading"; for Japanese, include "reading" in romaji; for English, include "reading" as IPA phonetic transcription; for Korean, include "reading" as revised romanization; for other languages, include "reading" only when a practical pronunciation guide is useful, using a conventional romanization or phonetic notation for that language. Preserve meaning, names, units, line breaks, and formatting. "notes" must explain the source input text, not the output translation. Write notes in nativeLanguage about the source text nuance, idioms, domain terms, implied context, grammar, and culturally loaded wording. Do not explain your translation choices. Include 2 to 5 notes when there is something useful to explain.',
+          'You are tc-translate, a precise translation engine. Detect the source language automatically. The final translation language must always be targetLanguage. Do not translate into nativeLanguage unless nativeLanguage is also targetLanguage. Return only JSON with "translations" and "notes". Generate only the requested tones. "translations" must be an array of objects with "tone" and "text". Add pronunciation help based on the final output language: for Chinese, include "pinyin" and do not include "reading"; for Japanese, include "reading" in romaji; for English, include "reading" as IPA phonetic transcription; for Korean, include "reading" as revised romanization; for other languages, include "reading" only when a practical pronunciation guide is useful, using a conventional romanization or phonetic notation for that language. Preserve meaning, names, units, line breaks, and formatting. "notes" must explain the source input text, not the output translation. Write notes in nativeLanguage about the source text nuance, idioms, domain terms, implied context, grammar, and culturally loaded wording. Do not explain your translation choices. Include 2 to 5 notes when there is something useful to explain.' +
+          (nuance
+            ? ' The input includes "nuance" describing how the speaker wants to come across. "relationship" is who the speaker is addressing: adjust register, politeness, honorifics, pronouns, and sentence endings to fit it. It shapes the Natural tone; explicitly requested tones such as Polite, Casual, or Business keep their own register. "impression" is how the text should sound to the reader: express it with devices native to the target language, such as sentence-final particles and endings (for example Japanese ね/よ/かな, Korean -요/-거든요, Chinese 呢/吧/啦), softeners, hedges, and word choice; in languages without such endings (for example English), use word choice and phrasing instead. "impression" colors every tone except Literal within the politeness level of that tone and never drops honorifics the relationship or tone requires. "emotion" is the feeling the speaker wants to convey: reflect it naturally through word choice, interjections, and phrasing in every tone except Literal, without adding facts or content that are not in the source. "decoration" adds expressive symbols to each non-Literal translation, matching the emotion and impression: "emoji" means add one or two fitting emoji; "kaomoji" means add one fitting kaomoji (a Japanese-style text face such as (＾▽＾), (´・ω・`), or (；・∀・)) and no emoji; "both" means add one or two fitting emoji and one fitting kaomoji. Place them where they read naturally, usually at the end of a sentence. Without "decoration", do not add emoji or kaomoji that are not in the source.'
+            : ''),
       },
       {
         role: 'user',
@@ -56,6 +69,7 @@ export async function translateText(params: {
           nativeLanguage: params.nativeLanguage,
           outputLanguageRule: 'Always translate into targetLanguage.',
           tones: params.tones,
+          ...(nuance ? { nuance } : {}),
           text: params.sourceText,
         }),
       },
@@ -237,7 +251,9 @@ export async function checkBackTranslation(params: {
   sourceText: string
   nativeLanguage: string
   translations: TranslationVariant[]
+  nuance?: TranslationNuance
 }): Promise<BackTranslationCheck> {
+  const intendedNuance = nuancePromptPayload(params.nuance)
   const sourceLanguage = await detectBackTranslationLanguage(params.settings, params.sourceText)
   const backTranslations = await Promise.all(params.translations.map(async (translation) => ({
     tone: translation.tone,
@@ -250,13 +266,17 @@ export async function checkBackTranslation(params: {
       {
         role: 'system',
         content:
-          'Compare each independently produced back-translation with sourceText. Identify meaning drift, omissions, additions, tone/register problems, named-entity errors, number/unit errors, and OCR-sensitive mistakes. Return only JSON with "checks", "summary", and "issues". "checks" must be in the same order as backTranslations and contain objects with "verdict" and "issues". Write all judgments in nativeLanguage. Keep issues short and concrete. Use an empty issues array when the meaning is preserved. Do not rewrite the back-translations.',
+          'Compare each independently produced back-translation with sourceText. Identify meaning drift, omissions, additions, tone/register problems, named-entity errors, number/unit errors, and OCR-sensitive mistakes. Return only JSON with "checks", "summary", and "issues". "checks" must be in the same order as backTranslations and contain objects with "verdict" and "issues". Write all judgments in nativeLanguage. Keep issues short and concrete. Use an empty issues array when the meaning is preserved. Do not rewrite the back-translations.' +
+          (intendedNuance
+            ? ' The translations were intentionally adjusted to intendedNuance (relationship register, impression, and/or emotion). Do not report register, politeness, sentence-ending style, emotional coloring, emoji, or kaomoji that match intendedNuance as issues; still report meaning drift.'
+            : ''),
       },
       {
         role: 'user',
         content: JSON.stringify({
           sourceText: params.sourceText,
           nativeLanguage: params.nativeLanguage,
+          ...(intendedNuance ? { intendedNuance } : {}),
           backTranslations,
         }),
       },

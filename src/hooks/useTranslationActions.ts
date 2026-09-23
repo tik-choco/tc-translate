@@ -5,12 +5,14 @@ import { checkBackTranslation, translateText } from '../lib/api'
 import { createId, writeClipboard } from '../lib/format'
 import { detectScript, scriptMatchesLanguage } from '../lib/language'
 import { localizeNetworkError } from '../lib/network'
+import { isNuanceActive } from '../lib/nuance'
 import { mergeNotes, mergeTranslations } from '../lib/parse'
 import type {
   BackTranslationCheck,
   ProviderSettings,
   Status,
   TranslationHistoryItem,
+  TranslationNuance,
   TranslationResult,
   TranslationVariant,
 } from '../types'
@@ -20,6 +22,7 @@ type UseTranslationActionsParams = {
   sourceText: string
   targetLanguage: string
   nativeLanguage: string
+  nuance: TranslationNuance
   status: Status
   result: TranslationResult | null
   selectedHistory: TranslationHistoryItem | null
@@ -55,6 +58,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
     sourceText,
     targetLanguage,
     nativeLanguage,
+    nuance,
     status,
     result,
     selectedHistory,
@@ -101,6 +105,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         scriptMatchesLanguage(detectedScript, targetLanguage) &&
         !scriptMatchesLanguage(detectedScript, nativeLanguage)
       const effectiveTargetLanguage = reversed ? nativeLanguage : targetLanguage
+      const activeNuance = isNuanceActive(nuance) ? nuance : undefined
       const translatedResult = await translateText({
         settings,
         sourceText,
@@ -108,6 +113,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         targetLanguage: effectiveTargetLanguage,
         nativeLanguage,
         tones: initialTranslationTones,
+        nuance: activeNuance,
         signal: controller.signal,
       })
       const nextResult = {
@@ -115,6 +121,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         sourceText,
         translatedLanguage: effectiveTargetLanguage,
         reversed,
+        nuance: activeNuance,
       }
       const id = createId()
       const historyItem = {
@@ -125,6 +132,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         targetLanguage: effectiveTargetLanguage,
         translations: nextResult.translations,
         notes: nextResult.notes,
+        nuance: activeNuance,
       }
       setResult(nextResult)
       setActiveHistoryId(id)
@@ -163,6 +171,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         targetLanguage: result.translatedLanguage ?? targetLanguage,
         nativeLanguage,
         tones: missingToneOptions,
+        nuance: result.nuance,
       })
       const mergedResult = {
         translations: mergeTranslations(result.translations, nextToneResult.translations),
@@ -170,6 +179,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         sourceText: result.sourceText ?? toneSourceText,
         translatedLanguage: result.translatedLanguage,
         reversed: result.reversed,
+        nuance: result.nuance,
       }
       setResult(mergedResult)
       if (selectedHistory) {
@@ -200,6 +210,7 @@ export function useTranslationActions(params: UseTranslationActionsParams) {
         sourceText: backTranslationSourceText,
         nativeLanguage,
         translations: result.translations,
+        nuance: result.nuance,
       })
       setBackTranslation(nextBackTranslation)
       setBackTranslationStatus('done')
