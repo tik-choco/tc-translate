@@ -1,4 +1,5 @@
 import { extractJsonContent } from './parse'
+import { backTranslateText } from './backTranslation'
 import { requestChatCompletion } from './llm'
 import type { ReplyTone } from '../constants'
 import type { ProviderSettings } from '../types'
@@ -102,54 +103,50 @@ export type ReplyBackTranslationResult = {
   issues: string[]
 }
 
-function parseReplyBackTranslation(content: string): ReplyBackTranslationResult {
+function parseReplyBackTranslationReview(content: string, backTranslatedText: string): ReplyBackTranslationResult {
   try {
     const parsed = JSON.parse(extractJsonContent(content)) as Partial<{
-      backTranslatedText: unknown
       verdict: unknown
       issues: unknown
     }>
-    if (typeof parsed.backTranslatedText === 'string' && parsed.backTranslatedText.trim()) {
-      return {
-        backTranslatedText: parsed.backTranslatedText.trim(),
-        verdict: typeof parsed.verdict === 'string' ? parsed.verdict.trim() : '',
-        issues: Array.isArray(parsed.issues) ? parsed.issues.filter((issue): issue is string => typeof issue === 'string') : [],
-      }
+    return {
+      backTranslatedText,
+      verdict: typeof parsed.verdict === 'string' ? parsed.verdict.trim() : '',
+      issues: Array.isArray(parsed.issues) ? parsed.issues.filter((issue): issue is string => typeof issue === 'string') : [],
     }
   } catch {
     // Some OpenAI-compatible providers ignore JSON-only instructions.
   }
 
-  return { backTranslatedText: content.trim(), verdict: '', issues: [] }
+  return { backTranslatedText, verdict: '', issues: [] }
 }
 
-// Translates translatedReply back into nativeLanguage and compares it
-// against what the user originally wrote (ownReply), to catch meaning drift
-// introduced by the outbound translation before the user sends it.
+// First back-translate without the original reply, then compare the result.
 export async function checkReplyBackTranslation(params: {
   settings: ProviderSettings
   ownReply: string
   translatedReply: string
   nativeLanguage: string
 }): Promise<ReplyBackTranslationResult> {
+  const backTranslatedText = await backTranslateText(params.settings, params.translatedReply, params.nativeLanguage)
   const content = await requestChatCompletion({
     settings: params.settings,
     messages: [
       {
         role: 'system',
         content:
-          'You are tc-translate back-translation checker. Translate translatedReply back into nativeLanguage, then compare it against ownReply (what the user originally wrote, in nativeLanguage) to identify meaning drift, omissions, additions, and tone/register problems. Return only JSON of the shape {"backTranslatedText": "...", "verdict": "...", "issues": ["..."]}. "backTranslatedText" is the back-translation in nativeLanguage. Write "verdict" and "issues" in nativeLanguage. Keep issues short and concrete. Use an empty issues array when the meaning is preserved.',
+          'Compare the independently produced backTranslatedText with ownReply (what the user originally wrote) to identify meaning drift, omissions, additions, and tone/register problems. Return only JSON of the shape {"verdict": "...", "issues": ["..."]}. Write "verdict" and "issues" in nativeLanguage. Keep issues short and concrete. Use an empty issues array when the meaning is preserved. Do not rewrite the back-translation.',
       },
       {
         role: 'user',
         content: JSON.stringify({
           nativeLanguage: params.nativeLanguage,
           ownReply: params.ownReply,
-          translatedReply: params.translatedReply,
+          backTranslatedText,
         }),
       },
     ],
   })
 
-  return parseReplyBackTranslation(content)
+  return parseReplyBackTranslationReview(content, backTranslatedText)
 }

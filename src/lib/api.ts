@@ -1,9 +1,10 @@
 import { fetchModels, MistaiError } from '@tik-choco/mistai'
 import { normalizeBaseUrl } from './format'
+import { backTranslateText, detectBackTranslationLanguage } from './backTranslation'
 import { requestChatCompletion } from './llm'
 import { requestNetworkOpenAi } from './network'
 import { isNetworkProviderBaseUrl } from './networkModels'
-import { parseBackTranslation, parseTranslation } from './parse'
+import { parseBackTranslationReview, parseTranslation } from './parse'
 import type { BackTranslationCheck, ImageInput, ProviderSettings, TranslationResult, TranslationVariant } from '../types'
 
 export async function fetchModelIds(
@@ -234,32 +235,33 @@ export async function readImageText(params: {
 export async function checkBackTranslation(params: {
   settings: ProviderSettings
   sourceText: string
-  targetLanguage: string
   nativeLanguage: string
   translations: TranslationVariant[]
 }): Promise<BackTranslationCheck> {
+  const sourceLanguage = await detectBackTranslationLanguage(params.settings, params.sourceText)
+  const backTranslations = await Promise.all(params.translations.map(async (translation) => ({
+    tone: translation.tone,
+    text: await backTranslateText(params.settings, translation.text, sourceLanguage),
+  })))
+
   const content = await requestChatCompletion({
     settings: params.settings,
     messages: [
       {
         role: 'system',
         content:
-          'You are tc-translate back-translation checker. Detect the original language from sourceText. For each translated item, translate it back into the original source language, compare the meaning with sourceText, and identify meaning drift, omissions, additions, tone/register problems, named-entity errors, number/unit errors, and OCR-sensitive mistakes. Return only JSON with "checks", "summary", and "issues". "checks" must be an array of objects with "tone", "text", "verdict", and "issues". In each check, "text" is the back-translation in the original source language. Write "verdict", "summary", and "issues" in nativeLanguage. Keep issues short and concrete. Use an empty issues array when the meaning is preserved.',
+          'Compare each independently produced back-translation with sourceText. Identify meaning drift, omissions, additions, tone/register problems, named-entity errors, number/unit errors, and OCR-sensitive mistakes. Return only JSON with "checks", "summary", and "issues". "checks" must be in the same order as backTranslations and contain objects with "verdict" and "issues". Write all judgments in nativeLanguage. Keep issues short and concrete. Use an empty issues array when the meaning is preserved. Do not rewrite the back-translations.',
       },
       {
         role: 'user',
         content: JSON.stringify({
           sourceText: params.sourceText,
-          targetLanguage: params.targetLanguage,
           nativeLanguage: params.nativeLanguage,
-          translations: params.translations.map((translation) => ({
-            tone: translation.tone,
-            text: translation.text,
-          })),
+          backTranslations,
         }),
       },
     ],
   })
 
-  return parseBackTranslation(content, params.translations)
+  return parseBackTranslationReview(content, backTranslations)
 }

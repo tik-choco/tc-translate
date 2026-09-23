@@ -1,3 +1,4 @@
+import { MistBuildBanner } from "./MistBuildBanner";
 import { Network, Plus, Server, X } from 'lucide-preact'
 import { memo } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
@@ -1149,6 +1150,7 @@ export const SettingsModal = memo(function SettingsModal({
             />
           </div>
         ) : null}
+        <footer style={{ padding: "12px 20px" }}><MistBuildBanner view="settings" /></footer>
       </aside>
     </div>
   )
