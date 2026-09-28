@@ -201,28 +201,50 @@ export function TranslatorPanel({
           : Boolean(result) || Boolean(selectedHistory) || status === 'loading')
   // Side-by-side (wide screens only, see layout.css) kicks in once the
   // stacked layout overflows the translator, i.e. the result would need
-  // scrolling to read. The decision sticks until the text behind the output or
-  // the mode changes: side-by-side is shorter, so re-measuring there would
-  // flip straight back. Judged on the text the shown output came from, so
-  // typing a new input doesn't flip the layout.
+  // scrolling to read. Measure the stacked layout even while the panes are
+  // side by side, so shorter content can switch back without first resetting
+  // the layout and replaying the animation on every keystroke.
   const translatorRef = useRef<HTMLDivElement>(null)
   const [sideBySide, setSideBySide] = useState(false)
-  const outputSourceText =
-    mode === 'translate' ? (result?.sourceText ?? selectedHistory?.sourceText ?? sourceText) : sourceText
-  const layoutKey = hasOutput ? `${mode}:${outputSourceText}` : ''
+  const outputIdentity =
+    mode === 'proofread'
+      ? proofreadResult
+      : mode === 'explain'
+        ? explainResult
+        : mode === 'example'
+          ? exampleResult
+          : result ?? selectedHistory
+  const layoutKey = hasOutput ? mode : ''
 
+  // Wait until input settles before changing layout. ResizeObserver alone can
+  // miss edits when the output pane remains taller than the input pane.
+  const previousSourceTextRef = useRef(sourceText)
+  const editingRef = useRef(false)
+  const editingTimerRef = useRef<number | null>(null)
+  const checkLayoutRef = useRef<() => void>(() => {})
   useLayoutEffect(() => {
-    setSideBySide(false)
-  }, [layoutKey])
+    if (previousSourceTextRef.current === sourceText) return
+    previousSourceTextRef.current = sourceText
+    editingRef.current = true
+    if (editingTimerRef.current !== null) window.clearTimeout(editingTimerRef.current)
+    editingTimerRef.current = window.setTimeout(() => {
+      editingTimerRef.current = null
+      editingRef.current = false
+      checkLayoutRef.current()
+    }, 400)
+  }, [sourceText])
 
-  // FLIP: after switching to side-by-side, slide each pane from where it was
-  // in the stacked layout to its new spot instead of jumping.
+  useEffect(() => () => {
+    if (editingTimerRef.current !== null) window.clearTimeout(editingTimerRef.current)
+  }, [])
+
+  // FLIP: slide the panes between their stacked and side-by-side positions.
   const flipFromRef = useRef<DOMRect[] | null>(null)
   useLayoutEffect(() => {
     const from = flipFromRef.current
     flipFromRef.current = null
     const translator = translatorRef.current
-    if (!sideBySide || !from || !translator) return
+    if (!from || !translator) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const panes = translator.querySelectorAll<HTMLElement>('.pane-grid > .text-pane')
     paneRects(translator).forEach((to, index) => {
@@ -242,21 +264,36 @@ export function TranslatorPanel({
   useLayoutEffect(() => {
     const translator = translatorRef.current
     const grid = translator?.querySelector('.pane-grid')
-    if (!layoutKey || sideBySide || !translator || !grid) return
+    if (!translator || !grid) return
     const el: HTMLDivElement = translator
 
-    function check(): void {
-      if (el.scrollHeight <= el.clientHeight + 1) return
-      flipFromRef.current = paneRects(el)
-      setSideBySide(true)
+    function check(force = false): void {
+      if (editingRef.current && !force) return
+      // The side-by-side layout is shorter. Measure the stacked height without
+      // painting it, then restore the class before the next frame.
+      const wasSideBySide = el.classList.contains('side-by-side')
+      if (wasSideBySide) el.classList.remove('side-by-side')
+      const overflow = el.scrollHeight - el.clientHeight
+      if (wasSideBySide) el.classList.add('side-by-side')
+      // Keep a little room around the threshold to avoid switching back and
+      // forth when text wrapping changes by only a pixel or two.
+      const nextSideBySide = Boolean(layoutKey) && overflow > (sideBySide ? -24 : 1)
+      if (nextSideBySide === sideBySide) return
+      flipFromRef.current = layoutKey ? paneRects(el) : null
+      setSideBySide(nextSideBySide)
     }
-    check()
+    checkLayoutRef.current = check
+    // A new result or mode should be measured immediately, even while typing.
+    check(true)
     // Re-check as the output grows (streaming, late notes) or the pane resizes.
-    const observer = new ResizeObserver(check)
+    const observer = new ResizeObserver(() => check())
     observer.observe(grid)
     observer.observe(el)
-    return () => observer.disconnect()
-  }, [layoutKey, sideBySide])
+    return () => {
+      observer.disconnect()
+      if (checkLayoutRef.current === check) checkLayoutRef.current = () => {}
+    }
+  }, [layoutKey, outputIdentity, sideBySide])
 
   // Fallback auto-grow for browsers without `field-sizing: content` support.
   useEffect(() => {

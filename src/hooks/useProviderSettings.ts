@@ -30,6 +30,7 @@ function mergeSettings(local: LocalProviderSettings, llmConfigState: SharedLlmCo
     temperature: resolved?.temperature ?? defaultResolvedProvider.temperature,
     // Fast mode drops reasoning for text tasks; vision (OCR) keeps its setting.
     reasoningEffort: local.performanceMode === 'fast' ? 'none' : local.defaultReasoningEffort,
+    defaultReasoningEffort: local.defaultReasoningEffort,
     visionReasoningEffort: local.visionReasoningEffort,
     connection: local.connection,
     roomId: config.network.roomId,

@@ -161,7 +161,7 @@ export async function readImageText(params: {
         // The advertised network name, not a real upstream model id — the
         // provider maps it back to its own upstream model.
         model: params.settings.visionModel.trim() || params.settings.model.trim() || undefined,
-        temperature: params.settings.temperature,
+        temperature: params.settings.visionReasoningEffort === 'none' ? params.settings.temperature : undefined,
         reasoning_effort: params.settings.visionReasoningEffort,
         messages,
       }),
@@ -213,7 +213,7 @@ export async function readImageText(params: {
       headers,
       body: JSON.stringify({
         model,
-        temperature: params.settings.temperature,
+        temperature: params.settings.visionReasoningEffort === 'none' ? params.settings.temperature : undefined,
         reasoning_effort: params.settings.visionReasoningEffort,
         stream: true,
         messages,

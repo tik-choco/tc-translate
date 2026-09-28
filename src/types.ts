@@ -5,7 +5,7 @@ export type ProviderConnection = 'api' | 'network'
 // reasoning_effort values offered per task. 'none' is a real API value
 // (explicitly disables reasoning on servers that support it), not "omit the
 // field" — requests always include reasoning_effort, 'none' included.
-export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high'
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
 export type ReasoningTask = 'default' | 'vision'
 
@@ -65,6 +65,8 @@ export type ProviderSettings = {
   temperature: number
   /** reasoning_effort for default-task requests. Always sent to the API, 'none' included. */
   reasoningEffort: ReasoningEffort
+  /** Saved default-task choice, including while fast mode overrides requests to 'none'. */
+  defaultReasoningEffort: ReasoningEffort
   visionReasoningEffort: ReasoningEffort
   connection: ProviderConnection
   roomId: string
