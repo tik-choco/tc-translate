@@ -1107,7 +1107,7 @@ export const SettingsModal = memo(function SettingsModal({
                     <span class="task-badge task-badge-network">{t('llm-preset-network-badge')}</span>
                   ) : null}
                 </div>
-                {renderReasoningEffortSelect('default', settings.reasoningEffort)}
+                {renderReasoningEffortSelect('default', settings.defaultReasoningEffort)}
               </div>
             </div>
 

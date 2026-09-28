@@ -96,7 +96,7 @@ export const defaultLocalSettings: LocalProviderSettings = {
 }
 
 export const performanceModes: PerformanceMode[] = ['normal', 'saver', 'fast']
-export const reasoningEffortOptions: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high']
+export const reasoningEffortOptions: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
 
 export const defaultLocalSttSettings: LocalSttSettings = {
   micDeviceId: '',

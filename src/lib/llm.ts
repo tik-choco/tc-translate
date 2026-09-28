@@ -54,7 +54,7 @@ function apiConfig(settings: ProviderSettings, model?: string): OpenAIConfig {
     baseUrl: normalizeBaseUrl(settings.baseUrl),
     apiKey: settings.apiKey,
     model: (model ?? settings.model).trim(),
-    temperature: settings.temperature,
+    temperature: settings.reasoningEffort === 'none' ? settings.temperature : undefined,
     reasoningEffort: settings.reasoningEffort ?? 'none',
   }
 }
@@ -88,7 +88,7 @@ function resolvedTargetConfig(target: ResolvedLlmTargetV1): OpenAIConfig {
     baseUrl: normalizeBaseUrl(target.baseUrl),
     apiKey: target.apiKey,
     model: target.model.trim(),
-    temperature: target.temperature,
+    temperature: target.reasoningEffort === undefined || target.reasoningEffort === 'none' ? target.temperature : undefined,
     reasoningEffort: target.reasoningEffort ?? 'none',
   }
 }

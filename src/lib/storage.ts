@@ -69,7 +69,7 @@ function buildSourcePreview(sourceText: string): string {
 // `micDeviceId`.
 
 function parseReasoningEffort(value: unknown): ReasoningEffort {
-  return value === 'minimal' || value === 'low' || value === 'medium' || value === 'high' ? value : 'none'
+  return value === 'minimal' || value === 'low' || value === 'medium' || value === 'high' || value === 'xhigh' || value === 'max' ? value : 'none'
 }
 
 // `tokenSaver: true` was the on/off predecessor of performanceMode.
