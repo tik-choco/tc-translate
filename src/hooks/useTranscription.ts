@@ -1,3 +1,5 @@
+import { resolveVoice } from '../lib/llmConfig'
+import { roomIdFromBaseUrl } from '../lib/networkModels'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { t } from '../i18n'
 import { maxRecordingDurationMs } from '../constants'
@@ -10,7 +12,6 @@ import type { SttSettings } from '../types'
 type UseTranscriptionParams = {
   sttSettings: SttSettings
   llmConfig: SharedLlmConfigV1
-  roomId: string
   /** BCP-47 code for the browser fallback recognizer (e.g. 'ja-JP'). */
   speechLang?: string
   onTranscribed: (text: string) => void
@@ -21,10 +22,13 @@ function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | undef
   return window.SpeechRecognition ?? window.webkitSpeechRecognition
 }
 
-export function useTranscription({ sttSettings, llmConfig, roomId, speechLang, onTranscribed }: UseTranscriptionParams) {
+export function useTranscription({ sttSettings, llmConfig, speechLang, onTranscribed }: UseTranscriptionParams) {
   const connection = resolveSttConnection(llmConfig)
+  const resolvedVoice = resolveVoice(llmConfig, 'stt')
+  const roomId = roomIdFromBaseUrl(connection.baseUrl)
+  const voiceModel = resolvedVoice?.model ?? ''
   const useBrowser = sttSettings.engine === 'browser'
-  const apiConfigured = !useBrowser && Boolean(connection.baseUrl && sttSettings.model.trim())
+  const apiConfigured = !useBrowser && Boolean(connection.baseUrl && voiceModel.trim())
   const useNetwork = sttSettings.engine === 'network'
   const roomConfigured = Boolean(roomId.trim())
   const networkConfigured = useNetwork && roomConfigured
@@ -37,7 +41,7 @@ export function useTranscription({ sttSettings, llmConfig, roomId, speechLang, o
   // Explicitly choosing the browser engine always uses the Web Speech API.
   // With no STT model configured otherwise, fall back to it too so the mic
   // still works — and transcribes live to boot.
-  const browserFallback = useBrowser ? browserRecognitionSupported : !modelConfigured && browserRecognitionSupported
+  const browserFallback = useBrowser && browserRecognitionSupported
   const supported = modelConfigured ? recorderSupported : browserFallback
 
   const [isRecording, setIsRecording] = useState(false)
@@ -74,10 +78,10 @@ export function useTranscription({ sttSettings, llmConfig, roomId, speechLang, o
     setIsTranscribing(true)
     try {
       const text = networkConfigured
-        ? await requestNetworkStt(roomId, { audio, model: networkVoiceModelParam(sttSettings.model), fileName })
+        ? await requestNetworkStt(roomId, { audio, model: networkVoiceModelParam(voiceModel), fileName })
         : await transcribeAudio({
             connection,
-            model: sttSettings.model,
+            model: voiceModel,
             audio,
             fileName,
           })
@@ -182,6 +186,7 @@ export function useTranscription({ sttSettings, llmConfig, roomId, speechLang, o
   }
 
   async function startRecording(): Promise<void> {
+    if (sttSettings.model && !resolvedVoice) { setTranscriptionError(t('voice-connection-unresolved')); return }
     if (!supported || isRecording) return
 
     setTranscriptionError('')

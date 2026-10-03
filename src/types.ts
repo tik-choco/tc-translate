@@ -1,90 +1,27 @@
-import type { LlmProviderV1, ModelPresetV1 } from './lib/llmConfig'
-
+import type { LlmProviderV1, ModelRefV1, ResolvedLlmTargetV1 } from './lib/llmConfig'
 export type ProviderConnection = 'api' | 'network'
-
-// reasoning_effort values offered per task. 'none' is a real API value
-// (explicitly disables reasoning on servers that support it), not "omit the
-// field" — requests always include reasoning_effort, 'none' included.
 export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
-
 export type ReasoningTask = 'default' | 'vision'
-
-// App-local settings persisted at `tc-translate-provider-settings-v1`.
-// Connection details (baseUrl/apiKey/model/temperature) now live in the
-// shared `tc-shared-llm-config-v1` key (see lib/llmConfig.ts) so they can be
-// reused by other same-origin tik-choco apps; this type keeps only what's
-// specific to tc-translate itself.
+export type PerformanceMode = 'normal' | 'saver' | 'fast'
+export type TaskModel = { ref?: ModelRefV1; reasoningEffort: ReasoningEffort }
+export type RoomProvide = { enabled: boolean; shared: ModelRefV1[] }
 export type LocalProviderSettings = {
-  connection: ProviderConnection
-  /**
-   * Participate as an LLM Network provider, forwarding llm_request traffic
-   * received in `roomId` to this upstream (Base URL / API key / model).
-   * Independent of `connection`: a user can consume via direct API while
-   * also providing Network service to others.
-   */
-  networkProviderEnabled: boolean
-  /**
-   * Id of the preset (in the shared llm config) used for OCR/vision calls.
-   * '' means "use the default preset's model for vision too".
-   */
-  visionPresetId: string
-  /**
-   * Ids of presets (in the shared llm config) shared to the LLM Network when
-   * networkProviderEnabled; their labels (falling back to model ids, see
-   * advertisedModelName in lib/networkModels.ts) are advertised via
-   * provider_hello.models, and incoming requests naming one route to the
-   * matching preset's connection.
-   */
-  networkProviderPresetIds: string[]
-  /** Per-task reasoning_effort, always sent with the request (default 'none'). */
-  defaultReasoningEffort: ReasoningEffort
-  visionReasoningEffort: ReasoningEffort
-  /** Speed/cost trade-off for LLM work; see PerformanceMode. */
+  tasks: Record<ReasoningTask, TaskModel>
+  roomProvide: Record<string, RoomProvide>
+  recentModels: ModelRefV1[]
   performanceMode: PerformanceMode
 }
-
-/**
- * 'normal': full output. 'saver': fewest tokens (no notes, batched
- * back-translation, no explain ruby request, no orchestrator).
- * 'fast': quickest result (no notes or readings, reasoning_effort 'none',
- * requests kept parallel, no orchestrator). The auto back-translation toggles
- * are an explicit user opt-in and run in every mode.
- */
-export type PerformanceMode = 'normal' | 'saver' | 'fast'
-
-// Runtime settings used throughout the app: `LocalProviderSettings` merged
-// with the resolved default preset/provider (and, for `visionModel`, the
-// vision preset) from the shared llm config. Kept in this pre-migration
-// shape so the call sites built around it (lib/llm.ts, lib/api.ts, most
-// hooks) don't need to change; only how it's constructed/persisted changed.
-export type ProviderSettings = {
+export type ProviderSettings = LocalProviderSettings & {
   baseUrl: string
   apiKey: string
   model: string
   visionModel: string
-  temperature: number
-  /** reasoning_effort for default-task requests. Always sent to the API, 'none' included. */
+  visionTarget: ResolvedLlmTargetV1 | null
   reasoningEffort: ReasoningEffort
-  /** Saved default-task choice, including while fast mode overrides requests to 'none'. */
   defaultReasoningEffort: ReasoningEffort
   visionReasoningEffort: ReasoningEffort
-  connection: ProviderConnection
-  roomId: string
-  networkProviderEnabled: boolean
-  visionPresetId: string
-  /**
-   * Ids of presets (in the shared llm config) shared to the LLM Network when
-   * networkProviderEnabled; their labels (falling back to model ids, see
-   * advertisedModelName in lib/networkModels.ts) are advertised via
-   * provider_hello.models, and incoming requests naming one route to the
-   * matching preset's connection.
-   */
-  networkProviderPresetIds: string[]
-  performanceMode: PerformanceMode
-  /** Every connection/preset in the shared llm config, for the Settings UI's connection/preset management lists and pickers. */
   providers: LlmProviderV1[]
-  presets: ModelPresetV1[]
-  defaultPresetId: string
+  defaultModel?: ModelRefV1
 }
 
 // Shape of the pre-migration `tc-translate-provider-settings-v1`, kept only

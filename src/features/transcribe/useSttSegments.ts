@@ -1,3 +1,5 @@
+import { resolveVoice } from '../../lib/llmConfig'
+import { roomIdFromBaseUrl } from '../../lib/networkModels'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { sttSegmentIntervalMs } from '../../constants'
 import { t } from '../../i18n'
@@ -26,20 +28,23 @@ function toSttLanguage(speechLang: string): string {
 export function useSttSegments(params: {
   sttSettings: SttSettings
   llmConfig: SharedLlmConfigV1
-  roomId: string
   /** BCP-47 tag from the language picker (e.g. 'ja', 'en-US'). */
   speechLang: string
   onSegment: (text: string) => void
 }) {
-  const { sttSettings, llmConfig, roomId, speechLang, onSegment } = params
+  const { sttSettings, llmConfig, speechLang, onSegment } = params
   const connection = resolveSttConnection(llmConfig)
+  const resolvedVoice = resolveVoice(llmConfig, 'stt')
+  const roomId = roomIdFromBaseUrl(connection.baseUrl)
+  const voiceModel = resolvedVoice?.model ?? ''
   const language = toSttLanguage(speechLang)
-  const apiConfigured = sttSettings.engine === 'api' && Boolean(connection.baseUrl && sttSettings.model.trim())
+  const apiConfigured = sttSettings.engine === 'api' && Boolean(connection.baseUrl && voiceModel.trim())
   const networkConfigured = sttSettings.engine === 'network' && Boolean(roomId.trim())
   const recorderSupported =
     typeof navigator !== 'undefined' &&
     Boolean(navigator.mediaDevices?.getUserMedia) &&
     typeof MediaRecorder !== 'undefined'
+  const unresolved = Boolean(sttSettings.model && !resolvedVoice)
   const configured = (apiConfigured || networkConfigured) && recorderSupported
 
   const [isListening, setIsListening] = useState(false)
@@ -57,7 +62,7 @@ export function useSttSegments(params: {
   const queueRef = useRef<Promise<void>>(Promise.resolve())
   // Frozen per start(): mid-recording settings edits must not switch the
   // transport/model for segments already being spoken.
-  const targetRef = useRef({ useNetwork: networkConfigured, roomId, model: sttSettings.model, connection, language })
+  const targetRef = useRef({ useNetwork: networkConfigured, roomId, model: voiceModel, connection, language })
   const onSegmentRef = useRef(onSegment)
   onSegmentRef.current = onSegment
 
@@ -113,10 +118,11 @@ export function useSttSegments(params: {
   }
 
   async function start(): Promise<void> {
+    if (unresolved) { setError(t('voice-connection-unresolved')); return }
     if (!configured || listeningRef.current) return
     listeningRef.current = true
     setError('')
-    targetRef.current = { useNetwork: networkConfigured, roomId, model: sttSettings.model, connection, language }
+    targetRef.current = { useNetwork: networkConfigured, roomId, model: voiceModel, connection, language }
 
     // Realtime first (direct API only - the Network transport has no
     // streaming STT). A server without the realtime endpoint fails the
@@ -125,7 +131,7 @@ export function useSttSegments(params: {
       try {
         const handle = await startRealtimeStt({
           connection,
-          model: sttSettings.model,
+          model: voiceModel,
           micDeviceId: sttSettings.micDeviceId,
           language,
           onDelta: (delta) => setLiveText((current) => current + delta),
@@ -199,5 +205,5 @@ export function useSttSegments(params: {
 
   useEffect(() => stop, [])
 
-  return { configured, isListening, isTranscribing: pendingCount > 0, error, mode, liveText, toggle }
+  return { unresolved, configured, isListening, isTranscribing: pendingCount > 0, error, mode, liveText, toggle }
 }

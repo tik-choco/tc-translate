@@ -14,19 +14,8 @@ export function isNetworkProviderBaseUrl(baseUrl: string): boolean {
   return baseUrl.trim().startsWith(NETWORK_PROVIDER_URL_PREFIX)
 }
 
-/**
- * The name a shared preset is advertised under in `provider_hello.models`,
- * and the key incoming model-specific requests are matched back to a target
- * by: the preset's user-facing label, falling back to the raw model id when
- * the label is blank. Room-level convention (to be adopted by the other
- * tik-choco apps): the advertised strings are display names doubling as
- * opaque routing keys, NOT necessarily upstream model ids — consumers echo
- * them back verbatim and only the provider that advertised a name knows
- * which upstream preset it maps to. Wire-compatible with peers that
- * advertise plain model ids (label defaults to the model id).
- */
-export function advertisedModelName(target: { label: string; model: string }): string {
-  return target.label.trim() || target.model
+export function roomIdFromBaseUrl(baseUrl: string): string {
+  return isNetworkProviderBaseUrl(baseUrl) ? baseUrl.trim().slice(NETWORK_PROVIDER_URL_PREFIX.length) : ''
 }
 
 /** Sentinel voice-config model meaning "let the room's provider use its own configured TTS/STT model". Stored in the shared config's tts/stt model field alongside a mist-network pseudo-provider id; stripped from outgoing requests (an omitted wire model → provider's own default). */

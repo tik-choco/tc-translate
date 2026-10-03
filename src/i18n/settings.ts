@@ -1,23 +1,20 @@
-import type { MessageBundle } from './types'
+import { defineMessages } from './types'
 
 // Voice (TTS/STT) settings panel and network status panels. Keys are prefixed
 // with `voice-` / `network-` to avoid collisions with other bundles.
-export const settingsMessages = {
+export const settingsMessages = defineMessages({
   en: {
     'voice-tts-heading': 'TTS (text-to-speech)',
     'voice-tts-tip': "Model used to read text aloud. When not set, the browser's speech synthesis is used.",
     'voice-stt-heading': 'STT (speech-to-text)',
     'voice-stt-tip': "Model used to transcribe speech. When not set, the browser's speech recognition is used.",
     'voice-model-browser-option': 'Browser built-in (not set)',
-    'voice-model-network-auto-option': "AI Network (room's default)",
     'voice-tts-model-label': 'TTS model',
     'voice-tts-voice-label': 'TTS voice',
     'voice-provider-default-option': 'Provider default (not specified)',
     'voice-stt-model-label': 'STT model',
     'voice-connection-unresolved':
-      'No connection can be resolved: pick a model above, or add a connection in the AI Connection tab and set a default model in the Tasks tab.',
-    'voice-stt-unresolved-fallback': 'Until then, STT falls back to the browser recognizer.',
-    'voice-stt-model-missing': 'The STT model name is empty.',
+      'No connection can be resolved: pick a model above, or add a connection in the Connections tab and set a default model in the Tasks tab.',
     'voice-mic-label': 'Microphone',
     'voice-mic-default-option': 'Default microphone',
     'voice-mic-fallback-label': 'Microphone {index}',
@@ -35,15 +32,12 @@ export const settingsMessages = {
     'voice-stt-heading': 'STT（音声認識）',
     'voice-stt-tip': '音声入力の文字起こしに使うモデルです。未設定のときはブラウザの音声認識を使います。',
     'voice-model-browser-option': 'ブラウザ標準（未設定）',
-    'voice-model-network-auto-option': 'AI Network（ルームにおまかせ）',
     'voice-tts-model-label': 'TTS モデル',
     'voice-tts-voice-label': 'TTS ボイス',
     'voice-provider-default-option': 'provider 既定（未指定）',
     'voice-stt-model-label': 'STT モデル',
     'voice-connection-unresolved':
-      '接続先を解決できません。上のモデルを選び直すか、「AI接続」タブで接続先を追加し、「タスク」タブで既定のモデルを設定してください。',
-    'voice-stt-unresolved-fallback': 'それまで STT はブラウザ音声認識にフォールバックします。',
-    'voice-stt-model-missing': 'STT モデル名が未入力です。',
+      '接続先を解決できません。上のモデルを選び直すか、「接続先」タブで接続先を追加し、「タスク」タブで既定のモデルを設定してください。',
     'voice-mic-label': 'マイク',
     'voice-mic-default-option': '既定のマイク',
     'voice-mic-fallback-label': 'マイク {index}',
@@ -61,14 +55,11 @@ export const settingsMessages = {
     'voice-stt-heading': 'STT（语音转文字）',
     'voice-stt-tip': '用于语音转文字的模型。未设置时使用浏览器的语音识别。',
     'voice-model-browser-option': '浏览器内置（未设置）',
-    'voice-model-network-auto-option': 'AI 网络（由房间决定）',
     'voice-tts-model-label': 'TTS 模型',
     'voice-tts-voice-label': 'TTS 语音',
     'voice-provider-default-option': 'provider 默认（未指定）',
     'voice-stt-model-label': 'STT 模型',
-    'voice-connection-unresolved': '无法解析连接：请在上方重新选择模型，或在“AI 连接”标签页添加连接，并在“任务”标签页设置默认模型。',
-    'voice-stt-unresolved-fallback': '在此之前，STT 将回退到浏览器语音识别。',
-    'voice-stt-model-missing': '未填写 STT 模型名称。',
+    'voice-connection-unresolved': '无法找到可用连接：请在上方重新选择模型，或在“连接”标签页添加连接，并在“任务”标签页设置默认模型。',
     'voice-mic-label': '麦克风',
     'voice-mic-default-option': '默认麦克风',
     'voice-mic-fallback-label': '麦克风 {index}',
@@ -85,14 +76,11 @@ export const settingsMessages = {
     'voice-stt-heading': 'STT（語音轉文字）',
     'voice-stt-tip': '用於語音轉文字的模型。未設定時使用瀏覽器的語音辨識。',
     'voice-model-browser-option': '瀏覽器內建（未設定）',
-    'voice-model-network-auto-option': 'AI 網路（由房間決定）',
     'voice-tts-model-label': 'TTS 模型',
     'voice-tts-voice-label': 'TTS 語音',
     'voice-provider-default-option': 'provider 預設（未指定）',
     'voice-stt-model-label': 'STT 模型',
-    'voice-connection-unresolved': '無法解析連線：請在上方重新選擇模型，或在「AI 連線」分頁新增連線，並在「任務」分頁設定預設模型。',
-    'voice-stt-unresolved-fallback': '在此之前，STT 將回退為瀏覽器語音辨識。',
-    'voice-stt-model-missing': '未填寫 STT 模型名稱。',
+    'voice-connection-unresolved': '找不到可用連線：請在上方重新選擇模型，或在「連線」分頁新增連線，並在「任務」分頁設定預設模型。',
     'voice-mic-label': '麥克風',
     'voice-mic-default-option': '預設麥克風',
     'voice-mic-fallback-label': '麥克風 {index}',
@@ -103,4 +91,4 @@ export const settingsMessages = {
     'network-provider-tts-missing': '此 provider 尚未設定 TTS 端點。',
     'network-provider-stt-missing': '此 provider 尚未設定 STT 端點。',
   },
-} satisfies MessageBundle
+})

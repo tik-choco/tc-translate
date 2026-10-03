@@ -6,11 +6,13 @@
 
 import { MESSAGES_EN, MESSAGES_JA, type ConsumerStatus, type ProviderLogEntry } from '@tik-choco/mistai'
 import { ConsumerStatusIndicator, ProviderStatusPanel } from '@tik-choco/mistai/preact'
+import { useLayoutEffect, useRef } from 'preact/hooks'
 import { getUiLanguage, t } from '../i18n'
 import type { NetworkProviderPeer, NetworkProviderStatus } from '../hooks/useNetworkProvider'
 
 function mistaiMessages() {
-  return getUiLanguage() === 'ja' ? MESSAGES_JA : MESSAGES_EN
+  const messages = getUiLanguage() === 'ja' ? MESSAGES_JA : MESSAGES_EN
+  return { ...messages, consumerPhase: { idle: t('connection-phase-idle'), joining: t('connection-phase-joining'), searching: t('connection-phase-searching'), connected: t('connection-phase-connected'), error: t('connection-phase-error') } }
 }
 
 type NetworkConsumerIndicatorProps = {
@@ -21,14 +23,23 @@ type NetworkConsumerIndicatorProps = {
 }
 
 export function NetworkConsumerIndicator({ status, updatedAt, variant = 'compact' }: NetworkConsumerIndicatorProps) {
+  const header = useRef<HTMLSpanElement>(null)
+  const messages = mistaiMessages()
+  const tooltip = [messages.consumerPhase[status.phase], updatedAt ? t('connection-updated', { time: new Date(updatedAt).toLocaleTimeString() }) : '', status.phase === 'error' ? status.message : '', status.phase === 'connected' ? `provider: ${status.providerId}` : t('network-consumer-note')].filter(Boolean).join(' · ')
+  useLayoutEffect(() => {
+    const button = header.current?.querySelector('button')
+    if (button && variant === 'compact') button.title = tooltip
+  }, [tooltip, variant])
   return (
+    <span ref={header} class="room-header-status" title={tooltip}>
     <ConsumerStatusIndicator
       status={status}
-      updatedAt={updatedAt}
+      updatedAt={variant === 'detailed' ? updatedAt : undefined}
       variant={variant}
       note={t('network-consumer-note')}
-      messages={mistaiMessages()}
+      messages={messages}
     />
+    </span>
   )
 }
 

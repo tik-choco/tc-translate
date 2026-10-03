@@ -1,8 +1,8 @@
-import type { MessageBundle } from './types'
+import { defineMessages } from './types'
 
 // Translate tab: input panel, outputs, history, language picker. Keys are
 // prefixed with `translator-` / `history-` to avoid collisions.
-export const translatorMessages = {
+export const translatorMessages = defineMessages({
   en: {
     'translator-placeholder-image': 'Reading text from the image...',
     'translator-placeholder-default': 'Paste text, or drop an image/audio/PDF file, to translate or proofread...',
@@ -558,4 +558,4 @@ export const translatorMessages = {
     'translator-nuance-paused': '語氣已暫時關閉：{nuance}',
     'translator-nuance-applied': '語氣：{nuance}',
   },
-} satisfies MessageBundle
+})

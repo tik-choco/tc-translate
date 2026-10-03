@@ -68,7 +68,9 @@
 
   /* Motion */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
   --dur-fast: 150ms;
   --dur-med: 220ms;
 

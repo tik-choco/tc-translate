@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { defaultResolvedProvider } from '../constants'
 import { appendTranscript, createId, normalizeBaseUrl } from '../lib/format'
 import { speechCodeForLanguage } from '../lib/language'
-import { ensurePreset, ensureProvider } from '../lib/llmConfig'
-import { isNetworkProviderBaseUrl } from '../lib/networkModels'
+import { ensureProvider } from '../lib/llmConfig'
+import { refreshProviderModels } from '../lib/providerModels'
+import { roomIdFromBaseUrl } from '../lib/networkModels'
 import {
   loadMode,
   loadNativeLanguage,
@@ -26,8 +27,6 @@ import { useHistoryPanel } from './useHistoryPanel'
 import { useImageImport } from './useImageImport'
 import { useNetworkConsumerConnection } from './useNetworkConsumerConnection'
 import { useNetworkConsumerStatusWithTimestamp } from './useNetworkConsumerStatus'
-import { useNetworkModelSync } from './useNetworkModelSync'
-import { useNetworkProvider } from './useNetworkProvider'
 import { usePdfImport } from './usePdfImport'
 import { useProofread } from './useProofread'
 import { useProviderSettings } from './useProviderSettings'
@@ -58,12 +57,10 @@ export function useTranslator() {
   const { ttsSettings, sttSettings } = voiceSettingsHook
   const historyPanel = useHistoryPanel()
   const { history, updateHistory, addHistoryItem, patchHistoryItem } = historyPanel
-  const networkProvider = useNetworkProvider(settings, ttsSettings, sttSettings, llmConfigState.config)
-  useNetworkConsumerConnection(settings)
-  const { status: networkConsumerStatus, updatedAt: networkConsumerUpdatedAt } = useNetworkConsumerStatusWithTimestamp()
-  useNetworkModelSync(settings, networkConsumerStatus, llmConfigState)
-
   const [showSettings, setShowSettings] = useState(false)
+  useNetworkConsumerConnection(settings, llmConfigState, showSettings)
+  const { status: networkConsumerStatus, updatedAt: networkConsumerUpdatedAt } = useNetworkConsumerStatusWithTimestamp(roomIdFromBaseUrl(settings.baseUrl))
+
   const [showLanguageMenu, setShowLanguageMenu] = useState(false)
   const languageSelectRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -177,7 +174,7 @@ export function useTranslator() {
     onDone: handleExampleDone,
   })
 
-  const speech = useSpeech({ ttsSettings, llmConfig: llmConfigState.config, roomId: settings.roomId })
+  const speech = useSpeech({ ttsSettings, llmConfig: llmConfigState.config })
 
   function appendSourceText(text: string): void {
     setSourceText((current) => appendTranscript(current, text))
@@ -186,7 +183,6 @@ export function useTranslator() {
   const transcription = useTranscription({
     sttSettings,
     llmConfig: llmConfigState.config,
-    roomId: settings.roomId,
     speechLang: speechCodeForLanguage(nativeLanguage),
     onTranscribed: appendSourceText,
   })
@@ -207,13 +203,13 @@ export function useTranslator() {
     () =>
       Boolean(
         sourceText.trim() &&
-          (settings.connection === 'network' ? settings.roomId.trim() : settings.model.trim() && normalizeBaseUrl(settings.baseUrl)),
+          (settings.model.trim() && normalizeBaseUrl(settings.baseUrl)),
       ),
     [settings, sourceText],
   )
 
   const hasProviderConfigured =
-    settings.connection === 'network' ? Boolean(settings.roomId.trim()) : Boolean(settings.model.trim() && normalizeBaseUrl(settings.baseUrl))
+    Boolean(settings.model.trim() && normalizeBaseUrl(settings.baseUrl))
 
   // Distinct from hasProviderConfigured: that only checks the fields are
   // non-empty (and defaults pre-fill baseUrl/model), so it's already true on
@@ -221,9 +217,7 @@ export function useTranslator() {
   // case - default OpenAI endpoint with no API key entered - so first-time
   // users get a setup guide instead of a silent 401 on their first translate.
   const providerNeedsSetup =
-    settings.connection === 'network'
-      ? !settings.roomId.trim()
-      : !settings.apiKey.trim() &&
+    !settings.model.trim() || !settings.apiKey.trim() &&
         (!normalizeBaseUrl(settings.baseUrl) || normalizeBaseUrl(settings.baseUrl) === normalizeBaseUrl(defaultResolvedProvider.baseUrl))
 
   const backTranslationSourceText = selectedHistory?.sourceText ?? result?.sourceText ?? sourceText
@@ -396,24 +390,18 @@ export function useTranslator() {
 
   /**
    * Quick setup from the onboarding wizard: writes one connection into the
-   * shared config's default preset (edited in place unless it is a
-   * network-imported preset, otherwise a new preset becomes the default) and
-   * switches translation to the direct API.
+   * shared config and selects it as the default model.
    */
   function applyQuickConnection(input: { baseUrl: string; apiKey: string; model: string }): void {
     const model = input.model.trim()
+    let providerId = ''
     llmConfigState.save((config) => {
-      const providerId = ensureProvider(config, { baseUrl: input.baseUrl, apiKey: input.apiKey })
-      const current = config.presets.find((preset) => preset.id === config.defaultPresetId)
-      const currentProvider = config.providers.find((provider) => provider.id === current?.providerId)
-      if (current && !(currentProvider && isNetworkProviderBaseUrl(currentProvider.baseUrl))) {
-        current.providerId = providerId
-        current.model = model
-      } else {
-        config.defaultPresetId = ensurePreset(config, { providerId, model, label: model })
-      }
+      providerId = ensureProvider(config, { baseUrl: input.baseUrl, apiKey: input.apiKey })
+      const provider = config.providers.find(p => p.id === providerId)
+      if (provider) { provider.enabled = true; provider.models = [...new Set([...(provider.models ?? []), model])] }
+      config.defaultModel = { providerId, model }
     })
-    if (settings.connection !== 'api') providerSettings.updateSettings({ ...settings, connection: 'api' })
+    void refreshProviderModels(providerId, true)
   }
 
   const { handleTranslate, handleCheckBackTranslation, copyTranslation, cancelTranslate } = useTranslationActions({
@@ -515,9 +503,9 @@ export function useTranslator() {
     setShowOnboarding(false)
   }, [])
   const closeSettings = useCallback(() => setShowSettings(false), [])
-  const refreshModels = useStableCallback(() => void providerSettings.loadModels())
 
   return {
+    llmConfigState,
     ...providerSettings,
     ...voiceSettingsHook,
     ...historyPanel,
@@ -603,7 +591,6 @@ export function useTranslator() {
     downloadSpeech: stableDownloadSpeech,
     openSettings,
     closeSettings,
-    refreshModels,
     micSupported: transcription.supported,
     isRecording: transcription.isRecording,
     isTranscribing: transcription.isTranscribing,
@@ -615,7 +602,7 @@ export function useTranslator() {
     pdfImportError: pdfImport.pdfImportError,
     pdfPageProgress: pdfImport.pdfPageProgress,
     importPdfFile: pdfImport.importPdfFile,
-    networkProvider,
+
     networkConsumerStatus,
     networkConsumerUpdatedAt,
     providerNeedsSetup,

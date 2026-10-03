@@ -1,3 +1,4 @@
+import { isModelRef } from './llmConfig'
 import {
   defaultLocalSettings,
   defaultLocalSttSettings,
@@ -59,15 +60,7 @@ function buildSourcePreview(sourceText: string): string {
     : sourceText
 }
 
-// These keys hold only tc-translate-local settings; baseUrl/apiKey/model/
-// temperature now live in the shared `tc-shared-llm-config-v1` key (see
-// hooks/useSharedLlmConfig.ts, which runs the one-time migration off of
-// these keys' pre-migration shape before anything here is read). The TTS
-// engine choice is no longer stored at all - it's derived from the shared
-// config (see deriveVoiceEngine in lib/voice.ts) - so there's no local TTS
-// settings key/loader anymore; `sttSettingsStorageKey` now only holds
-// `micDeviceId`.
-
+// Only task choices, room providing, recents and microphone selection are app-local.
 function parseReasoningEffort(value: unknown): ReasoningEffort {
   return value === 'minimal' || value === 'low' || value === 'medium' || value === 'high' || value === 'xhigh' || value === 'max' ? value : 'none'
 }
@@ -83,17 +76,12 @@ export function loadSettings(): LocalProviderSettings {
   try {
     const stored = JSON.parse(localStorage.getItem(settingsStorageKey) ?? '{}') as Partial<LocalProviderSettings>
     return {
-      connection: stored.connection === 'network' ? 'network' : 'api',
-      networkProviderEnabled:
-        typeof stored.networkProviderEnabled === 'boolean'
-          ? stored.networkProviderEnabled
-          : defaultLocalSettings.networkProviderEnabled,
-      visionPresetId: typeof stored.visionPresetId === 'string' ? stored.visionPresetId : defaultLocalSettings.visionPresetId,
-      networkProviderPresetIds: Array.isArray(stored.networkProviderPresetIds)
-        ? stored.networkProviderPresetIds.filter((id): id is string => typeof id === 'string')
-        : defaultLocalSettings.networkProviderPresetIds,
-      defaultReasoningEffort: parseReasoningEffort(stored.defaultReasoningEffort),
-      visionReasoningEffort: parseReasoningEffort(stored.visionReasoningEffort),
+      tasks: {
+        default: { ref: isModelRef(stored.tasks?.default?.ref) ? stored.tasks.default.ref : undefined, reasoningEffort: parseReasoningEffort(stored.tasks?.default?.reasoningEffort) },
+        vision: { ref: isModelRef(stored.tasks?.vision?.ref) ? stored.tasks.vision.ref : undefined, reasoningEffort: parseReasoningEffort(stored.tasks?.vision?.reasoningEffort) },
+      },
+      roomProvide: Object.fromEntries(Object.entries(stored.roomProvide ?? {}).filter(([, v]) => v && typeof v.enabled === 'boolean').map(([id, v]) => [id, { enabled: v.enabled, shared: Array.isArray(v.shared) ? v.shared.filter(isModelRef) : [] }])),
+      recentModels: Array.isArray(stored.recentModels) ? stored.recentModels.filter(isModelRef).slice(0, 8) : [],
       performanceMode: parsePerformanceMode(stored),
     }
   } catch {
@@ -107,35 +95,6 @@ export function saveSettings(settings: LocalProviderSettings): void {
   } catch (err) {
     console.warn('tc-translate: failed to save provider settings', err)
   }
-}
-
-/**
- * Repoints `visionPresetId`/any `networkProviderPresetIds` entry naming a
- * preset id in `remap`'s keys at its mapped surviving id instead. Used by
- * `useNetworkModelSync`'s mirror self-heal
- * (`lib/networkMirrorSync.ts#consolidateNetworkMirror`) after it merges
- * duplicate mist-network:// presets for the same advertised model into one
- * survivor: without this, `visionPresetId` (or a network-provider share
- * entry) that had been pointing at one of the now-removed duplicates would
- * silently degrade to "unset"/drop out of the shared list instead of
- * continuing to point at the same model under its surviving id. A no-op
- * (never calls `saveSettings`) when nothing in the current settings actually
- * names a remapped id.
- */
-export function remapPresetIdReferences(remap: ReadonlyMap<string, string>): void {
-  if (remap.size === 0) return
-  const current = loadSettings()
-  let changed = false
-
-  const remappedVisionPresetId = current.visionPresetId ? remap.get(current.visionPresetId) : undefined
-  const visionPresetId = remappedVisionPresetId ?? current.visionPresetId
-  if (remappedVisionPresetId) changed = true
-
-  const networkProviderPresetIds = current.networkProviderPresetIds.map((id) => remap.get(id) ?? id)
-  if (networkProviderPresetIds.some((id, i) => id !== current.networkProviderPresetIds[i])) changed = true
-
-  if (!changed) return
-  saveSettings({ ...current, visionPresetId, networkProviderPresetIds })
 }
 
 export function loadSttSettings(): LocalSttSettings {

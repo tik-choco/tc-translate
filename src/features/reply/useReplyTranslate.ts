@@ -53,7 +53,7 @@ export function useReplyTranslate({ settings, nativeLanguage, nuance, onDone }: 
   const incomingGeneration = useRef(0)
 
   const providerConfigured = Boolean(
-    settings.connection === 'network' ? settings.roomId.trim() : settings.model.trim() && normalizeBaseUrl(settings.baseUrl),
+    settings.model.trim() && normalizeBaseUrl(settings.baseUrl),
   )
 
   const canTranslate = useMemo(

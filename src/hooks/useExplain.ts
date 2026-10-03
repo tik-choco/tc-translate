@@ -25,7 +25,7 @@ export function useExplain({ settings, sourceText, nativeLanguage, onDone, onRub
     () =>
       Boolean(
         sourceText.trim() &&
-          (settings.connection === 'network' ? settings.roomId.trim() : settings.model.trim() && normalizeBaseUrl(settings.baseUrl)),
+          (settings.model.trim() && normalizeBaseUrl(settings.baseUrl)),
       ),
     [settings, sourceText],
   )

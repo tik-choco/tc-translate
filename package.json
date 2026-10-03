@@ -9,7 +9,8 @@
     "prebuild": "node scripts/fetch-mistlib.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "fetch-mistlib": "node scripts/fetch-mistlib.mjs"
+    "fetch-mistlib": "node scripts/fetch-mistlib.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",

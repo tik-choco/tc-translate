@@ -1,8 +1,8 @@
+import { modelMessages } from './models'
 import { languageSpeechCodes } from '../constants'
 import { loadNativeLanguage } from '../lib/storage'
 import { appMessages } from './app'
 import { featureMessages } from './features'
-import { llmSettingsMessages } from './llmSettings'
 import { onboardingMessages } from './onboarding'
 import { settingsMessages } from './settings'
 import { translatorMessages } from './translator'
@@ -13,34 +13,34 @@ export type { UiLanguage } from './types'
 const tables: Record<UiLanguage, MessageTable> = {
   en: {
     ...appMessages.en,
+    ...modelMessages.en,
     ...settingsMessages.en,
     ...translatorMessages.en,
     ...featureMessages.en,
-    ...llmSettingsMessages.en,
     ...onboardingMessages.en,
   },
   ja: {
     ...appMessages.ja,
+    ...modelMessages.ja,
     ...settingsMessages.ja,
     ...translatorMessages.ja,
     ...featureMessages.ja,
-    ...llmSettingsMessages.ja,
     ...onboardingMessages.ja,
   },
   'zh-CN': {
     ...appMessages['zh-CN'],
+    ...modelMessages['zh-CN'],
     ...settingsMessages['zh-CN'],
     ...translatorMessages['zh-CN'],
     ...featureMessages['zh-CN'],
-    ...llmSettingsMessages['zh-CN'],
     ...onboardingMessages['zh-CN'],
   },
   'zh-TW': {
     ...appMessages['zh-TW'],
+    ...modelMessages['zh-TW'],
     ...settingsMessages['zh-TW'],
     ...translatorMessages['zh-TW'],
     ...featureMessages['zh-TW'],
-    ...llmSettingsMessages['zh-TW'],
     ...onboardingMessages['zh-TW'],
   },
 }

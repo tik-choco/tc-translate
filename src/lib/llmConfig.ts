@@ -1,32 +1,4 @@
-// Shared LLM/TTS/STT connection config for the tik-choco app family, vendored
-// identically (modulo TS/JS syntax) into every participating app. See
-// protocol/docs/data-contracts/docs/llm-config.md for the full spec.
-// Contract version: v1
-//
-// Design: this module does NOT depend on mistlib or sharedBus.ts. Unlike
-// appManifest.ts (one key per app, writer-owned) this key is co-owned: every
-// participating app reads AND writes the same localStorage record, so a user
-// only has to enter their LLM endpoint/API key once per origin instead of
-// once per app. Same-origin apps mutually trust each other; conflicts are
-// resolved last-write-wins by `updatedAt`. See docs/did-identity.md for the
-// precedent of this co-owned-shared-key pattern
-// (`tc-shared-did-identity-cid-v1`).
-//
-// Merge/migration policy (enforced by convention, not code): apps seeding
-// this config from their own legacy local settings must loadLlmConfig() (or
-// start from emptyLlmConfig() if null), add entries via ensureProvider/
-// ensurePreset (which only ever append, never delete or overwrite existing
-// entries), set `defaultPresetId`/`tts`/`stt`/`network.roomId` ONLY if
-// currently empty/absent, then call saveLlmConfig(). Never blind-overwrite
-// another app's providers/presets.
-//
-// This is the canonical reference copy
-// (protocol/docs/data-contracts/reference/llmConfig.ts). Don't hand-edit the
-// vendored per-app copies directly — regenerate them with
-// protocol/scripts/sync-vendored.mjs instead. Like appManifest.ts, this file
-// has no per-app placeholder to substitute: the vendored copy is
-// byte-identical everywhere.
-
+// Shared v1 contract. Legacy preset/network fields are read for migration only.
 export const LLM_CONFIG_KEY = "tc-shared-llm-config-v1";
 export const LLM_CONFIG_VERSION = 1;
 
@@ -36,6 +8,9 @@ export type LlmProviderV1 = {
   label: string;
   baseUrl: string;
   apiKey: string;
+  enabled?: boolean;
+  models?: string[];
+  modelsFetchedAt?: string;
 };
 
 /** 名前付きモデル設定 = 「どう呼ぶか」。providerId で LlmProviderV1 を参照 */
@@ -48,7 +23,7 @@ export type ModelPresetV1 = {
   reasoningEffort?: string;
 };
 
-/** TTS/STT。providerId 省略時は defaultPreset の provider にフォールバック */
+/** TTS/STT。providerId 省略時は defaultModel の provider を使用 */
 export type VoiceConfigV1 = {
   providerId?: string;
   model: string;
@@ -56,7 +31,11 @@ export type VoiceConfigV1 = {
   speed?: number;
 };
 
+export type ModelRefV1 = { providerId: string; model: string };
+export type ModelRef = ModelRefV1;
+
 export type SharedLlmConfigV1 = {
+  defaultModel?: ModelRefV1;
   v: 1;
   providers: LlmProviderV1[];
   presets: ModelPresetV1[];
@@ -70,18 +49,18 @@ export type SharedLlmConfigV1 = {
   updatedAt: string;
 };
 
-/** resolvePreset() の解決結果。provider の接続情報と preset のモデル設定を1つにマージしたもの。 */
-export type ResolvedLlmTargetV1 = {
-  presetId: string;
-  providerId: string;
-  /** preset の label */
+export type ResolvedLlmTargetV1 = ModelRefV1 & {
   label: string;
   baseUrl: string;
   apiKey: string;
-  model: string;
-  temperature?: number;
   reasoningEffort?: string;
 };
+
+export function isModelRef(value: unknown): value is ModelRefV1 {
+  if (!value || typeof value !== 'object') return false;
+  const ref = value as ModelRefV1;
+  return typeof ref.providerId === 'string' && typeof ref.model === 'string';
+}
 
 function isLlmProviderV1(value: unknown): value is LlmProviderV1 {
   if (value === null || typeof value !== "object") return false;
@@ -90,7 +69,10 @@ function isLlmProviderV1(value: unknown): value is LlmProviderV1 {
     typeof record.id === "string" &&
     typeof record.label === "string" &&
     typeof record.baseUrl === "string" &&
-    typeof record.apiKey === "string"
+    typeof record.apiKey === "string" &&
+    (record.enabled === undefined || typeof record.enabled === "boolean") &&
+    (record.models === undefined || (Array.isArray(record.models) && record.models.every(m => typeof m === "string"))) &&
+    (record.modelsFetchedAt === undefined || typeof record.modelsFetchedAt === "string")
   );
 }
 
@@ -131,25 +113,22 @@ function sanitizeLlmConfig(value: unknown): SharedLlmConfigV1 | null {
 
   if (record.v !== 1) return null;
   if (!Array.isArray(record.providers)) return null;
-  if (!Array.isArray(record.presets)) return null;
-  if (typeof record.defaultPresetId !== "string") return null;
-  if (record.network === null || typeof record.network !== "object") return null;
-  const network = record.network as Record<string, unknown>;
-  if (typeof network.roomId !== "string") return null;
+  const network = (record.network ?? {}) as Record<string, unknown>;
   if (typeof record.updatedAt !== "string") return null;
 
   const config: SharedLlmConfigV1 = {
     v: 1,
     providers: record.providers.filter(isLlmProviderV1),
-    presets: record.presets.filter(isModelPresetV1),
-    defaultPresetId: record.defaultPresetId,
-    network: { roomId: network.roomId },
+    presets: Array.isArray(record.presets) ? record.presets.filter(isModelPresetV1) : [],
+    defaultPresetId: typeof record.defaultPresetId === "string" ? record.defaultPresetId : "",
+    network: { roomId: typeof network.roomId === "string" ? network.roomId : "" },
     updatedAt: record.updatedAt,
   };
 
   if (record.tts !== undefined && isVoiceConfigV1(record.tts)) config.tts = record.tts;
   if (record.stt !== undefined && isVoiceConfigV1(record.stt)) config.stt = record.stt;
 
+  if (isModelRef(record.defaultModel)) config.defaultModel = record.defaultModel;
   return config;
 }
 
@@ -202,6 +181,8 @@ export function loadLlmConfig(): SharedLlmConfigV1 | null {
 export function saveLlmConfig(config: SharedLlmConfigV1): void {
   config.updatedAt = new Date().toISOString();
   try {
+    // presets/defaultPresetId/network are written back unchanged: unmigrated
+    // apps on the same origin still require them to accept the record at all.
     localStorage.setItem(LLM_CONFIG_KEY, JSON.stringify(config));
   } catch (error) {
     console.warn("tc-shared-llm-config: failed to persist config", error);
@@ -248,108 +229,23 @@ export function ensureProvider(
   return id;
 }
 
-/**
- * Finds-or-creates a preset. If `input.id` is given and a preset with that id
- * already exists, it is returned unchanged (an explicit id is never
- * overwritten). Otherwise dedupes by
- * `(providerId, model, temperature ?? null, reasoningEffort ?? null)`.
- * Mutates `config.presets` in place (push-only); the caller is responsible
- * for calling `saveLlmConfig` afterwards.
- */
-export function ensurePreset(
-  config: SharedLlmConfigV1,
-  input: {
-    id?: string;
-    label?: string;
-    providerId: string;
-    model: string;
-    temperature?: number;
-    reasoningEffort?: string;
-  },
-): string {
-  if (input.id) {
-    const byId = config.presets.find((p) => p.id === input.id);
-    if (byId) return byId.id;
-  }
-
-  const temperature = input.temperature ?? null;
-  const reasoningEffort = input.reasoningEffort ?? null;
-  const existing = config.presets.find(
-    (p) =>
-      p.providerId === input.providerId &&
-      p.model === input.model &&
-      (p.temperature ?? null) === temperature &&
-      (p.reasoningEffort ?? null) === reasoningEffort,
-  );
-  if (existing) return existing.id;
-
-  const preset: ModelPresetV1 = {
-    id: input.id ?? newId(),
-    label: input.label || input.model,
-    providerId: input.providerId,
-    model: input.model,
-  };
-  if (input.temperature !== undefined) preset.temperature = input.temperature;
-  if (input.reasoningEffort !== undefined) preset.reasoningEffort = input.reasoningEffort;
-
-  config.presets.push(preset);
-  return preset.id;
+/** Resolve exactly, without default fallback (used for the share list). */
+export function resolveModelExact(config: SharedLlmConfigV1, ref?: ModelRefV1): ResolvedLlmTargetV1 | null {
+  if (!ref?.model.trim()) return null;
+  const provider = config.providers.find(p => p.id === ref.providerId);
+  if (!provider || provider.enabled === false || !provider.baseUrl.trim()) return null;
+  return { ...ref, label: provider.label, baseUrl: provider.baseUrl, apiKey: provider.apiKey };
 }
 
-/**
- * Resolves `presetId` (or, if omitted/not found, `config.defaultPresetId`)
- * to a preset and merges it with its provider's connection info. Returns
- * null if no preset can be found or its provider no longer exists.
- */
-export function resolvePreset(config: SharedLlmConfigV1, presetId?: string | null): ResolvedLlmTargetV1 | null {
-  const preset =
-    (presetId ? config.presets.find((p) => p.id === presetId) : undefined) ??
-    config.presets.find((p) => p.id === config.defaultPresetId);
-  if (!preset) return null;
-
-  const provider = config.providers.find((p) => p.id === preset.providerId);
-  if (!provider) return null;
-
-  const resolved: ResolvedLlmTargetV1 = {
-    presetId: preset.id,
-    providerId: provider.id,
-    label: preset.label,
-    baseUrl: provider.baseUrl,
-    apiKey: provider.apiKey,
-    model: preset.model,
-  };
-  if (preset.temperature !== undefined) resolved.temperature = preset.temperature;
-  if (preset.reasoningEffort !== undefined) resolved.reasoningEffort = preset.reasoningEffort;
-  return resolved;
+/** A missing task ref follows the default; an unusable ref may use only that default. */
+export function resolveModel(config: SharedLlmConfigV1, ref?: ModelRefV1): ResolvedLlmTargetV1 | null {
+  return resolveModelExact(config, ref ?? config.defaultModel) ?? resolveModelExact(config, config.defaultModel);
 }
 
-/**
- * Resolves `config.tts`/`config.stt` to concrete connection info. Returns
- * null if the voice config is absent, has no `model`, or its provider (the
- * explicit `providerId`, or else the provider of `resolvePreset(config)`)
- * can't be found.
- */
-export function resolveVoice(
-  config: SharedLlmConfigV1,
-  kind: "tts" | "stt",
-): { baseUrl: string; apiKey: string; model: string; voice?: string; speed?: number } | null {
-  const cfg = config[kind];
-  if (!cfg || !cfg.model) return null;
-
-  const provider = cfg.providerId
-    ? config.providers.find((p) => p.id === cfg.providerId)
-    : (() => {
-        const defaultTarget = resolvePreset(config);
-        return defaultTarget ? config.providers.find((p) => p.id === defaultTarget.providerId) : undefined;
-      })();
-  if (!provider) return null;
-
-  const resolved: { baseUrl: string; apiKey: string; model: string; voice?: string; speed?: number } = {
-    baseUrl: provider.baseUrl,
-    apiKey: provider.apiKey,
-    model: cfg.model,
-  };
-  if (cfg.voice !== undefined) resolved.voice = cfg.voice;
-  if (cfg.speed !== undefined) resolved.speed = cfg.speed;
-  return resolved;
+export function resolveVoice(config: SharedLlmConfigV1, kind: 'tts' | 'stt') {
+  const voice = config[kind];
+  if (!voice?.model) return null;
+  const ref = { providerId: voice.providerId ?? config.defaultModel?.providerId ?? '', model: voice.model };
+  const target = resolveModel(config, ref);
+  return target ? { ...target, voice: voice.voice, speed: voice.speed } : null;
 }

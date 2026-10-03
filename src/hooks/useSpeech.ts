@@ -1,5 +1,8 @@
+import { t } from '../i18n'
+import { resolveVoice } from '../lib/llmConfig'
+import { roomIdFromBaseUrl } from '../lib/networkModels'
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { localizeNetworkError, networkClient, requestNetworkTts } from '../lib/network'
+import { localizeNetworkError, requestNetworkTts } from '../lib/network'
 import { networkVoiceModelParam } from '../lib/networkModels'
 import { resolveTtsConnection, synthesizeSpeech } from '../lib/voice'
 import type { SharedLlmConfigV1 } from '../lib/llmConfig'
@@ -8,28 +11,19 @@ import type { TtsSettings } from '../types'
 type UseSpeechParams = {
   ttsSettings: TtsSettings
   llmConfig: SharedLlmConfigV1
-  roomId: string
 }
 
-/** DevTools-only diagnostics for a failed API/network TTS attempt: the raw
- * error alongside the consumer's current provider table (which peers are
- * connected and what `services`/`voices` each one advertised in its last
- * `provider_hello`) — the single most useful thing to check when "no tts
- * provider was found" (was a provider even discovered? did it advertise
- * "tts"?) vs. an actual upstream failure needs telling apart on a real
- * device where there's no other way to see the wire state. Console-only by
- * design: this can be a lot of detail, and the AI Network status display
- * already covers the UI-facing summary. */
 function logTtsFailureDiagnostics(err: unknown): void {
-  console.warn('[useSpeech] TTS request failed; falling back to the browser voice.', err, {
-    consumerStatus: networkClient.status,
-  })
+  console.warn('[useSpeech] TTS request failed; falling back to the browser voice.', err)
 }
 
-export function useSpeech({ ttsSettings, llmConfig, roomId }: UseSpeechParams) {
+export function useSpeech({ ttsSettings, llmConfig }: UseSpeechParams) {
   const browserSupported = typeof window !== 'undefined' && 'speechSynthesis' in window
   const connection = resolveTtsConnection(llmConfig)
-  const apiConfigured = Boolean(connection.baseUrl && ttsSettings.model.trim())
+  const resolvedVoice = resolveVoice(llmConfig, 'tts')
+  const roomId = roomIdFromBaseUrl(connection.baseUrl)
+  const voiceModel = resolvedVoice?.model ?? ''
+  const apiConfigured = Boolean(connection.baseUrl && voiceModel.trim())
   const roomConfigured = Boolean(roomId.trim())
   const useNetworkEngine = ttsSettings.engine === 'network' && roomConfigured
   const useApiEngine = ttsSettings.engine === 'api' && apiConfigured
@@ -135,6 +129,7 @@ export function useSpeech({ ttsSettings, llmConfig, roomId }: UseSpeechParams) {
   }
 
   function speak(text: string, lang: string | undefined, id: string): void {
+    if (ttsSettings.model && !resolvedVoice) { setSpeechError(t('voice-connection-unresolved')); return }
     if (!supported || !text.trim()) return
 
     if (speakingId === id || loadingId === id) {
@@ -146,7 +141,7 @@ export function useSpeech({ ttsSettings, llmConfig, roomId }: UseSpeechParams) {
 
     if (useNetworkEngine) {
       void playFromSource(
-        () => requestNetworkTts(roomId, { text, model: networkVoiceModelParam(ttsSettings.model), voice: ttsSettings.voice }),
+        () => requestNetworkTts(roomId, { text, model: networkVoiceModelParam(voiceModel), voice: ttsSettings.voice }),
         text,
         lang,
         id,
@@ -156,7 +151,7 @@ export function useSpeech({ ttsSettings, llmConfig, roomId }: UseSpeechParams) {
 
     if (useApiEngine) {
       void playFromSource(
-        () => synthesizeSpeech({ connection, model: ttsSettings.model, voice: ttsSettings.voice, text }),
+        () => synthesizeSpeech({ connection, model: voiceModel, voice: ttsSettings.voice, text }),
         text,
         lang,
         id,
@@ -225,8 +220,8 @@ export function useSpeech({ ttsSettings, llmConfig, roomId }: UseSpeechParams) {
     const generation = ++downloadGenerationRef.current
 
     const getBlob = useNetworkEngine
-      ? () => requestNetworkTts(roomId, { text, model: networkVoiceModelParam(ttsSettings.model), voice: ttsSettings.voice })
-      : () => synthesizeSpeech({ connection, model: ttsSettings.model, voice: ttsSettings.voice, text })
+      ? () => requestNetworkTts(roomId, { text, model: networkVoiceModelParam(voiceModel), voice: ttsSettings.voice })
+      : () => synthesizeSpeech({ connection, model: voiceModel, voice: ttsSettings.voice, text })
 
     setSpeechError('')
     setDownloadingId(id)

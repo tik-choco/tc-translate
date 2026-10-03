@@ -86,12 +86,9 @@ export const defaultNuance: TranslationNuance = { intimacy: 'neutral', stance: '
 
 // New app-local defaults (post shared-llm-config migration / fresh installs).
 export const defaultLocalSettings: LocalProviderSettings = {
-  connection: 'api',
-  networkProviderEnabled: false,
-  visionPresetId: '',
-  networkProviderPresetIds: [],
-  defaultReasoningEffort: 'none',
-  visionReasoningEffort: 'none',
+  tasks: { default: { reasoningEffort: 'none' }, vision: { reasoningEffort: 'none' } },
+  roomProvide: {},
+  recentModels: [],
   performanceMode: 'normal',
 }
 
@@ -102,16 +99,10 @@ export const defaultLocalSttSettings: LocalSttSettings = {
   micDeviceId: '',
 }
 
-// Fallback connection info used when the shared llm config has no default
-// preset yet (fresh install, or migration skipped seeding from pristine
-// legacy defaults). Mirrors the pre-migration defaults so first-run UX
-// (baseUrl pre-filled, providerNeedsSetup gating) is unchanged.
+// Legacy endpoint used only to recognize untouched setup data.
 export const defaultResolvedProvider = {
   baseUrl: 'https://api.openai.com/v1',
   apiKey: '',
-  model: 'gpt-4o-mini',
-  visionModel: 'gpt-4o-mini',
-  temperature: 0.2,
 }
 
 // Pre-migration defaults, used only to fill Partial<Legacy*Settings> read
@@ -120,9 +111,9 @@ export const defaultResolvedProvider = {
 export const legacyDefaultSettings: LegacyProviderSettings = {
   baseUrl: defaultResolvedProvider.baseUrl,
   apiKey: defaultResolvedProvider.apiKey,
-  model: defaultResolvedProvider.model,
-  visionModel: defaultResolvedProvider.visionModel,
-  temperature: defaultResolvedProvider.temperature,
+  model: 'gpt-4o-mini',
+  visionModel: 'gpt-4o-mini',
+  temperature: 0.2,
   connection: 'api',
   roomId: '',
   networkProviderEnabled: false,
@@ -345,15 +336,3 @@ export const languageSpeechCodes: Record<string, string> = {
   Bengali: 'bn-BD',
   Hebrew: 'he-IL',
 }
-
-export const fallbackModelOptions = [
-  'gpt-4o-mini',
-  'gpt-4o',
-  'llama3.2',
-  'llama3.1',
-  'qwen2.5',
-  'qwen3',
-  'mistral',
-  'gemma3',
-  'deepseek-r1',
-]

@@ -1,8 +1,8 @@
-import type { MessageBundle } from './types'
+import { defineMessages } from './types'
 
 // Kanji converter, Transcribe, and Reply tabs. Keys are prefixed with
 // `kanji-` / `transcribe-` / `reply-` to avoid collisions with other bundles.
-export const featureMessages = {
+export const featureMessages = defineMessages({
   en: {
     'kanji-input-label': 'Input',
     'kanji-input-placeholder': 'Enter Japanese or Chinese text',
@@ -239,4 +239,4 @@ export const featureMessages = {
     'reply-empty': '翻譯後的回覆將顯示於此',
     'reply-backcheck-label': '回譯',
   },
-} satisfies MessageBundle
+})
