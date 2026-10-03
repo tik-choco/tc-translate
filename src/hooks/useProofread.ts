@@ -21,7 +21,7 @@ export function useProofread({ settings, sourceText, nativeLanguage, onDone }: U
     () =>
       Boolean(
         sourceText.trim() &&
-          (settings.connection === 'network' ? settings.roomId.trim() : settings.model.trim() && normalizeBaseUrl(settings.baseUrl)),
+          (settings.model.trim() && normalizeBaseUrl(settings.baseUrl)),
       ),
     [settings, sourceText],
   )

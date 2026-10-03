@@ -35,6 +35,7 @@ let realNode: MistNode | null = null
 let realNodeId: string | null = null
 const liveHandles = new Set<SharedMistNodeHandle>()
 const roomRefCounts = new Map<string, number>()
+const roomJoins = new Map<string, Promise<void>>()
 
 function ensureRealNode(nodeId: string): MistNode {
   if (!realNode) {
@@ -58,16 +59,23 @@ function ensureRealNode(nodeId: string): MistNode {
 
 class SharedMistNodeHandle implements MistNodeLike {
   private readonly nodeId: string
+  private readonly initialRoom?: string
   private readonly rooms = new Set<string>()
   private handler: ((eventType: number, fromId: string, payload: unknown) => void) | null = null
 
-  constructor(nodeId: string) {
+  constructor(nodeId: string, roomId?: string) {
     this.nodeId = nodeId
+    this.initialRoom = roomId
   }
 
   async init(): Promise<void> {
     await ensureSharedMistNodeReady(this.nodeId)
     liveHandles.add(this)
+    if (this.initialRoom) {
+      this.joinRoom(this.initialRoom)
+      try { await roomJoins.get(this.initialRoom) }
+      catch (error) { this.leaveRoom(); throw error }
+    }
   }
 
   onEvent(handler: (eventType: number, fromId: string, payload: unknown) => void): void {
@@ -79,9 +87,21 @@ class SharedMistNodeHandle implements MistNodeLike {
       this.rooms.add(roomId)
       roomRefCounts.set(roomId, (roomRefCounts.get(roomId) ?? 0) + 1)
     }
-    // Re-joining an already-joined room is an idempotent re-announce per the
-    // wrapper, so no need to guard the underlying call.
-    realNode?.joinRoom(roomId)
+    if (!roomJoins.has(roomId) && realNode) {
+      // mistai's joinRoom interface is synchronous. Buffer early hellos until
+      // the wrapper confirms the room is usable, then send in that room only.
+      const joined = realNode.joinRoomAsync(roomId).then(() => {
+        if (!roomRefCounts.has(roomId)) {
+          realNode?.leaveRoom(roomId)
+          roomJoins.delete(roomId)
+        }
+      })
+      roomJoins.set(roomId, joined)
+      void joined.catch(error => {
+        if (roomJoins.get(roomId) === joined) roomJoins.delete(roomId)
+        console.warn(`tc-translate: room join failed (${roomId})`, error)
+      })
+    }
   }
 
   leaveRoom(): void {
@@ -93,7 +113,10 @@ class SharedMistNodeHandle implements MistNodeLike {
         // leaveRoom(), this does NOT reset the wrapper's activeNode guard, so
         // the shared node stays usable for the other handles and for later
         // re-joins.
-        realNode?.leaveRoom(roomId)
+        if (realNode?.isRoomJoined(roomId)) {
+          realNode.leaveRoom(roomId)
+          roomJoins.delete(roomId)
+        }
       } else {
         roomRefCounts.set(roomId, remaining)
       }
@@ -103,7 +126,12 @@ class SharedMistNodeHandle implements MistNodeLike {
   }
 
   sendMessage(toId: string | null | undefined, payload: Uint8Array, delivery?: number): void {
-    realNode?.sendMessage(toId, payload, delivery)
+    for (const roomId of this.rooms) {
+      const joined = roomJoins.get(roomId)
+      void joined?.then(() => {
+        if (this.rooms.has(roomId)) realNode?.sendMessage(toId, payload, delivery, roomId)
+      }).catch(error => console.warn(`tc-translate: room send failed (${roomId})`, error))
+    }
   }
 
   /** Fan-out target for the real node's single global event callback. */
@@ -122,8 +150,8 @@ class SharedMistNodeHandle implements MistNodeLike {
  * the page's single shared MistNode instead of a fresh (and, for every caller
  * but the first, fatally colliding) real node.
  */
-export function createSharedMistNode(nodeId: string): MistNodeLike {
-  return new SharedMistNodeHandle(nodeId)
+export function createSharedMistNode(nodeId: string, roomId?: string): MistNodeLike {
+  return new SharedMistNodeHandle(nodeId, roomId)
 }
 
 /**

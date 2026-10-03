@@ -1,8 +1,8 @@
-import type { MessageBundle } from './types'
+import { defineMessages } from './types'
 
 // First-run onboarding wizard (components/Onboarding.tsx). Keys are prefixed
 // with `ob-` to avoid collisions with other bundles.
-export const onboardingMessages = {
+export const onboardingMessages = defineMessages({
   en: {
     'ob-label': 'First-time setup',
     'ob-reopen': 'Show the setup guide',
@@ -18,7 +18,6 @@ export const onboardingMessages = {
     'ob-api-key': 'API key (leave blank if not needed)',
     'ob-model': 'Model',
     'ob-model-placeholder': 'e.g. gpt-4o-mini',
-    'ob-fetch-models': 'Fetch available models',
     'ob-test': 'Test connection',
     'ob-testing': 'Connecting…',
     'ob-test-ok': 'Connected',
@@ -61,7 +60,6 @@ export const onboardingMessages = {
     'ob-api-key': 'API キー（不要なら空欄）',
     'ob-model': 'モデル',
     'ob-model-placeholder': '例: gpt-4o-mini',
-    'ob-fetch-models': 'モデル候補を取得',
     'ob-test': '接続テスト',
     'ob-testing': '接続中…',
     'ob-test-ok': '接続できました',
@@ -102,7 +100,6 @@ export const onboardingMessages = {
     'ob-api-key': 'API 密钥（不需要则留空）',
     'ob-model': '模型',
     'ob-model-placeholder': '例如：gpt-4o-mini',
-    'ob-fetch-models': '获取可用模型',
     'ob-test': '测试连接',
     'ob-testing': '连接中…',
     'ob-test-ok': '连接成功',
@@ -143,7 +140,6 @@ export const onboardingMessages = {
     'ob-api-key': 'API 金鑰（不需要則留空）',
     'ob-model': '模型',
     'ob-model-placeholder': '例如：gpt-4o-mini',
-    'ob-fetch-models': '取得可用模型',
     'ob-test': '測試連線',
     'ob-testing': '連線中…',
     'ob-test-ok': '連線成功',
@@ -170,4 +166,4 @@ export const onboardingMessages = {
     'ob-skip': '暫時略過',
     'ob-finish': '完成',
   },
-} satisfies MessageBundle
+})

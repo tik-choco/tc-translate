@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { migrateLegacyLocalSettings } from '../lib/migrateLlmConfig'
+import { MODEL_CACHE_EVENT } from '../lib/providerModels'
 import { emptyLlmConfig, loadLlmConfig, saveLlmConfig, subscribeLlmConfig, type SharedLlmConfigV1 } from '../lib/llmConfig'
 
 let migrated = false
@@ -28,7 +29,16 @@ export function useSharedLlmConfig() {
   const configRef = useRef(config)
   configRef.current = config
 
-  useEffect(() => subscribeLlmConfig((next) => setConfig(next ?? emptyLlmConfig())), [])
+  useEffect(() => {
+    const update = (next: SharedLlmConfigV1 | null) => {
+      configRef.current = next ?? emptyLlmConfig()
+      setConfig(configRef.current)
+    }
+    const stop = subscribeLlmConfig(update)
+    const onCache = () => update(loadLlmConfig())
+    window.addEventListener(MODEL_CACHE_EVENT, onCache)
+    return () => { stop(); window.removeEventListener(MODEL_CACHE_EVENT, onCache) }
+  }, [])
 
   const save = useCallback((mutate: (config: SharedLlmConfigV1) => void): SharedLlmConfigV1 => {
     const next = structuredClone(configRef.current)

@@ -2,7 +2,7 @@ import { MistaiError, streamChatCompletion, type OpenAIConfig } from '@tik-choco
 import { withAbort } from './abort'
 import { normalizeBaseUrl } from './format'
 import { requestNetworkChat } from './network'
-import { isNetworkProviderBaseUrl } from './networkModels'
+import { roomIdFromBaseUrl, isNetworkProviderBaseUrl } from './networkModels'
 import type { ChatMessage } from '@tik-choco/mistai'
 import type { ResolvedLlmTargetV1 } from './llmConfig'
 import type { ProviderSettings } from '../types'
@@ -24,26 +24,11 @@ export async function requestChatCompletion(params: {
   // abort that request at the transport level - withAbort below still makes
   // the caller stop waiting on it immediately, it just leaves the (now
   // unobserved) request running in the background.
-  const request =
-    params.settings.connection === 'network'
-      ? // Don't force this client's own (API-mode) model onto the request: the
-        // room's provider falls back to its own configured model whenever no
-        // model is specified (see apiConfig below), so omitting it here makes
-        // the network connection automatically use whatever model the connected
-        // peer has set up, instead of demanding a model name it may not offer.
-        // Exception: when the resolved default preset is itself a
-        // network-imported preset (pseudo-provider `mist-network://`), the
-        // user explicitly picked one of the peer's advertised models, so
-        // request it by name instead of falling back to the peer's default.
-        requestNetworkChat(
-          params.settings.roomId,
-          params.messages,
-          isNetworkProviderBaseUrl(params.settings.baseUrl) && params.settings.model.trim()
-            ? params.settings.model.trim()
-            : undefined,
-          params.onProgress ? (_delta, full) => params.onProgress?.(full) : undefined,
-        )
-      : requestApiChatCompletion(params.settings, params.messages, params.signal, params.onProgress)
+  if (!params.settings.baseUrl || !params.settings.model) throw new Error('No usable default model configured.')
+  const request = isNetworkProviderBaseUrl(params.settings.baseUrl)
+    ? requestNetworkChat(roomIdFromBaseUrl(params.settings.baseUrl), params.messages, params.settings.model,
+        params.onProgress ? (_delta, full) => params.onProgress?.(full) : undefined)
+    : requestApiChatCompletion(params.settings, params.messages, params.signal, params.onProgress)
 
   return params.signal ? withAbort(request, params.signal) : request
 }
@@ -54,49 +39,20 @@ function apiConfig(settings: ProviderSettings, model?: string): OpenAIConfig {
     baseUrl: normalizeBaseUrl(settings.baseUrl),
     apiKey: settings.apiKey,
     model: (model ?? settings.model).trim(),
-    temperature: settings.reasoningEffort === 'none' ? settings.temperature : undefined,
     reasoningEffort: settings.reasoningEffort ?? 'none',
   }
 }
 
-// Streaming variant used by the LLM Network provider to forward llm_request
-// traffic upstream: same OpenAI-compatible endpoint, but deltas are relayed
-// to the consumer chunk-by-chunk instead of waiting for the full completion.
-// The SSE plumbing lives in @tik-choco/mistai's streamChatCompletion.
-export async function requestApiChatCompletionStreaming(
-  settings: ProviderSettings,
-  messages: ChatRequestMessage[],
-  model: string | undefined,
-  onDelta: (delta: string) => void,
-): Promise<string> {
-  const full = await streamChatCompletion(apiConfig(settings, model), messages, onDelta)
-
-  if (!full.trim()) {
-    throw new MistaiError('UPSTREAM_BAD_RESPONSE', 'The provider returned an empty response.')
-  }
-
-  return full
-}
-
-// Maps a resolved shared-config preset (see lib/llmConfig.ts's resolvePreset)
-// onto the shared library's upstream config, mirroring apiConfig above.
-// OpenAIConfig.temperature/reasoningEffort are already optional and typed as
-// number|undefined / string|undefined, matching ResolvedLlmTargetV1 exactly,
-// so no ReasoningEffort-union cast is needed here.
 function resolvedTargetConfig(target: ResolvedLlmTargetV1): OpenAIConfig {
   return {
     baseUrl: normalizeBaseUrl(target.baseUrl),
     apiKey: target.apiKey,
     model: target.model.trim(),
-    temperature: target.reasoningEffort === undefined || target.reasoningEffort === 'none' ? target.temperature : undefined,
     reasoningEffort: target.reasoningEffort ?? 'none',
   }
 }
 
-// Forwards an LLM Network request upstream via a specific resolved preset:
-// used by the provider hook when an incoming llm_request's model matches one
-// of the presets the user chose to share (networkProviderPresetIds), instead
-// of the single upstream connection requestApiChatCompletionStreaming uses.
+// Forward a room request to an enabled HTTP target.
 export async function requestResolvedChatCompletionStreaming(
   target: ResolvedLlmTargetV1,
   messages: ChatRequestMessage[],

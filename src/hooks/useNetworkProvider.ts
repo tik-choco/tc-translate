@@ -2,57 +2,40 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { MistaiError, fetchVoices } from '@tik-choco/mistai'
 import type { NetworkProviderPeer, NetworkProviderStatus } from '@tik-choco/mistai/preact'
 import { t } from '../i18n'
-import { requestApiChatCompletionStreaming, requestResolvedChatCompletionStreaming } from '../lib/llm'
-import { resolvePreset, type ResolvedLlmTargetV1, type SharedLlmConfigV1 } from '../lib/llmConfig'
+import { requestResolvedChatCompletionStreaming } from '../lib/llm'
+import { resolveModelExact, resolveVoice, type ModelRefV1, type ResolvedLlmTargetV1, type SharedLlmConfigV1 } from '../lib/llmConfig'
 import { createMistNode, NODE_ID_STORAGE_KEY } from '../lib/network'
-import { advertisedModelName, isNetworkProviderBaseUrl } from '../lib/networkModels'
+import { roomIdFromBaseUrl, isNetworkProviderBaseUrl } from '../lib/networkModels'
 import { OAI_TUNNEL_SERVICE } from '../lib/p2p/protocol'
 import { OaiTunnelProvider, type OaiUpstreamResolver } from '../lib/p2p/tunnel'
 import { useMistaiNetworkProvider } from './useMistaiProvider'
-import { normalizeBaseUrl } from '../lib/format'
 import { resolveSttConnection, resolveTtsConnection, synthesizeSpeech, transcribeAudio } from '../lib/voice'
-import type { ProviderSettings, SttSettings, TtsSettings } from '../types'
+import type { ProviderSettings, RoomProvide, SttSettings, TtsSettings } from '../types'
 
 export type { NetworkProviderPeer, NetworkProviderStatus }
 
-/**
- * Resolves `presetIds` (the model presets the user checked to share, see
- * `LocalProviderSettings.networkProviderPresetIds`) against the shared llm
- * config. Drops ids that no longer resolve, ids whose resolution silently
- * fell back to the shared default preset (see `resolvePreset`'s fallback -
- * this guards against re-sharing the default preset under a stale/removed
- * id), and any target whose baseUrl is itself a `mist-network://`
- * pseudo-provider - re-advertising a network-imported preset would loop
- * traffic straight back into the room it came from.
- */
-export function resolveSharedTargets(llmConfig: SharedLlmConfigV1, presetIds: string[]): ResolvedLlmTargetV1[] {
-  const targets: ResolvedLlmTargetV1[] = []
-  for (const id of presetIds) {
-    const resolved = resolvePreset(llmConfig, id)
-    if (!resolved || resolved.presetId !== id) continue
-    if (isNetworkProviderBaseUrl(resolved.baseUrl)) continue
-    targets.push(resolved)
-  }
-  return targets
+export function resolveSharedTargets(config: SharedLlmConfigV1, refs: ModelRefV1[]): ResolvedLlmTargetV1[] {
+  return refs.map(ref => resolveModelExact(config, ref)).filter((t): t is ResolvedLlmTargetV1 => !!t && !isNetworkProviderBaseUrl(t.baseUrl))
 }
 
-/**
- * Owns the "participate as an LLM Network provider" lifecycle: joins/leaves
- * the configured room, forwards llm_request traffic to the user's configured
- * upstream API, and surfaces connection/peer/request-log state for the UI.
- *
- * Independent of `settings.connection` — provider mode can run alongside a
- * consumer using direct API for its own translations.
- *
- * Thin wrapper over @tik-choco/mistai's useNetworkProvider: this hook only
- * binds the app's settings objects to the library's injected upstream
- * functions (chat / TTS / STT).
- */
+export function inboundTarget(config: SharedLlmConfigV1, shared: ModelRefV1[], model?: string): ResolvedLlmTargetV1 | null {
+  const targets = resolveSharedTargets(config, shared)
+  if (model) {
+    const match = targets.find(t => t.model === model)
+    if (match) return match
+    if (shared.length) throw new Error('model_not_shared')
+  }
+  const target = resolveModelExact(config, config.defaultModel)
+  return target && !isNetworkProviderBaseUrl(target.baseUrl) ? target : targets[0] ?? null
+}
+
 export function useNetworkProvider(
   settings: ProviderSettings,
   ttsSettings: TtsSettings,
   sttSettings: SttSettings,
   llmConfig: SharedLlmConfigV1,
+  roomProviderId: string,
+  provide: RoomProvide,
 ) {
   // Ride the settings in refs so in-flight requests always see the latest
   // values without retriggering the room join effect (same as before).
@@ -65,37 +48,22 @@ export function useNetworkProvider(
   const llmConfigRef = useRef(llmConfig)
   llmConfigRef.current = llmConfig
 
-  // Presets the user explicitly checked to share (settings.networkProviderPresetIds),
-  // resolved to concrete connections. Kept in a ref (like the settings above)
-  // so callLlm always sees the latest set without retriggering the room join.
+  // Share-list order is preserved for inbound routing.
   const sharedTargets = useMemo(
-    () => resolveSharedTargets(llmConfig, settings.networkProviderPresetIds),
-    [llmConfig, settings.networkProviderPresetIds],
+    () => resolveSharedTargets(llmConfig, provide.shared),
+    [llmConfig, provide.shared],
   )
-  const sharedTargetsRef = useRef(sharedTargets)
-  sharedTargetsRef.current = sharedTargets
 
-  // What each shared preset is advertised as in provider_hello.models: its
-  // label, falling back to the model id (see advertisedModelName). Deduped,
-  // sorted and joined into a single string so the useMemo below doesn't
-  // retrigger on array-identity churn when the underlying set hasn't actually
-  // changed. Share-list edits propagate to already-connected consumers
-  // without dropping the session: the forked hook (useMistaiProvider)
-  // re-broadcasts provider_hello in place whenever this set changes.
-  const advertisedModelsKey = [...new Set(sharedTargets.map(advertisedModelName))].sort().join('\n')
+  // Advertise raw model IDs; edits rebroadcast without rejoining.
+  const advertisedModelsKey = [...new Set(sharedTargets.map(t => t.model))].sort().join('\n')
   const advertisedModels = useMemo(
     () => (advertisedModelsKey ? advertisedModelsKey.split('\n') : []),
     [advertisedModelsKey],
   )
 
-  // The legacy single-upstream connection counts as "configured" only when
-  // it's an actual HTTP endpoint - a default preset that resolves to a
-  // `mist-network://` pseudo-provider can't be forwarded upstream into the
-  // network it came from. Sharing via the checkboxes (sharedTargets) is
-  // independently sufficient even without a legacy upstream.
   const upstreamConfigured =
     sharedTargets.length > 0 ||
-    (Boolean(settings.model.trim() && normalizeBaseUrl(settings.baseUrl)) && !isNetworkProviderBaseUrl(settings.baseUrl))
+    Boolean(inboundTarget(llmConfig, provide.shared))
 
   // mistai v0.4.0 derives the advertised provider_hello.services list from
   // which of callLlm/synthesize/transcribe are actually injected (see
@@ -152,117 +120,36 @@ export function useNetworkProvider(
   // surfaced in the UI (a documented v1 limitation).
   const advertisedVoices = useMemo(() => fetchedTtsVoices.slice(0, 64), [fetchedTtsVoices])
 
-  const [debouncedRoomId, setDebouncedRoomId] = useState(settings.roomId)
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedRoomId(settings.roomId), 500)
-    return () => clearTimeout(timer)
-  }, [settings.roomId])
-
-  // Resolves which upstream serves an incoming oai_* tunnel request (an
-  // OpenAI-compatible HTTP call proxied over P2P, see '../lib/p2p/tunnel').
-  // Consumer-supplied auth never exists on the wire - whichever upstream is
-  // chosen here is always forwarded to with THIS provider's own api key, the
-  // same as callLlm above. Paths are allowlisted; anything not matched below
-  // returns null and the tunnel answers with an 'unsupported_path' error
-  // instead of forwarding an arbitrary path to an upstream. Reads refs (not
-  // the closed-over settings/llmConfig/sharedTargets props) so it stays
-  // correct across renders without needing to be recreated on every one -
-  // it's invoked from inside the per-session tunnel-provider factory below.
+  const provider = llmConfig.providers.find(p => p.id === roomProviderId)
+  const roomId = provider ? roomIdFromBaseUrl(provider.baseUrl) : ''
+  const provideRef = useRef(provide)
+  provideRef.current = provide
   const resolveOaiUpstream: OaiUpstreamResolver = (path, body) => {
-    const targets = sharedTargetsRef.current
-    const settingsNow = settingsRef.current
-
-    if (path === '/chat/completions') {
-      const bodyObj = body as { model?: unknown } | undefined
-      const requested = typeof bodyObj?.model === 'string' ? bodyObj.model : ''
-      const matched = targets.find((target) => advertisedModelName(target) === requested)
-      if (matched) {
-        return {
-          baseUrl: matched.baseUrl,
-          apiKey: matched.apiKey,
-          // stream:false - the tunnel is single-shot v1 (no chunked delta relay yet).
-          rewriteBody: (b) => ({ ...(b as object), model: matched.model, stream: false }),
-        }
-      }
-      // Same share-list policy as callLlm below: a named model that isn't in
-      // the advertised set is refused (relayed as 'request_rejected'), never
-      // silently served by another upstream/model. Model-less requests fall
-      // through to the default-upstream choices.
-      if (requested && targets.length > 0) {
-        throw new MistaiError('ENDPOINT_NOT_CONFIGURED', 'The requested model is not shared by this provider.')
-      }
-      if (!isNetworkProviderBaseUrl(settingsNow.baseUrl) && normalizeBaseUrl(settingsNow.baseUrl)) {
-        return {
-          baseUrl: settingsNow.baseUrl,
-          apiKey: settingsNow.apiKey,
-          rewriteBody: (b) => ({ ...(b as object), model: settingsNow.model, stream: false }),
-        }
-      }
-      if (targets.length > 0) {
-        const first = targets[0]
-        return {
-          baseUrl: first.baseUrl,
-          apiKey: first.apiKey,
-          rewriteBody: (b) => ({ ...(b as object), model: first.model, stream: false }),
-        }
-      }
-      return null
+    if (!['/chat/completions', '/models', '/embeddings'].includes(path)) return null
+    const requested = typeof (body as { model?: unknown })?.model === 'string' ? (body as { model: string }).model : ''
+    const target = inboundTarget(llmConfigRef.current, provideRef.current.shared, requested)
+    if (!target) return null
+    return {
+      baseUrl: target.baseUrl, apiKey: target.apiKey,
+      rewriteBody: b => {
+        const { temperature: _temperature, ...rest } = (b ?? {}) as Record<string, unknown>
+        return { ...rest, model: target.model, ...(path === '/chat/completions' ? { stream: false } : {}) }
+      },
     }
-
-    if (path === '/models' || path === '/embeddings') {
-      // /embeddings: no rewriteBody - embeddings models aren't label-mapped
-      // to shared-target models yet, so the requested model rides through
-      // unchanged instead of being rewritten like /chat/completions above.
-      if (targets.length > 0) return { baseUrl: targets[0].baseUrl, apiKey: targets[0].apiKey }
-      if (!isNetworkProviderBaseUrl(settingsNow.baseUrl) && normalizeBaseUrl(settingsNow.baseUrl)) {
-        return { baseUrl: settingsNow.baseUrl, apiKey: settingsNow.apiKey }
-      }
-      return null
-    }
-
-    return null
   }
 
   const result = useMistaiNetworkProvider({
-    enabled: settings.networkProviderEnabled && upstreamConfigured,
-    roomId: debouncedRoomId,
-    createNode: createMistNode,
+    enabled: provider?.enabled !== false && provide.enabled && !!roomId,
+    roomId: roomId,
+    createNode: nodeId => createMistNode(nodeId, roomId),
     nodeIdStorageKey: NODE_ID_STORAGE_KEY,
-    extraServices: [OAI_TUNNEL_SERVICE],
+    extraServices: upstreamConfigured ? [OAI_TUNNEL_SERVICE] : [],
     createTunnelProvider: (send) => new OaiTunnelProvider(send, resolveOaiUpstream),
-    callLlm: (messages, model, onDelta) => {
-      const targets = sharedTargetsRef.current
-      // A model-specific llm_request: the requested name is the advertised
-      // name (label-or-model, see advertisedModelName) echoed back by the
-      // consumer - map it to the matching shared preset and forward via that
-      // preset's own connection, not the single legacy upstream (which may
-      // not even offer this model).
-      if (model) {
-        const matched = targets.find((target) => advertisedModelName(target) === model)
-        if (matched) return requestResolvedChatCompletionStreaming(matched, messages, onDelta)
-        // A model was named but isn't in the current share list. While this
-        // provider advertises a list at all, honoring the request anyway
-        // (e.g. by forwarding the raw name to the legacy upstream) would let
-        // consumers keep using entries the user just un-shared - stale
-        // imported cards, or hand-crafted requests naming real upstream model
-        // ids. Refuse instead; only a provider with NO advertised list
-        // (legacy single-upstream mode) still forwards named requests below.
-        if (targets.length > 0) {
-          throw new MistaiError('ENDPOINT_NOT_CONFIGURED', 'The requested model is not shared by this provider.')
-        }
-      }
-      // No model requested (or one was, but nothing is advertised - legacy
-      // single-upstream mode): the legacy default-preset upstream normally
-      // answers these, EXCEPT when that default preset is itself a
-      // network-imported preset (forwarding there
-      // would loop the request back into the room it came from) - in that
-      // case fall back to the first shared target instead, so a provider
-      // sharing only via the checkboxes still answers model-less requests.
-      if (isNetworkProviderBaseUrl(settingsRef.current.baseUrl) && targets.length) {
-        return requestResolvedChatCompletionStreaming(targets[0], messages, onDelta)
-      }
-      return requestApiChatCompletionStreaming(settingsRef.current, messages, model, onDelta)
-    },
+    callLlm: upstreamConfigured ? (messages, model, onDelta) => {
+      const target = inboundTarget(llmConfigRef.current, provideRef.current.shared, model)
+      if (!target) throw new MistaiError('ENDPOINT_NOT_CONFIGURED', 'No usable HTTP model configured.')
+      return requestResolvedChatCompletionStreaming({ ...target, reasoningEffort: settingsRef.current.defaultReasoningEffort }, messages, onDelta)
+    } : undefined,
     advertisedModels: advertisedModels.length ? advertisedModels : undefined,
     advertisedVoices: advertisedVoices.length ? advertisedVoices : undefined,
     synthesize: ttsConfigured
@@ -273,17 +160,12 @@ export function useNetworkProvider(
           // pseudo-provider) - re-check here too, so we never forward into
           // the network room this capability was advertised to.
           if (!conn.baseUrl || isNetworkProviderBaseUrl(conn.baseUrl)) throw new Error(t('network-provider-tts-missing'))
-          // The requested model is whatever the consumer's picker stored -
-          // typically an advertised chat-preset name (a label, not a model id
-          // in this provider's TTS catalog) - so it's only forwarded upstream
-          // when it matches this provider's own configured TTS model;
-          // anything else falls back to that own model instead of erroring.
           const ownTtsModel = ttsSettingsRef.current.model
           // TODO: `lang` isn't used yet to pick a language-specific voice - synthesizeSpeech always uses ownTtsModel's single configured voice.
           void lang
           const blob = await synthesizeSpeech({
             connection: conn,
-            model: model === ownTtsModel ? model : ownTtsModel,
+            model: model === ownTtsModel ? model : (resolveVoice(llmConfigRef.current, 'tts')?.model ?? ownTtsModel),
             voice: voice || ttsSettingsRef.current.voice,
             text,
           })
@@ -296,9 +178,8 @@ export function useNetworkProvider(
           // Same re-check as synthesize above: never loop back into the
           // network room this capability was advertised to.
           if (!conn.baseUrl || isNetworkProviderBaseUrl(conn.baseUrl)) throw new Error(t('network-provider-stt-missing'))
-          // Same requested-model policy as synthesize above.
           const ownSttModel = sttSettingsRef.current.model
-          return transcribeAudio({ connection: conn, model: model === ownSttModel ? model : ownSttModel, audio, fileName })
+          return transcribeAudio({ connection: conn, model: model === ownSttModel ? model : (resolveVoice(llmConfigRef.current, 'stt')?.model ?? ownSttModel), audio, fileName })
         }
       : undefined,
   })

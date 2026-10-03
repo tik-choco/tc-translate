@@ -4,7 +4,7 @@
 // `onClose`); Settings can re-open it any time.
 // Ported from tc-books' src/components/Onboarding.tsx.
 
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,7 +15,6 @@ import {
   Languages,
   Mic,
   Plug,
-  RefreshCw,
   Send,
   Sparkles,
   SpellCheck,
@@ -48,22 +47,23 @@ function inputValue(event: Event): string {
   return (event.target as HTMLInputElement).value
 }
 
-/** Model name input; the refresh button fills a datalist from GET /models and silently falls back to typing. */
+/** Automatically fills a datalist for the draft connection, with manual entry as a fallback. */
 function ModelField({ value, baseUrl, apiKey, onChange }: { value: string; baseUrl: string; apiKey: string; onChange: (model: string) => void }) {
   const [options, setOptions] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
-  async function refresh(): Promise<void> {
+  useEffect(() => {
+    setLoading(false)
     if (!baseUrl.trim()) return
-    setLoading(true)
-    try {
-      setOptions(await fetchModelIds({ baseUrl, apiKey }, AbortSignal.timeout(30_000)))
-    } catch {
-      // Fall back to typing the model name.
-    } finally {
-      setLoading(false)
-    }
-  }
+    const controller = new AbortController()
+    const timer = window.setTimeout(async () => {
+      setLoading(true)
+      try { setOptions(await fetchModelIds({ baseUrl, apiKey }, controller.signal)) }
+      catch { /* Keep the previous list and allow manual entry. */ }
+      finally { if (!controller.signal.aborted) setLoading(false) }
+    }, 300)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  }, [baseUrl, apiKey])
 
   return (
     <div class="ob-model-row">
@@ -80,30 +80,17 @@ function ModelField({ value, baseUrl, apiKey, onChange }: { value: string; baseU
           <option key={model} value={model} />
         ))}
       </datalist>
-      <button
-        class="ob-icon-btn"
-        type="button"
-        onClick={() => void refresh()}
-        disabled={loading || !baseUrl.trim()}
-        title={t('ob-fetch-models')}
-        aria-label={t('ob-fetch-models')}
-      >
-        {loading ? <span class="ob-spinner" /> : <RefreshCw size={14} />}
-      </button>
+      {loading && <span class="ob-spinner" role="status" aria-label={t('models-fetching')} />}
     </div>
   )
 }
 
 export function Onboarding({ nativeLanguage, onNativeLanguageChange, settings, onApplyConnection, onClose }: OnboardingProps) {
   const [step, setStep] = useState(0)
-  // Start from the current default connection so re-running the wizard edits
-  // the real one. With no preset yet, `settings` only holds the built-in
-  // placeholders (OpenAI URL, no key), and a network-imported preset has no
-  // URL/key to show, so both start blank.
   const [llm, setLlm] = useState<LlmDraft>(() => {
-    const hasPreset = settings.presets.some((preset) => preset.id === settings.defaultPresetId)
-    return hasPreset && !isNetworkProviderBaseUrl(settings.baseUrl)
-      ? { baseUrl: settings.baseUrl, apiKey: settings.apiKey, model: settings.model }
+    const provider = settings.providers.find(p => p.id === settings.defaultModel?.providerId)
+    return provider && provider.enabled !== false && settings.defaultModel && !isNetworkProviderBaseUrl(provider.baseUrl)
+      ? { baseUrl: provider.baseUrl, apiKey: provider.apiKey, model: settings.defaultModel.model }
       : { baseUrl: '', apiKey: '', model: '' }
   })
   const [test, setTest] = useState<TestState>({ phase: 'idle' })
@@ -120,7 +107,7 @@ export function Onboarding({ nativeLanguage, onNativeLanguageChange, settings, o
     setTest({ phase: 'busy' })
     try {
       await requestChatCompletion({
-        settings: { ...settings, connection: 'api', baseUrl: llm.baseUrl, apiKey: llm.apiKey, model: llm.model, reasoningEffort: 'none' },
+        settings: { ...settings, baseUrl: llm.baseUrl, apiKey: llm.apiKey, model: llm.model, reasoningEffort: 'none' },
         messages: [{ role: 'user', content: 'Connection test. Reply with just "OK".' }],
         signal: AbortSignal.timeout(60_000),
       })

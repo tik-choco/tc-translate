@@ -76,9 +76,7 @@ export function useSimultaneousTranslation(settings: ProviderSettings) {
 
   const hasProviderConfigured = useMemo(
     () =>
-      settings.connection === 'network'
-        ? Boolean(settings.roomId.trim())
-        : Boolean(settings.model.trim() && normalizeBaseUrl(settings.baseUrl)),
+      Boolean(settings.model.trim() && normalizeBaseUrl(settings.baseUrl)),
     [settings],
   )
 
@@ -89,9 +87,7 @@ export function useSimultaneousTranslation(settings: ProviderSettings) {
   // here as in the Translate tab.
   const providerNeedsSetup = useMemo(
     () =>
-      settings.connection === 'network'
-        ? !settings.roomId.trim()
-        : !settings.apiKey.trim() &&
+      !settings.model.trim() || !settings.apiKey.trim() &&
           (!normalizeBaseUrl(settings.baseUrl) || normalizeBaseUrl(settings.baseUrl) === normalizeBaseUrl(defaultResolvedProvider.baseUrl)),
     [settings],
   )

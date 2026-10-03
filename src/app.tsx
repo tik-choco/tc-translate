@@ -5,6 +5,8 @@ import './app.css'
 import { HistoryPanel } from './components/HistoryPanel'
 import { LanguageSelect } from './components/LanguageSelect'
 import { LazyPanel } from './components/LazyPanel'
+import { RoomProviders } from './components/RoomProvider'
+import { isNetworkProviderBaseUrl } from './lib/networkModels'
 import { NetworkConsumerIndicator } from './components/NetworkStatusPanel'
 import { Onboarding } from './components/Onboarding'
 import { SettingsModal } from './components/SettingsModal'
@@ -135,6 +137,7 @@ export function App() {
 
   return (
     <main class="workspace">
+      <RoomProviders settings={t.settings} ttsSettings={t.ttsSettings} sttSettings={t.sttSettings} config={t.llmConfig} />
       <header class="topbar">
         <div class="topbar-left">
           <div class="brand" role="img" aria-label="TC Translate">
@@ -198,7 +201,7 @@ export function App() {
         </div>
       </header>
 
-      {activeTab === 'translate' && t.settings.connection === 'network' ? (
+      {activeTab === 'translate' && isNetworkProviderBaseUrl(t.settings.baseUrl) ? (
         <div class="network-status-bar">
           <NetworkConsumerIndicator status={t.networkConsumerStatus} />
         </div>
@@ -326,34 +329,19 @@ export function App() {
           nativeLanguage={t.nativeLanguage}
           onUpdateNativeLanguage={t.updateNativeLanguage}
           settings={t.settings}
-          onUpdateSettings={t.updateSettings}
           onClose={t.closeSettings}
           onAddProvider={t.addProvider}
           onUpdateProvider={t.updateProvider}
           onRemoveProvider={t.removeProvider}
-          onAddPreset={t.addPreset}
-          onUpdatePreset={t.updatePreset}
-          onRemovePreset={t.removePreset}
-          onSetDefaultPresetId={t.setDefaultPresetId}
-          onSetVisionPresetId={t.setVisionPresetId}
+          onSetDefaultModel={t.setDefaultModel}
+          onSetTaskRef={t.setTaskRef}
           onSetReasoningEffort={t.setReasoningEffort}
-          onSetNetworkProviderPresetIds={t.setNetworkProviderPresetIds}
+          onSetRoomProvide={t.setRoomProvide}
+          onRememberModel={t.rememberModel}
           ttsSettings={t.ttsSettings}
           onUpdateTtsSettings={t.updateTtsSettings}
           sttSettings={t.sttSettings}
           onUpdateSttSettings={t.updateSttSettings}
-          llmProviders={t.llmProviders}
-          networkConsumerStatus={t.networkConsumerStatus}
-          networkConsumerUpdatedAt={t.networkConsumerUpdatedAt}
-          networkProviderStatus={t.networkProvider.status}
-          networkProviderStatusUpdatedAt={t.networkProvider.statusUpdatedAt}
-          networkProviderError={t.networkProvider.errorMessage}
-          networkProviderOwnNodeId={t.networkProvider.ownNodeId}
-          networkProviderRoomId={t.networkProvider.roomId}
-          networkProviderPeers={t.networkProvider.peers}
-          networkProviderConsumerCount={t.networkProvider.consumerCount}
-          networkProviderLogs={t.networkProvider.logs}
-          networkProviderUpstreamConfigured={t.networkProvider.upstreamConfigured}
           onOpenOnboarding={t.openOnboarding}
         />
       ) : null}

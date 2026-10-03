@@ -124,7 +124,10 @@ export function useMistaiNetworkProvider(options: UseNetworkProviderOptionsExten
       })
     }
 
-    const sendToNetwork = (toId: string | null, msg: ExtendedMessage): void => network.send(toId, msg)
+    const sendToNetwork = (toId: string | null, msg: ExtendedMessage): void => {
+      if (msg.type === 'llm_error' && msg.message === 'model_not_shared') msg = { ...msg, code: 'model_not_shared' }
+      network.send(toId, msg)
+    }
     const network = new ExtendedNetwork({
       createNode: (nodeId) => optionsRef.current.createNode(nodeId),
       nodeIdStorageKey: optionsRef.current.nodeIdStorageKey,

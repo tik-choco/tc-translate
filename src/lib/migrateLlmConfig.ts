@@ -1,219 +1,89 @@
-// One-time migration of tc-translate's legacy per-key local settings
-// (baseUrl/apiKey/model kept in `tc-translate-provider-settings-v1` /
-// `-tts-settings-v1` / `-stt-settings-v1`) into the shared
-// `tc-shared-llm-config-v1` key, following the merge-never-delete migration
-// policy in protocol/docs/data-contracts/docs/llm-config.md:
-//   1. load shared config (or start empty)
-//   2. add legacy entries via ensureProvider/ensurePreset (append-only)
-//   3. set defaultPresetId/tts/stt/network.roomId only if currently empty
-//   4. saveLlmConfig
-//
-// Idempotent: legacy shape is detected by the presence of a `baseUrl` field
-// (the new local shapes never have one), so once a key has been rewritten to
-// its new shape, subsequent calls see nothing to migrate for it. A pristine,
-// never-touched install (default OpenAI endpoint, no API key, default
-// model/voice) is intentionally *not* seeded into the shared config - only
-// settings the user actually changed are migrated.
+import { legacyDefaultSettings, settingsStorageKey, sttSettingsStorageKey, ttsSettingsStorageKey, voiceSettingsStorageKey } from '../constants'
+import { emptyLlmConfig, ensureProvider, loadLlmConfig, saveLlmConfig, type ModelRefV1 } from './llmConfig'
+import { isNetworkProviderBaseUrl, networkProviderBaseUrl } from './networkModels'
+import type { LocalProviderSettings, ReasoningEffort, TaskModel } from '../types'
 
-import { normalizeBaseUrl } from './format'
-import { emptyLlmConfig, ensureProvider, ensurePreset, loadLlmConfig, saveLlmConfig } from './llmConfig'
-import {
-  legacyDefaultSettings,
-  legacyDefaultSttSettings,
-  legacyDefaultTtsSettings,
-  settingsStorageKey,
-  sttSettingsStorageKey,
-  ttsSettingsStorageKey,
-  voiceSettingsStorageKey,
-} from '../constants'
-import type {
-  LegacyProviderSettings,
-  LegacySttSettings,
-  LegacyTtsSettings,
-  LegacyVoiceSettings,
-  LocalProviderSettings,
-  LocalSttSettings,
-} from '../types'
-
-function readRaw(key: string): Record<string, unknown> | null {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    return parsed !== null && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null
-  } catch {
-    return null
-  }
+function readRaw(key: string): Record<string, any> {
+  try { return JSON.parse(localStorage.getItem(key) ?? '{}') ?? {} } catch { return {} }
 }
 
-// The new local shapes (LocalProviderSettings/LocalSttSettings; TTS no longer
-// has a local shape at all - see below) never have a `baseUrl` field, so its
-// presence marks the old (legacy) shape.
-function hasBaseUrlField(raw: Record<string, unknown>): boolean {
-  return typeof raw.baseUrl === 'string'
-}
-
-function readLegacyProviderSettings(raw: Record<string, unknown>): LegacyProviderSettings {
-  return {
-    baseUrl: typeof raw.baseUrl === 'string' ? raw.baseUrl : legacyDefaultSettings.baseUrl,
-    apiKey: typeof raw.apiKey === 'string' ? raw.apiKey : legacyDefaultSettings.apiKey,
-    model: typeof raw.model === 'string' ? raw.model : legacyDefaultSettings.model,
-    visionModel: typeof raw.visionModel === 'string' ? raw.visionModel : legacyDefaultSettings.visionModel,
-    temperature: typeof raw.temperature === 'number' ? raw.temperature : legacyDefaultSettings.temperature,
-    connection: raw.connection === 'network' ? 'network' : 'api',
-    roomId: typeof raw.roomId === 'string' ? raw.roomId : legacyDefaultSettings.roomId,
-    networkProviderEnabled:
-      typeof raw.networkProviderEnabled === 'boolean' ? raw.networkProviderEnabled : legacyDefaultSettings.networkProviderEnabled,
-  }
-}
-
-function readLegacyCombinedVoiceSettings(): Partial<LegacyVoiceSettings> {
-  const raw = readRaw(voiceSettingsStorageKey)
-  return (raw ?? {}) as Partial<LegacyVoiceSettings>
-}
-
-function readLegacyTtsSettings(raw: Record<string, unknown> | null): LegacyTtsSettings {
-  if (raw) {
-    return {
-      baseUrl: typeof raw.baseUrl === 'string' ? raw.baseUrl : legacyDefaultTtsSettings.baseUrl,
-      apiKey: typeof raw.apiKey === 'string' ? raw.apiKey : legacyDefaultTtsSettings.apiKey,
-      model: typeof raw.model === 'string' ? raw.model : legacyDefaultTtsSettings.model,
-      voice: typeof raw.voice === 'string' ? raw.voice : legacyDefaultTtsSettings.voice,
-      engine: raw.engine === 'api' ? 'api' : raw.engine === 'network' ? 'network' : 'browser',
-    }
-  }
-  // No dedicated TTS settings saved: fall back to the old combined key, same
-  // as the pre-migration loadTtsSettings() did.
-  const legacy = readLegacyCombinedVoiceSettings()
-  return {
-    baseUrl: legacy.baseUrl ?? legacyDefaultTtsSettings.baseUrl,
-    apiKey: legacy.apiKey ?? legacyDefaultTtsSettings.apiKey,
-    model: legacy.ttsModel ?? legacyDefaultTtsSettings.model,
-    voice: legacy.ttsVoice ?? legacyDefaultTtsSettings.voice,
-    engine: legacy.engine === 'api' ? 'api' : legacyDefaultTtsSettings.engine,
-  }
-}
-
-function readLegacySttSettings(raw: Record<string, unknown> | null): LegacySttSettings {
-  if (raw) {
-    return {
-      baseUrl: typeof raw.baseUrl === 'string' ? raw.baseUrl : legacyDefaultSttSettings.baseUrl,
-      apiKey: typeof raw.apiKey === 'string' ? raw.apiKey : legacyDefaultSttSettings.apiKey,
-      model: typeof raw.model === 'string' ? raw.model : legacyDefaultSttSettings.model,
-      engine: raw.engine === 'network' ? 'network' : 'api',
-      micDeviceId: typeof raw.micDeviceId === 'string' ? raw.micDeviceId : legacyDefaultSttSettings.micDeviceId,
-    }
-  }
-  const legacy = readLegacyCombinedVoiceSettings()
-  return {
-    baseUrl: legacy.baseUrl ?? legacyDefaultSttSettings.baseUrl,
-    apiKey: legacy.apiKey ?? legacyDefaultSttSettings.apiKey,
-    model: legacy.sttModel ?? legacyDefaultSttSettings.model,
-    engine: legacyDefaultSttSettings.engine,
-    micDeviceId: legacyDefaultSttSettings.micDeviceId,
-  }
-}
-
+/** Import legacy data before removing it from new writes. Tasks mark completion locally. */
 export function migrateLegacyLocalSettings(): void {
-  const providerRaw = readRaw(settingsStorageKey)
-  const ttsRaw = readRaw(ttsSettingsStorageKey)
-  const sttRaw = readRaw(sttSettingsStorageKey)
-
-  const providerIsLegacy = providerRaw !== null && hasBaseUrlField(providerRaw)
-  const ttsIsLegacy = ttsRaw !== null && hasBaseUrlField(ttsRaw)
-  const sttIsLegacy = sttRaw !== null && hasBaseUrlField(sttRaw)
-  if (!providerIsLegacy && !ttsIsLegacy && !sttIsLegacy) return // nothing to migrate
-
   const cfg = loadLlmConfig() ?? emptyLlmConfig()
-  let cfgChanged = false
-
-  if (providerIsLegacy && providerRaw) {
-    const legacy = readLegacyProviderSettings(providerRaw)
-    let visionPresetId = ''
-
-    // Don't seed api.openai.com with an empty key just because the user
-    // opened the app: only migrate a provider/preset when something was
-    // actually changed from the untouched defaults.
-    const isPristine =
-      !legacy.apiKey.trim() &&
-      normalizeBaseUrl(legacy.baseUrl) === normalizeBaseUrl(legacyDefaultSettings.baseUrl) &&
-      legacy.model.trim() === legacyDefaultSettings.model
-
-    if (!isPristine) {
-      const providerId = ensureProvider(cfg, { baseUrl: legacy.baseUrl, apiKey: legacy.apiKey })
-      const presetId = ensurePreset(cfg, {
-        label: legacy.model.trim() || 'デフォルト',
-        providerId,
-        model: legacy.model,
-        temperature: legacy.temperature,
-      })
-      if (!cfg.defaultPresetId) cfg.defaultPresetId = presetId
-      cfgChanged = true
-
-      if (legacy.visionModel.trim() && legacy.visionModel.trim() !== legacy.model.trim()) {
-        visionPresetId = ensurePreset(cfg, { label: 'Vision', providerId, model: legacy.visionModel })
+  const local = readRaw(settingsStorageKey)
+  let changed = false
+  if (!cfg.defaultModel) {
+    const preset = cfg.presets.find(p => p.id === cfg.defaultPresetId)
+    if (preset) { cfg.defaultModel = { providerId: preset.providerId, model: preset.model }; changed = true }
+  }
+  if (typeof local.baseUrl === 'string' && local.baseUrl.trim() &&
+    (local.baseUrl.replace(/\/+$/, '') !== legacyDefaultSettings.baseUrl || local.apiKey || local.model !== legacyDefaultSettings.model)) {
+    const providerId = ensureProvider(cfg, { baseUrl: local.baseUrl, apiKey: local.apiKey ?? '' })
+    if (!cfg.defaultModel) cfg.defaultModel = { providerId, model: local.model ?? '' }
+    changed = true
+  }
+  const roomId = cfg.network.roomId.trim() || (typeof local.roomId === 'string' ? local.roomId.trim() : '')
+  const providerCount = cfg.providers.length
+  const roomProviderId = roomId ? cfg.providers.find(p => p.baseUrl === networkProviderBaseUrl(roomId))?.id ??
+    ensureProvider(cfg, { label: roomId, baseUrl: networkProviderBaseUrl(roomId), apiKey: '' }) : ''
+  if (cfg.providers.length !== providerCount) changed = true
+  const presetRef = (id: unknown): ModelRefV1 | undefined => {
+    const preset = cfg.presets.find(p => p.id === id)
+    return preset ? { providerId: preset.providerId, model: preset.model } : undefined
+  }
+  if (!local.tasks) {
+    const task = (id: unknown, effort: unknown): TaskModel => {
+      const preset = cfg.presets.find(p => p.id === id)
+      const value = effort ?? preset?.reasoningEffort ?? 'none'
+      return { ref: presetRef(id), reasoningEffort: value as ReasoningEffort }
+    }
+    const next: LocalProviderSettings = {
+      tasks: {
+        default: { reasoningEffort: task(local.defaultPresetId || cfg.defaultPresetId, local.defaultReasoningEffort).reasoningEffort, ...(local.defaultPresetId ? { ref: presetRef(local.defaultPresetId) } : {}) },
+        vision: task(local.visionPresetId, local.visionReasoningEffort),
+      },
+      roomProvide: roomProviderId ? { [roomProviderId]: {
+        enabled: local.networkProviderEnabled === true,
+        shared: (Array.isArray(local.networkProviderPresetIds) ? local.networkProviderPresetIds : []).map(presetRef).filter((r: ModelRefV1 | undefined): r is ModelRefV1 => !!r && cfg.providers.some(p => p.id === r.providerId && !isNetworkProviderBaseUrl(p.baseUrl))),
+      } } : {},
+      recentModels: [],
+      performanceMode: local.performanceMode === 'fast' || local.performanceMode === 'saver' ? local.performanceMode : local.tokenSaver ? 'saver' : 'normal',
+    }
+    if (local.visionModel && local.baseUrl && local.visionModel !== local.model) {
+      const providerId = ensureProvider(cfg, { baseUrl: local.baseUrl, apiKey: local.apiKey ?? '' })
+      next.tasks.vision.ref = { providerId, model: local.visionModel }
+    }
+    localStorage.setItem(settingsStorageKey, JSON.stringify(next))
+  }
+  const combinedVoice = readRaw(voiceSettingsStorageKey)
+  for (const kind of ['tts', 'stt'] as const) {
+    const dedicated = readRaw(kind === 'tts' ? ttsSettingsStorageKey : sttSettingsStorageKey)
+    const raw = typeof dedicated.baseUrl === 'string' ? dedicated : !cfg[kind] && typeof combinedVoice.baseUrl === 'string' ? { ...combinedVoice, model: kind === 'tts' ? combinedVoice.ttsModel : combinedVoice.sttModel, voice: combinedVoice.ttsVoice } : dedicated
+    if (typeof raw.baseUrl !== 'string') continue
+    if (!cfg[kind] && raw.model && raw.baseUrl.trim()) {
+      const providerId = ensureProvider(cfg, { baseUrl: raw.baseUrl, apiKey: raw.apiKey ?? '' })
+      cfg[kind] = { providerId, model: raw.model, ...(kind === 'tts' && raw.voice ? { voice: raw.voice } : {}) }
+      changed = true
+    }
+    if (kind === 'stt') localStorage.setItem(sttSettingsStorageKey, JSON.stringify({ micDeviceId: raw.micDeviceId ?? '' }))
+    else localStorage.removeItem(ttsSettingsStorageKey)
+  }
+  if (typeof combinedVoice.baseUrl === 'string') localStorage.removeItem(voiceSettingsStorageKey)
+  // Seed the cache only on migration, so a live refresh is not overwritten
+  // with retired preset models on the next page load.
+  if (!local.tasks) {
+    for (const preset of cfg.presets) {
+      const provider = cfg.providers.find(p => p.id === preset.providerId)
+      if (provider && !isNetworkProviderBaseUrl(provider.baseUrl) && preset.model) {
+        const models = [...new Set([...(provider.models ?? []), preset.model])]
+        if (models.length !== (provider.models ?? []).length) {
+          provider.models = models
+          changed = true
+        }
       }
     }
-
-    if (!cfg.network.roomId && legacy.roomId.trim()) {
-      cfg.network.roomId = legacy.roomId.trim()
-      cfgChanged = true
-    }
-
-    const newLocalProvider: LocalProviderSettings = {
-      connection: legacy.connection,
-      networkProviderEnabled: legacy.networkProviderEnabled,
-      visionPresetId,
-      networkProviderPresetIds: [],
-      defaultReasoningEffort: 'none',
-      visionReasoningEffort: 'none',
-      performanceMode: 'normal',
-    }
-    localStorage.setItem(settingsStorageKey, JSON.stringify(newLocalProvider))
   }
-
-  if (ttsIsLegacy) {
-    const legacy = readLegacyTtsSettings(ttsRaw)
-    const isPristine =
-      !legacy.baseUrl.trim() &&
-      !legacy.apiKey.trim() &&
-      legacy.model.trim() === legacyDefaultTtsSettings.model &&
-      legacy.voice.trim() === legacyDefaultTtsSettings.voice
-
-    if (!cfg.tts && !isPristine) {
-      if (legacy.baseUrl.trim()) {
-        const providerId = ensureProvider(cfg, { baseUrl: legacy.baseUrl, apiKey: legacy.apiKey })
-        cfg.tts = { providerId, model: legacy.model, voice: legacy.voice }
-      } else if (legacy.model.trim()) {
-        cfg.tts = { model: legacy.model, voice: legacy.voice }
-      }
-      if (cfg.tts) cfgChanged = true
-    }
-
-    // No local TTS key to rewrite anymore - engine is derived from the
-    // shared config (see deriveVoiceEngine in lib/voice.ts), not stored, so
-    // `legacy.engine` above is simply discarded.
-  }
-
-  if (sttIsLegacy) {
-    const legacy = readLegacySttSettings(sttRaw)
-    const isPristine = !legacy.baseUrl.trim() && !legacy.apiKey.trim() && legacy.model.trim() === legacyDefaultSttSettings.model
-
-    if (!cfg.stt && !isPristine) {
-      if (legacy.baseUrl.trim()) {
-        const providerId = ensureProvider(cfg, { baseUrl: legacy.baseUrl, apiKey: legacy.apiKey })
-        cfg.stt = { providerId, model: legacy.model }
-      } else if (legacy.model.trim()) {
-        cfg.stt = { model: legacy.model }
-      }
-      if (cfg.stt) cfgChanged = true
-    }
-
-    // engine is derived (see deriveVoiceEngine in lib/voice.ts), not stored -
-    // `legacy.engine` is discarded, only `micDeviceId` carries over.
-    const newLocalStt: LocalSttSettings = { micDeviceId: legacy.micDeviceId }
-    localStorage.setItem(sttSettingsStorageKey, JSON.stringify(newLocalStt))
-  }
-
-  if (cfgChanged) saveLlmConfig(cfg)
+  // Legacy presets/defaultPresetId/network stay in the stored config for apps
+  // that have not migrated yet, so only an actual change triggers a save.
+  if (changed) saveLlmConfig(cfg)
 }

@@ -3,7 +3,7 @@ import { normalizeBaseUrl } from './format'
 import { backTranslateTexts, detectBackTranslationLanguage } from './backTranslation'
 import { requestChatCompletion } from './llm'
 import { requestNetworkOpenAi } from './network'
-import { isNetworkProviderBaseUrl } from './networkModels'
+import { roomIdFromBaseUrl, isNetworkProviderBaseUrl } from './networkModels'
 import { nuanceInstructions, nuancePromptPayload } from './nuance'
 import { parseBackTranslationReview, parsePartialTranslations, parseTranslation } from './parse'
 import type {
@@ -149,19 +149,15 @@ export async function readImageText(params: {
     },
   ]
 
-  // 'connection === network' covers an explicit Network toggle; the baseUrl
-  // check covers a default preset imported from a network provider's
-  // advertised models while connection is still 'api'.
-  if (params.settings.connection === 'network' || isNetworkProviderBaseUrl(params.settings.baseUrl)) {
-    const response = await requestNetworkOpenAi(params.settings.roomId, {
+  if (!params.settings.visionTarget) throw new Error('No usable vision model configured.')
+  const vision = params.settings.visionTarget
+  if (isNetworkProviderBaseUrl(vision.baseUrl)) {
+    const response = await requestNetworkOpenAi(roomIdFromBaseUrl(vision.baseUrl), {
       path: '/chat/completions',
       method: 'POST',
       contentType: 'application/json',
       body: JSON.stringify({
-        // The advertised network name, not a real upstream model id — the
-        // provider maps it back to its own upstream model.
-        model: params.settings.visionModel.trim() || params.settings.model.trim() || undefined,
-        temperature: params.settings.visionReasoningEffort === 'none' ? params.settings.temperature : undefined,
+        model: vision.model.trim() || undefined,
         reasoning_effort: params.settings.visionReasoningEffort,
         messages,
       }),
@@ -197,13 +193,13 @@ export async function readImageText(params: {
     return sourceText
   }
 
-  const baseUrl = normalizeBaseUrl(params.settings.baseUrl)
-  const model = params.settings.visionModel.trim() || params.settings.model.trim()
+  const baseUrl = normalizeBaseUrl(vision.baseUrl)
+  const model = vision.model.trim()
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   }
-  if (params.settings.apiKey.trim()) {
-    headers.Authorization = `Bearer ${params.settings.apiKey}`
+  if (vision.apiKey.trim()) {
+    headers.Authorization = `Bearer ${vision.apiKey}`
   }
 
   let response: Response
@@ -213,7 +209,6 @@ export async function readImageText(params: {
       headers,
       body: JSON.stringify({
         model,
-        temperature: params.settings.visionReasoningEffort === 'none' ? params.settings.temperature : undefined,
         reasoning_effort: params.settings.visionReasoningEffort,
         stream: true,
         messages,

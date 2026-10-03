@@ -54,11 +54,10 @@ export function TranscribePanel({ settings, sttSettings, llmConfig, onOpenSettin
   const stt = useSttSegments({
     sttSettings,
     llmConfig,
-    roomId: settings.roomId,
     speechLang: speech.lang,
     onSegment: handleSttSegment,
   })
-  const usingApiStt = stt.configured
+  const usingApiStt = stt.configured || stt.unresolved
   const isListening = usingApiStt ? stt.isListening : speech.isListening
   const toggleListening = useCallback(() => {
     if (isListening) simul.flushPending()
@@ -94,7 +93,7 @@ export function TranscribePanel({ settings, sttSettings, llmConfig, onOpenSettin
     if (simul.enabled) simulBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [simul.entries, simul.enabled])
 
-  if (!speech.isSupported && !stt.configured) {
+  if (!speech.isSupported && !usingApiStt) {
     return (
       <div class="transcribe-panel">
         <p class="transcribe-unsupported">{t('transcribe-unsupported')}</p>
