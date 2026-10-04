@@ -1,6 +1,6 @@
 import { MistaiError } from '@tik-choco/mistai'
-import { resolveVoice, type SharedLlmConfigV1 } from './llmConfig'
-import { isNetworkProviderBaseUrl } from './networkModels'
+import { resolveVoice, type SharedLlmConfigV1 } from '@tik-choco/mistai/llm-config'
+import { isNetworkProviderBaseUrl } from '@tik-choco/mistai/llm-config'
 import type { VoiceEngine } from '../types'
 
 export type VoiceConnection = {

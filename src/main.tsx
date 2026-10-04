@@ -1,9 +1,12 @@
 import { MistBuildBanner } from "./components/MistBuildBanner";
 import { render } from 'preact'
+import { migrateLegacyLocalSettings } from './lib/migrateLlmConfig'
 import './index.css'
 import { App } from './app.tsx'
 import { writeAppManifest } from './lib/appManifest'
 import { BUS_VERSION } from './lib/sharedBus'
+
+migrateLegacyLocalSettings()
 
 render(<><MistBuildBanner /><App /></>, document.getElementById('app')!)
 

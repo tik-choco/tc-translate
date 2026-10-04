@@ -2,9 +2,8 @@ import { MistaiError, streamChatCompletion, type OpenAIConfig } from '@tik-choco
 import { withAbort } from './abort'
 import { normalizeBaseUrl } from './format'
 import { requestNetworkChat } from './network'
-import { roomIdFromBaseUrl, isNetworkProviderBaseUrl } from './networkModels'
+import { roomIdFromBaseUrl, isNetworkProviderBaseUrl } from '@tik-choco/mistai/llm-config'
 import type { ChatMessage } from '@tik-choco/mistai'
-import type { ResolvedLlmTargetV1 } from './llmConfig'
 import type { ProviderSettings } from '../types'
 
 export type ChatRequestMessage = ChatMessage
@@ -41,30 +40,6 @@ function apiConfig(settings: ProviderSettings, model?: string): OpenAIConfig {
     model: (model ?? settings.model).trim(),
     reasoningEffort: settings.reasoningEffort ?? 'none',
   }
-}
-
-function resolvedTargetConfig(target: ResolvedLlmTargetV1): OpenAIConfig {
-  return {
-    baseUrl: normalizeBaseUrl(target.baseUrl),
-    apiKey: target.apiKey,
-    model: target.model.trim(),
-    reasoningEffort: target.reasoningEffort ?? 'none',
-  }
-}
-
-// Forward a room request to an enabled HTTP target.
-export async function requestResolvedChatCompletionStreaming(
-  target: ResolvedLlmTargetV1,
-  messages: ChatRequestMessage[],
-  onDelta: (delta: string) => void,
-): Promise<string> {
-  const full = await streamChatCompletion(resolvedTargetConfig(target), messages, onDelta)
-
-  if (!full.trim()) {
-    throw new MistaiError('UPSTREAM_BAD_RESPONSE', 'The provider returned an empty response.')
-  }
-
-  return full
 }
 
 async function requestApiChatCompletion(

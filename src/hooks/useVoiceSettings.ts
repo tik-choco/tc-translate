@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'preact/hooks'
-import { setVoiceConfig } from '../lib/llmConfigEdit'
+import { setVoiceConfig } from '@tik-choco/mistai/llm-config'
 import { loadSttSettings, saveSttSettings } from '../lib/storage'
 import { deriveVoiceEngine } from '../lib/voice'
-import type { SharedLlmConfigState } from './useSharedLlmConfig'
+import type { useLlmConfig } from '@tik-choco/mistai/preact'
 import type { LocalSttSettings, SttSettings, TtsSettings } from '../types'
 
 // TTS has no app-local settings left: `engine` is derived from the shared llm
 // config (deriveVoiceEngine, lib/voice.ts) and model/voice/provider live in
 // `config.tts`. STT keeps `micDeviceId` app-local; its engine is derived the
 // same way from `config.stt`.
-export function useVoiceSettings(llmConfigState: SharedLlmConfigState) {
+export function useVoiceSettings(llmConfigState: ReturnType<typeof useLlmConfig>) {
   const [localStt, setLocalStt] = useState<LocalSttSettings>(() => loadSttSettings())
 
   const ttsSettings = useMemo<TtsSettings>(() => {

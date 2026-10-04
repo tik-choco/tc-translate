@@ -1,8 +1,6 @@
 import type {
   Intimacy,
   LegacyProviderSettings,
-  LegacySttSettings,
-  LegacyTtsSettings,
   LocalProviderSettings,
   LocalSttSettings,
   NuanceDecoration,
@@ -10,7 +8,6 @@ import type {
   NuanceMood,
   NuanceStance,
   PerformanceMode,
-  ReasoningEffort,
   TranslationNuance,
 } from './types'
 
@@ -93,7 +90,6 @@ export const defaultLocalSettings: LocalProviderSettings = {
 }
 
 export const performanceModes: PerformanceMode[] = ['normal', 'saver', 'fast']
-export const reasoningEffortOptions: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
 
 export const defaultLocalSttSettings: LocalSttSettings = {
   micDeviceId: '',
@@ -117,22 +113,6 @@ export const legacyDefaultSettings: LegacyProviderSettings = {
   connection: 'api',
   roomId: '',
   networkProviderEnabled: false,
-}
-
-export const legacyDefaultTtsSettings: LegacyTtsSettings = {
-  baseUrl: '',
-  apiKey: '',
-  model: 'tts-1',
-  voice: 'alloy',
-  engine: 'browser',
-}
-
-export const legacyDefaultSttSettings: LegacySttSettings = {
-  baseUrl: '',
-  apiKey: '',
-  model: 'whisper-1',
-  engine: 'api',
-  micDeviceId: '',
 }
 
 export const languageOptions = [

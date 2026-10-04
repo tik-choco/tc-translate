@@ -26,7 +26,7 @@ import { getUiLanguage, t } from '../i18n'
 import { fetchModelIds } from '../lib/api'
 import { languageOptionLabel } from '../lib/language'
 import { requestChatCompletion } from '../lib/llm'
-import { isNetworkProviderBaseUrl } from '../lib/networkModels'
+import { isNetworkProviderBaseUrl } from '@tik-choco/mistai/llm-config'
 import type { ProviderSettings } from '../types'
 import '../styles/onboarding.css'
 
