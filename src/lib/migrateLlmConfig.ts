@@ -1,6 +1,7 @@
 import { legacyDefaultSettings, settingsStorageKey, sttSettingsStorageKey, ttsSettingsStorageKey, voiceSettingsStorageKey } from '../constants'
-import { emptyLlmConfig, ensureProvider, loadLlmConfig, saveLlmConfig, type ModelRefV1 } from './llmConfig'
-import { isNetworkProviderBaseUrl, networkProviderBaseUrl } from './networkModels'
+import { createRoomProvider, emptyLlmConfig, loadLlmConfig, migrateSharedLlmConfig, presetIdToRef, saveLlmConfig, type ModelRefV1 } from '@tik-choco/mistai/llm-config'
+import { isNetworkProviderBaseUrl } from '@tik-choco/mistai/llm-config'
+import { ensureProvider } from './providerSetup'
 import type { LocalProviderSettings, ReasoningEffort, TaskModel } from '../types'
 
 function readRaw(key: string): Record<string, any> {
@@ -11,12 +12,8 @@ function readRaw(key: string): Record<string, any> {
 export function migrateLegacyLocalSettings(): void {
   const cfg = loadLlmConfig() ?? emptyLlmConfig()
   const local = readRaw(settingsStorageKey)
-  let changed = false
-  if (!cfg.defaultModel) {
-    const preset = cfg.presets.find(p => p.id === cfg.defaultPresetId)
-    if (preset) { cfg.defaultModel = { providerId: preset.providerId, model: preset.model }; changed = true }
-  }
-  if (typeof local.baseUrl === 'string' && local.baseUrl.trim() &&
+  let changed = migrateSharedLlmConfig(cfg).changed
+  if (!local.tasks && typeof local.baseUrl === 'string' && local.baseUrl.trim() &&
     (local.baseUrl.replace(/\/+$/, '') !== legacyDefaultSettings.baseUrl || local.apiKey || local.model !== legacyDefaultSettings.model)) {
     const providerId = ensureProvider(cfg, { baseUrl: local.baseUrl, apiKey: local.apiKey ?? '' })
     if (!cfg.defaultModel) cfg.defaultModel = { providerId, model: local.model ?? '' }
@@ -24,12 +21,10 @@ export function migrateLegacyLocalSettings(): void {
   }
   const roomId = cfg.network.roomId.trim() || (typeof local.roomId === 'string' ? local.roomId.trim() : '')
   const providerCount = cfg.providers.length
-  const roomProviderId = roomId ? cfg.providers.find(p => p.baseUrl === networkProviderBaseUrl(roomId))?.id ??
-    ensureProvider(cfg, { label: roomId, baseUrl: networkProviderBaseUrl(roomId), apiKey: '' }) : ''
+  const roomProviderId = roomId ? createRoomProvider(cfg, { roomId }).id : ''
   if (cfg.providers.length !== providerCount) changed = true
   const presetRef = (id: unknown): ModelRefV1 | undefined => {
-    const preset = cfg.presets.find(p => p.id === id)
-    return preset ? { providerId: preset.providerId, model: preset.model } : undefined
+    return typeof id === 'string' ? presetIdToRef(cfg, id) : undefined
   }
   if (!local.tasks) {
     const task = (id: unknown, effort: unknown): TaskModel => {
@@ -52,6 +47,7 @@ export function migrateLegacyLocalSettings(): void {
     if (local.visionModel && local.baseUrl && local.visionModel !== local.model) {
       const providerId = ensureProvider(cfg, { baseUrl: local.baseUrl, apiKey: local.apiKey ?? '' })
       next.tasks.vision.ref = { providerId, model: local.visionModel }
+      changed = true
     }
     localStorage.setItem(settingsStorageKey, JSON.stringify(next))
   }
@@ -69,20 +65,6 @@ export function migrateLegacyLocalSettings(): void {
     else localStorage.removeItem(ttsSettingsStorageKey)
   }
   if (typeof combinedVoice.baseUrl === 'string') localStorage.removeItem(voiceSettingsStorageKey)
-  // Seed the cache only on migration, so a live refresh is not overwritten
-  // with retired preset models on the next page load.
-  if (!local.tasks) {
-    for (const preset of cfg.presets) {
-      const provider = cfg.providers.find(p => p.id === preset.providerId)
-      if (provider && !isNetworkProviderBaseUrl(provider.baseUrl) && preset.model) {
-        const models = [...new Set([...(provider.models ?? []), preset.model])]
-        if (models.length !== (provider.models ?? []).length) {
-          provider.models = models
-          changed = true
-        }
-      }
-    }
-  }
   // Legacy presets/defaultPresetId/network stay in the stored config for apps
   // that have not migrated yet, so only an actual change triggers a save.
   if (changed) saveLlmConfig(cfg)

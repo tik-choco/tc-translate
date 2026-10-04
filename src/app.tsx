@@ -5,8 +5,7 @@ import './app.css'
 import { HistoryPanel } from './components/HistoryPanel'
 import { LanguageSelect } from './components/LanguageSelect'
 import { LazyPanel } from './components/LazyPanel'
-import { RoomProviders } from './components/RoomProvider'
-import { isNetworkProviderBaseUrl } from './lib/networkModels'
+import { isNetworkProviderBaseUrl } from '@tik-choco/mistai/llm-config'
 import { NetworkConsumerIndicator } from './components/NetworkStatusPanel'
 import { Onboarding } from './components/Onboarding'
 import { SettingsModal } from './components/SettingsModal'
@@ -137,7 +136,6 @@ export function App() {
 
   return (
     <main class="workspace">
-      <RoomProviders settings={t.settings} ttsSettings={t.ttsSettings} sttSettings={t.sttSettings} config={t.llmConfig} />
       <header class="topbar">
         <div class="topbar-left">
           <div class="brand" role="img" aria-label="TC Translate">
@@ -328,18 +326,8 @@ export function App() {
         <SettingsModal
           nativeLanguage={t.nativeLanguage}
           onUpdateNativeLanguage={t.updateNativeLanguage}
-          settings={t.settings}
+          localSettings={t.localSettings}
           onClose={t.closeSettings}
-          onAddProvider={t.addProvider}
-          onUpdateProvider={t.updateProvider}
-          onRemoveProvider={t.removeProvider}
-          onSetDefaultModel={t.setDefaultModel}
-          onSetTaskRef={t.setTaskRef}
-          onSetReasoningEffort={t.setReasoningEffort}
-          onSetRoomProvide={t.setRoomProvide}
-          onRememberModel={t.rememberModel}
-          ttsSettings={t.ttsSettings}
-          onUpdateTtsSettings={t.updateTtsSettings}
           sttSettings={t.sttSettings}
           onUpdateSttSettings={t.updateSttSettings}
           onOpenOnboarding={t.openOnboarding}

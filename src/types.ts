@@ -1,10 +1,10 @@
-import type { LlmProviderV1, ModelRefV1, ResolvedLlmTargetV1 } from './lib/llmConfig'
+import type { LlmProviderV1, ModelRefV1, ResolvedLlmTargetV1 } from '@tik-choco/mistai/llm-config'
 export type ProviderConnection = 'api' | 'network'
-export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+import type { ReasoningEffort, TaskModelV1, RoomProvide, VoiceEngine } from '@tik-choco/mistai/preact'
+export type { ReasoningEffort, RoomProvide, VoiceEngine } from '@tik-choco/mistai/preact'
 export type ReasoningTask = 'default' | 'vision'
 export type PerformanceMode = 'normal' | 'saver' | 'fast'
-export type TaskModel = { ref?: ModelRefV1; reasoningEffort: ReasoningEffort }
-export type RoomProvide = { enabled: boolean; shared: ModelRefV1[] }
+export type TaskModel = TaskModelV1
 export type LocalProviderSettings = {
   tasks: Record<ReasoningTask, TaskModel>
   roomProvide: Record<string, RoomProvide>
@@ -37,28 +37,18 @@ export type LegacyProviderSettings = {
   networkProviderEnabled: boolean
 }
 
-export type VoiceEngine = 'browser' | 'api' | 'network'
 
 // Runtime TTS settings: the shared config's `tts` field, with `engine`
 // DERIVED (not app-local/stored) via deriveVoiceEngine in lib/voice.ts - an
 // unset/blank `model` means 'browser'; otherwise it reflects whether the
 // resolved provider is a Network room or a plain API endpoint. `providerId`
-// absent means "same provider as the default LLM preset" (see resolveVoice
-// in lib/llmConfig.ts).
+// absent means "same provider as the default model" (see resolveVoice
+// in mistai/llm-config).
 export type TtsSettings = {
   engine: VoiceEngine
   providerId?: string
   model: string
   voice: string
-}
-
-// Shape of the pre-migration `tc-translate-tts-settings-v1`.
-export type LegacyTtsSettings = {
-  baseUrl: string
-  apiKey: string
-  model: string
-  voice: string
-  engine: VoiceEngine
 }
 
 // Same union as VoiceEngine; kept as a separate name since call sites
@@ -79,31 +69,12 @@ export type LocalSttSettings = {
 // deriveVoiceEngine in lib/voice.ts - an unset/blank `model` means 'browser';
 // otherwise it reflects whether the resolved provider is a Network room or a
 // plain API endpoint. `providerId` absent means "same provider as the
-// default LLM preset" (see resolveVoice in lib/llmConfig.ts).
+// default LLM preset" (see resolveVoice in mistai/llm-config).
 export type SttSettings = {
   engine: SttEngine
   micDeviceId: string
   providerId?: string
   model: string
-}
-
-// Shape of the pre-migration `tc-translate-stt-settings-v1`.
-export type LegacySttSettings = {
-  baseUrl: string
-  apiKey: string
-  model: string
-  engine: SttEngine
-  micDeviceId: string
-}
-
-// Shape of the pre-split voice settings, kept only to migrate old localStorage data.
-export type LegacyVoiceSettings = {
-  baseUrl: string
-  apiKey: string
-  ttsModel: string
-  sttModel: string
-  ttsVoice: string
-  engine: VoiceEngine
 }
 
 // Optional pre-translation nuance (Translate tab): how close the speaker is

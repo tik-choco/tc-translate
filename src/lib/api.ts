@@ -3,7 +3,7 @@ import { normalizeBaseUrl } from './format'
 import { backTranslateTexts, detectBackTranslationLanguage } from './backTranslation'
 import { requestChatCompletion } from './llm'
 import { requestNetworkOpenAi } from './network'
-import { roomIdFromBaseUrl, isNetworkProviderBaseUrl } from './networkModels'
+import { roomIdFromBaseUrl, isNetworkProviderBaseUrl } from '@tik-choco/mistai/llm-config'
 import { nuanceInstructions, nuancePromptPayload } from './nuance'
 import { parseBackTranslationReview, parsePartialTranslations, parseTranslation } from './parse'
 import type {

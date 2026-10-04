@@ -1,4 +1,4 @@
-import { isModelRef } from './llmConfig'
+import { isModelRef } from '@tik-choco/mistai/llm-config'
 import {
   defaultLocalSettings,
   defaultLocalSttSettings,

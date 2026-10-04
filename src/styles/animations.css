@@ -8,6 +8,12 @@
   animation: spin 0.9s linear infinite;
 }
 
+/* App motion follows the same preference as the shared settings and portals. */
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-fast: 0ms; --motion-base: 0ms; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
 @keyframes modal-fade {
   from {
     opacity: 0;

@@ -1,11 +1,11 @@
 import { t } from '../i18n'
-import { resolveVoice } from '../lib/llmConfig'
-import { roomIdFromBaseUrl } from '../lib/networkModels'
+import { resolveVoice } from '@tik-choco/mistai/llm-config'
+import { roomIdFromBaseUrl } from '@tik-choco/mistai/llm-config'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { localizeNetworkError, requestNetworkTts } from '../lib/network'
-import { networkVoiceModelParam } from '../lib/networkModels'
+import { networkVoiceModelParam } from '@tik-choco/mistai/llm-config'
 import { resolveTtsConnection, synthesizeSpeech } from '../lib/voice'
-import type { SharedLlmConfigV1 } from '../lib/llmConfig'
+import type { SharedLlmConfigV1 } from '@tik-choco/mistai/llm-config'
 import type { TtsSettings } from '../types'
 
 type UseSpeechParams = {

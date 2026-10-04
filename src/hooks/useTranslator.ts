@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { defaultResolvedProvider } from '../constants'
 import { appendTranscript, createId, normalizeBaseUrl } from '../lib/format'
 import { speechCodeForLanguage } from '../lib/language'
-import { ensureProvider } from '../lib/llmConfig'
-import { refreshProviderModels } from '../lib/providerModels'
-import { roomIdFromBaseUrl } from '../lib/networkModels'
+import { ensureProvider } from '../lib/providerSetup'
+import { refreshProviderModels } from '@tik-choco/mistai'
+import { roomIdFromBaseUrl } from '@tik-choco/mistai/llm-config'
 import {
   loadMode,
   loadNativeLanguage,
@@ -25,12 +25,13 @@ import { useExample } from './useExample'
 import { useExplain } from './useExplain'
 import { useHistoryPanel } from './useHistoryPanel'
 import { useImageImport } from './useImageImport'
-import { useNetworkConsumerConnection } from './useNetworkConsumerConnection'
+import { useLlmConfig, useRoomProviders } from '@tik-choco/mistai/preact'
+import { rooms } from '../lib/network'
 import { useNetworkConsumerStatusWithTimestamp } from './useNetworkConsumerStatus'
 import { usePdfImport } from './usePdfImport'
 import { useProofread } from './useProofread'
 import { useProviderSettings } from './useProviderSettings'
-import { useSharedLlmConfig } from './useSharedLlmConfig'
+
 import { useSpeech } from './useSpeech'
 import { useTranscription } from './useTranscription'
 import { useStableCallback, useTranslationActions } from './useTranslationActions'
@@ -50,7 +51,7 @@ import type {
 } from '../types'
 
 export function useTranslator() {
-  const llmConfigState = useSharedLlmConfig()
+  const llmConfigState = useLlmConfig()
   const providerSettings = useProviderSettings(llmConfigState)
   const { settings } = providerSettings
   const voiceSettingsHook = useVoiceSettings(llmConfigState)
@@ -58,7 +59,9 @@ export function useTranslator() {
   const historyPanel = useHistoryPanel()
   const { history, updateHistory, addHistoryItem, patchHistoryItem } = historyPanel
   const [showSettings, setShowSettings] = useState(false)
-  useNetworkConsumerConnection(settings, llmConfigState, showSettings)
+  useRoomProviders({ config: llmConfigState.config, roomProvide: settings.roomProvide,
+    consumers: rooms, taskRefs: Object.values(settings.tasks).map(task => task.ref),
+    settingsOpen: showSettings, reasoningEffort: settings.reasoningEffort })
   const { status: networkConsumerStatus, updatedAt: networkConsumerUpdatedAt } = useNetworkConsumerStatusWithTimestamp(roomIdFromBaseUrl(settings.baseUrl))
 
   const [showLanguageMenu, setShowLanguageMenu] = useState(false)
@@ -401,7 +404,7 @@ export function useTranslator() {
       if (provider) { provider.enabled = true; provider.models = [...new Set([...(provider.models ?? []), model])] }
       config.defaultModel = { providerId, model }
     })
-    void refreshProviderModels(providerId, true)
+    void refreshProviderModels(providerId, { force: true })
   }
 
   const { handleTranslate, handleCheckBackTranslation, copyTranslation, cancelTranslate } = useTranslationActions({
