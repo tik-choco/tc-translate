@@ -25,8 +25,11 @@ export async function requestChatCompletion(params: {
   // unobserved) request running in the background.
   if (!params.settings.baseUrl || !params.settings.model) throw new Error('No usable default model configured.')
   const request = isNetworkProviderBaseUrl(params.settings.baseUrl)
-    ? requestNetworkChat(roomIdFromBaseUrl(params.settings.baseUrl), params.messages, params.settings.model,
-        params.onProgress ? (_delta, full) => params.onProgress?.(full) : undefined)
+    ? requestNetworkChat(roomIdFromBaseUrl(params.settings.baseUrl), params.messages, {
+        model: params.settings.model,
+        reasoningEffort: params.settings.reasoningEffort,
+        onDelta: params.onProgress ? (_delta, full) => params.onProgress?.(full) : undefined,
+      })
     : requestApiChatCompletion(params.settings, params.messages, params.signal, params.onProgress)
 
   return params.signal ? withAbort(request, params.signal) : request
