@@ -1,4 +1,5 @@
 import { WandSparkles } from 'lucide-preact'
+import { Switch } from '@tik-choco/mistai/preact'
 import { memo } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { t } from '../i18n'
@@ -12,7 +13,7 @@ type AutoOptionsPickerProps = {
 
 // "Auto" pill shared by the Translate and Reply tabs: one compact button
 // (teal with a count while anything is on) that opens a small popover with
-// the after-translation automations, instead of a row of loose checkboxes.
+// the after-translation automations.
 export const AutoOptionsPicker = memo(function AutoOptionsPicker({
   backTranslate,
   onBackTranslateChange,
@@ -57,24 +58,20 @@ export const AutoOptionsPicker = memo(function AutoOptionsPicker({
       {open ? (
         <div class="auto-options-popover" role="dialog" aria-label={t('auto-options')}>
           <span class="auto-options-title">{t('auto-options-title')}</span>
-          <label class="auto-option">
-            <input
-              type="checkbox"
-              checked={backTranslate}
-              onChange={(event) => onBackTranslateChange(event.currentTarget.checked)}
-            />
+          <div class="auto-option">
+            <Switch label={t('auto-options-back-translate')} checked={backTranslate} onChange={onBackTranslateChange} />
             <span class="auto-option-text">
               <strong>{t('auto-options-back-translate')}</strong>
               <small>{t('auto-options-back-translate-hint')}</small>
             </span>
-          </label>
-          <label class="auto-option">
-            <input type="checkbox" checked={copy} onChange={(event) => onCopyChange(event.currentTarget.checked)} />
+          </div>
+          <div class="auto-option">
+            <Switch label={t('auto-options-copy')} checked={copy} onChange={onCopyChange} />
             <span class="auto-option-text">
               <strong>{t('auto-options-copy')}</strong>
               <small>{t('auto-options-copy-hint')}</small>
             </span>
-          </label>
+          </div>
         </div>
       ) : null}
     </div>

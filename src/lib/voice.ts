@@ -1,4 +1,4 @@
-import { MistaiError } from '@tik-choco/mistai'
+import { isTtsSpeed, MistaiError } from '@tik-choco/mistai'
 import { resolveVoice, type SharedLlmConfigV1 } from '@tik-choco/mistai/llm-config'
 import { isNetworkProviderBaseUrl } from '@tik-choco/mistai/llm-config'
 import type { VoiceEngine } from '../types'
@@ -38,6 +38,7 @@ export async function synthesizeSpeech(params: {
   model: string
   voice: string
   text: string
+  speed?: number
   signal?: AbortSignal
 }): Promise<Blob> {
   const response = await fetch(`${params.connection.baseUrl}/audio/speech`, {
@@ -52,6 +53,7 @@ export async function synthesizeSpeech(params: {
       input: params.text,
       voice: params.voice.trim() || 'alloy',
       response_format: 'mp3',
+      ...(isTtsSpeed(params.speed) ? { speed: params.speed } : {}),
     }),
   })
 

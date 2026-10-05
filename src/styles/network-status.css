@@ -40,13 +40,6 @@
   cursor: pointer;
 }
 
-.settings-role-head input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  margin: 0;
-}
-
 .settings-role-title,
 .settings-modal .settings-role-head > .settings-role-title {
   display: inline-flex;

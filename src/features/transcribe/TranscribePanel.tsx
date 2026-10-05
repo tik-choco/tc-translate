@@ -1,5 +1,6 @@
 import { LoaderCircle, Mic, MicOff, TriangleAlert, X } from 'lucide-preact'
 import type { JSX } from 'preact'
+import { Switch } from '@tik-choco/mistai/preact'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { languageOptions, transcribeLangStorageKey } from '../../constants'
 import { t } from '../../i18n'
@@ -121,23 +122,15 @@ export function TranscribePanel({ settings, sttSettings, llmConfig, onOpenSettin
           ))}
         </select>
 
-        <label class="transcribe-keep-log">
-          <input
-            type="checkbox"
-            checked={keepLog}
-            onChange={(event) => setKeepLog(event.currentTarget.checked)}
-          />
+        <div class="transcribe-keep-log">
+          <Switch label={t('transcribe-keep-log')} checked={keepLog} onChange={setKeepLog} />
           {t('transcribe-keep-log')}
-        </label>
+        </div>
 
-        <label class="transcribe-keep-log">
-          <input
-            type="checkbox"
-            checked={simul.enabled}
-            onChange={(event) => simul.setEnabled(event.currentTarget.checked)}
-          />
+        <div class="transcribe-keep-log">
+          <Switch label={t('transcribe-simul-toggle')} checked={simul.enabled} onChange={simul.setEnabled} />
           {t('transcribe-simul-toggle')}
-        </label>
+        </div>
 
         <button
           type="button"
