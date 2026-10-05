@@ -45,13 +45,6 @@
   font-size: 0.9em;
 }
 
-.transcribe-keep-log input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  min-height: 0;
-  flex: 0 0 auto;
-}
-
 .transcribe-toggle {
   display: inline-flex;
   align-items: center;

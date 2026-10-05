@@ -428,15 +428,6 @@ textarea {
   background: var(--surface-2);
 }
 
-.auto-option input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  min-height: 0;
-  margin: 2px 0 0;
-  flex: 0 0 auto;
-  accent-color: var(--primary);
-}
-
 .auto-option-text {
   display: grid;
   gap: 2px;

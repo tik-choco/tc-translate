@@ -36,7 +36,8 @@ export function useSpeech({ ttsSettings, llmConfig }: UseSpeechParams) {
   const [speechError, setSpeechError] = useState('')
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const objectUrlRef = useRef<string | null>(null)
-  const blobCacheRef = useRef<{ id: string; text: string; blob: Blob } | null>(null)
+  const blobCacheRef = useRef<{ id: string; text: string; key: string; blob: Blob } | null>(null)
+  const voiceCacheKey = JSON.stringify([connection.baseUrl, connection.apiKey, voiceModel, ttsSettings.voice, resolvedVoice?.speed, ttsSettings.engine])
   // Bumped on every stop()/speak() so a slow (network) getBlob() that resolves
   // after the user moved on can't resurrect playback they already dismissed.
   const playGenerationRef = useRef(0)
@@ -88,7 +89,7 @@ export function useSpeech({ ttsSettings, llmConfig }: UseSpeechParams) {
     try {
       const blob = await getBlob()
       if (generation !== playGenerationRef.current) return // superseded by stop()/another speak()
-      blobCacheRef.current = { id, text, blob }
+      blobCacheRef.current = { id, text, key: voiceCacheKey, blob }
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
       const url = URL.createObjectURL(blob)
       objectUrlRef.current = url
@@ -151,7 +152,7 @@ export function useSpeech({ ttsSettings, llmConfig }: UseSpeechParams) {
 
     if (useApiEngine) {
       void playFromSource(
-        () => synthesizeSpeech({ connection, model: voiceModel, voice: ttsSettings.voice, text }),
+        () => synthesizeSpeech({ connection, model: voiceModel, voice: ttsSettings.voice, text, speed: resolvedVoice?.speed }),
         text,
         lang,
         id,
@@ -221,7 +222,7 @@ export function useSpeech({ ttsSettings, llmConfig }: UseSpeechParams) {
 
     const getBlob = useNetworkEngine
       ? () => requestNetworkTts(roomId, { text, model: networkVoiceModelParam(voiceModel), voice: ttsSettings.voice })
-      : () => synthesizeSpeech({ connection, model: voiceModel, voice: ttsSettings.voice, text })
+      : () => synthesizeSpeech({ connection, model: voiceModel, voice: ttsSettings.voice, text, speed: resolvedVoice?.speed })
 
     setSpeechError('')
     setDownloadingId(id)
@@ -230,12 +231,12 @@ export function useSpeech({ ttsSettings, llmConfig }: UseSpeechParams) {
       try {
         const cached = blobCacheRef.current
         let blob: Blob
-        if (cached && cached.id === id && cached.text === text) {
+        if (cached && cached.id === id && cached.text === text && cached.key === voiceCacheKey) {
           blob = cached.blob
         } else {
           blob = await getBlob()
           if (generation !== downloadGenerationRef.current) return // superseded by a newer download call
-          blobCacheRef.current = { id, text, blob }
+          blobCacheRef.current = { id, text, key: voiceCacheKey, blob }
         }
         // Some providers ignore `response_format: 'mp3'` and return WAV;
         // normalize to MP3 in the browser (lazy chunk) before saving.
