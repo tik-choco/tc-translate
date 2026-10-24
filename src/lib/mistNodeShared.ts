@@ -1,5 +1,5 @@
 import { createSharedNodeScope } from '@tik-choco/mistai'
-import { MistNode } from '../vendor/mistlib/wrappers/web/index.js'
+import { MistNode } from '@tik-choco/mistlib-web'
 import { captureMistBuildInfo, markMistLoadError } from './mistBuildInfo'
 import { mistSignalingConfig } from './mistSignaling'
 

@@ -11,6 +11,9 @@ npm install
 npm run dev
 ```
 
+The mistlib engine and JS wrapper come from npm (`@tik-choco/mistlib` and
+`@tik-choco/mistlib-web`). See `.env.example` for local engine development.
+
 ## Usage
 
 Choose a target language, paste text, then translate. `Ctrl + Enter` also

@@ -1,4 +1,4 @@
-// Thin storage-only path into the vendored mistlib wasm module, used to move
+// Thin storage-only path through @tik-choco/mistlib-web from npm, used to move
 // heavy per-item content (translation history bodies, shared translations-
 // inbox Markdown) out of localStorage and into mistlib's OPFS-backed,
 // content-addressed store. storage_add/storage_get only need the wasm node
@@ -11,7 +11,7 @@
 // (verified via a direct repro: two independent `init_with_config` calls on
 // the same wasm singleton each fully reset the engine with no error/warning).
 
-import { storage_add, storage_get } from '../vendor/mistlib/wrappers/web/index.js'
+import { storage_add, storage_get } from '@tik-choco/mistlib-web'
 import { ensureSharedMistNodeReady } from './mistNodeShared'
 import { NODE_ID_STORAGE_KEY } from './network'
 
