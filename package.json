@@ -12,8 +12,8 @@
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
     "@tik-choco/mistai": "github:tik-choco-lab/mistai",
-    "@tik-choco/mistlib": "0.6.6",
-    "@tik-choco/mistlib-web": "0.1.0",
+    "@tik-choco/mistlib": "0.7.1",
+    "@tik-choco/mistlib-web": "0.3.0",
     "lucide-preact": "^1.16.0",
     "pdfjs-dist": "^6.1.200",
     "pinyin-pro": "^3.28.1",

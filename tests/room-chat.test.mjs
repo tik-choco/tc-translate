@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { registerHooks } from 'node:module'
 import { after, mock, test } from 'node:test'
-import { createRoomConsumers, decode, encode, requestRoomChat, requestRoomOpenAi } from '@tik-choco/mistai'
+import { createRoomConsumers, decode, encode, EVENT_RAW, requestRoomChat, requestRoomOpenAi } from '@tik-choco/mistai'
 
 // Node strips TypeScript; resolve the app's extensionless Vite imports.
 const hooks = registerHooks({
@@ -29,7 +29,7 @@ function roomFixture(t) {
   const received = Promise.withResolvers()
   const rooms = createRoomConsumers(() => {
     let onEvent
-    const reply = message => onEvent(0, 'provider', encode({ v: 1, ...message }))
+    const reply = message => onEvent(EVENT_RAW, 'provider', encode({ v: 1, ...message }))
     return {
       async init() {},
       onEvent(callback) { onEvent = callback },
